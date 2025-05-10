@@ -268,6 +268,18 @@ class BattlegroundBFGScore final : public BattlegroundScore
         uint32 BasesDefended;
 };
 
+struct CaptureBFGPointInfo
+{
+    CaptureBFGPointInfo() : _ownerTeamId(TEAM_NEUTRAL), _iconNone(0), _iconCapture(0), _state(BG_BFG_NODE_TYPE_NEUTRAL), _captured(false) {}
+
+    TeamId _ownerTeamId;
+    uint32 _iconNone;
+    uint32 _iconCapture;
+    uint8  _state;
+
+    bool _captured;
+};
+
 class BattlegroundBFG : public Battleground
 {
     public:
@@ -298,6 +310,9 @@ class BattlegroundBFG : public Battleground
 
         uint32 GetPrematureWinner() override;
 
+        [[nodiscard]] CaptureBFGPointInfo const& GetCapturePointInfo(uint32 node) const { return m_capturePointInfo[node]; }
+
+
     private:
         void PostUpdateImpl(uint32 diff) override;
         /* Gameobject spawning/despawning */
@@ -326,6 +341,7 @@ class BattlegroundBFG : public Battleground
         uint32                  m_HonorScoreTics[BG_TEAMS_COUNT];
         bool                    m_IsInformedNearVictory;
         uint32                  m_HonorTics;
+        CaptureBFGPointInfo     m_capturePointInfo[BG_BFG_DYNAMIC_NODES_COUNT];
         // need for achievements
         bool                    m_TeamScores500Disadvantage[BG_TEAMS_COUNT];
 };

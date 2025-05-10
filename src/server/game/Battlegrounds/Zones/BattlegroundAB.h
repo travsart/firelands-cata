@@ -303,6 +303,18 @@ struct BattlegroundABScore final : public BattlegroundScore
         uint32 BasesDefended;
 };
 
+struct CaptureABPointInfo
+{
+    CaptureABPointInfo() : _ownerTeamId(TEAM_NEUTRAL), _iconNone(0), _iconCapture(0), _state(BG_AB_NODE_STATE_NEUTRAL), _captured(false) {}
+
+    TeamId _ownerTeamId;
+    uint32 _iconNone;
+    uint32 _iconCapture;
+    uint8  _state;
+
+    bool _captured;
+};
+
 class BattlegroundAB : public Battleground
 {
     public:
@@ -329,9 +341,12 @@ class BattlegroundAB : public Battleground
 
         /* achievement req. */
         bool IsAllNodesControlledByTeam(uint32 team) const override;
+
         bool CheckAchievementCriteriaMeet(uint32 /*criteriaId*/, Player const* /*player*/, Unit const* /*target*/ = nullptr, uint32 /*miscvalue1*/ = 0) override;
 
         uint32 GetPrematureWinner() override;
+
+        [[nodiscard]] CaptureABPointInfo const& GetCapturePointInfo(uint32 node) const { return m_capturePointInfo[node]; }
     private:
         void PostUpdateImpl(uint32 diff) override;
         /* Gameobject spawning/despawning */
@@ -343,6 +358,9 @@ class BattlegroundAB : public Battleground
         /// @todo working, scripted peons spawning
         void _NodeOccupied(uint8 node, Team team);
         void _NodeDeOccupied(uint8 node);
+
+        void ApplyPhaseMask();
+        
 
         /* Nodes info:
             0: neutral
@@ -357,10 +375,13 @@ class BattlegroundAB : public Battleground
         uint32              m_lastTick[BG_TEAMS_COUNT];
         uint32              m_HonorScoreTics[BG_TEAMS_COUNT];
         uint32              m_ReputationScoreTics[BG_TEAMS_COUNT];
+        CaptureABPointInfo m_capturePointInfo[BG_AB_DYNAMIC_NODES_COUNT];
         bool                m_IsInformedNearVictory;
         uint32              m_HonorTics;
         uint32              m_ReputationTics;
+        uint32              m_configurableMaxTeamScore;
         // need for achievements
         bool                m_TeamScores500Disadvantage[BG_TEAMS_COUNT];
+        
 };
 #endif

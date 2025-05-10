@@ -385,6 +385,25 @@ struct BattlegroundEYScore final : public BattlegroundScore
         uint32 FlagCaptures;
 };
 
+struct CaptureEYPointInfo
+{
+    CaptureEYPointInfo() : _ownerTeamId(TEAM_NEUTRAL), _barStatus(BG_EY_PROGRESS_BAR_STATE_MIDDLE), _areaTrigger(0)
+    {
+        _playersCount[TEAM_ALLIANCE] = 0;
+        _playersCount[TEAM_HORDE] = 0;
+    }
+
+    Player* player = nullptr;
+    TeamId _ownerTeamId;
+    int8 _barStatus;
+    uint32 _areaTrigger;
+    int8 _playersCount[PVP_TEAMS_COUNT];
+
+    bool IsUnderControl(TeamId teamId) const { return _ownerTeamId == teamId; }
+    bool IsUnderControl() const { return _ownerTeamId != TEAM_NEUTRAL; }
+    bool IsUncontrolled() const { return _ownerTeamId == TEAM_NEUTRAL; }
+};
+
 class BattlegroundEY : public Battleground
 {
     public:
@@ -425,6 +444,9 @@ class BattlegroundEY : public Battleground
         bool IsAllNodesControlledByTeam(uint32 team) const override;
 
         uint32 GetPrematureWinner() override;
+
+        [[nodiscard]] CaptureEYPointInfo const& GetCapturePointInfo(uint32 node) const { return m_capturePointInfo[node]; }
+
     private:
         void PostUpdateImpl(uint32 diff) override;
 
@@ -462,8 +484,10 @@ class BattlegroundEY : public Battleground
         int32 m_PointBarStatus[EY_POINTS_MAX];
         GuidVector m_PlayersNearPoint[EY_POINTS_MAX + 1];
         uint8 m_CurrentPointPlayersCount[2*EY_POINTS_MAX];
+        CaptureEYPointInfo m_capturePointInfo[EY_POINTS_MAX];
 
         int32 m_PointAddingTimer;
         uint32 m_HonorTics;
+        uint32 m_configurableMaxTeamScore; // TODO add
 };
 #endif

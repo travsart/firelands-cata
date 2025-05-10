@@ -153,6 +153,7 @@ void BattlegroundAB::PostUpdateImpl(uint32 diff)
                     m_HonorScoreTics[team] -= m_HonorTics;
                 }
 
+                // TODO need to update if the config limit is not default
                 if (!m_IsInformedNearVictory && m_TeamScores[team] > BG_AB_WARNING_NEAR_VICTORY_SCORE)
                 {
                     if (team == TEAM_ALLIANCE)
@@ -163,8 +164,8 @@ void BattlegroundAB::PostUpdateImpl(uint32 diff)
                     m_IsInformedNearVictory = true;
                 }
 
-                if (m_TeamScores[team] > BG_AB_MAX_TEAM_SCORE)
-                    m_TeamScores[team] = BG_AB_MAX_TEAM_SCORE;
+                if (m_TeamScores[team] > static_cast<int32>(m_configurableMaxTeamScore))
+                    m_TeamScores[team] = m_configurableMaxTeamScore;
 
                 if (team == TEAM_ALLIANCE)
                     UpdateWorldState(BG_AB_OP_RESOURCES_ALLY, m_TeamScores[team]);
@@ -178,11 +179,11 @@ void BattlegroundAB::PostUpdateImpl(uint32 diff)
             }
         }
 
+        
         // Test win condition
-        if (m_TeamScores[TEAM_ALLIANCE] >= BG_AB_MAX_TEAM_SCORE)
-            EndBattleground(ALLIANCE);
-        else if (m_TeamScores[TEAM_HORDE] >= BG_AB_MAX_TEAM_SCORE)
-            EndBattleground(HORDE);
+        if (m_TeamScores[team] >= static_cast<int32>(m_configurableMaxTeamScore))
+            EndBattleground(team);
+
     }
 }
 
@@ -328,7 +329,7 @@ void BattlegroundAB::FillInitialWorldStates(WorldPackets::WorldState::InitWorldS
     data.Worldstates.emplace_back(uint32(BG_AB_OP_OCCUPIED_BASES_HORDE), uint32(horde));
 
     // Team scores
-    data.Worldstates.emplace_back(uint32(BG_AB_OP_RESOURCES_MAX), uint32(BG_AB_MAX_TEAM_SCORE));
+    data.Worldstates.emplace_back(uint32(BG_AB_OP_RESOURCES_MAX), m_configurableMaxTeamScore);
     data.Worldstates.emplace_back(uint32(BG_AB_OP_RESOURCES_WARNING), uint32(BG_AB_WARNING_NEAR_VICTORY_SCORE));
     data.Worldstates.emplace_back(uint32(BG_AB_OP_RESOURCES_ALLY), uint32(m_TeamScores[TEAM_ALLIANCE]));
     data.Worldstates.emplace_back(uint32(BG_AB_OP_RESOURCES_HORDE), uint32(m_TeamScores[TEAM_HORDE]));
@@ -619,20 +620,29 @@ void BattlegroundAB::Reset()
     for (uint8 i = 0; i < BG_AB_ALL_NODES_COUNT + 5; ++i)//+5 for aura triggers
         if (BgCreatures[i])
             DelCreature(i);
+
+    uint32 bgArathiCapturePointsConfig = sWorld->getIntConfig(CONFIG_BATTLEGROUND_ARATHI_CAPTUREPOINTS);
+    m_configurableMaxTeamScore = bgArathiCapturePointsConfig > 0
+        ? bgArathiCapturePointsConfig
+        : static_cast<uint32>(BG_AB_MAX_TEAM_SCORE);
 }
 
 void BattlegroundAB::EndBattleground(uint32 winner)
 {
-    // Win reward
-    if (winner == ALLIANCE)
-        RewardHonorToTeam(GetBonusHonorFromKill(1), ALLIANCE);
-    if (winner == HORDE)
-        RewardHonorToTeam(GetBonusHonorFromKill(1), HORDE);
     // Complete map_end rewards (even if no team wins)
     RewardHonorToTeam(GetBonusHonorFromKill(1), HORDE);
     RewardHonorToTeam(GetBonusHonorFromKill(1), ALLIANCE);
 
-    Battleground::EndBattleground(winner);
+    // TODO this should use TEAM_ALLIANCE/TEAM_HORDE
+    // Win reward
+    if (winner == TEAM_ALLIANCE) {
+        RewardHonorToTeam(GetBonusHonorFromKill(1), ALLIANCE);
+        Battleground::EndBattleground(ALLIANCE);
+    }
+    else {
+        RewardHonorToTeam(GetBonusHonorFromKill(1), HORDE);
+        Battleground::EndBattleground(HORDE);
+    }
 }
 
 WorldSafeLocsEntry const* BattlegroundAB::GetClosestGraveyard(Player* player)

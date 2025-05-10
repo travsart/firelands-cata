@@ -982,6 +982,8 @@ class BattlegroundIC : public Battleground
 
         bool IsSpellAllowed(uint32 spellId, Player const* player) const override;
 
+        [[nodiscard]] ICNodePoint const& GetICNodePoint(uint8 index) { return nodePoint[index]; }
+
     private:
         uint32 closeFortressDoorsTimer;
         bool doorsClosed;

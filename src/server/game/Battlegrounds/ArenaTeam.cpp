@@ -942,3 +942,108 @@ ArenaTeamMember* ArenaTeam::GetMember(ObjectGuid guid)
 
     return nullptr;
 }
+
+void ArenaTeam::SetEmblem(uint32 backgroundColor, uint8 emblemStyle, uint32 emblemColor, uint8 borderStyle, uint32 borderColor)
+{
+    BackgroundColor = backgroundColor;
+    EmblemStyle = emblemStyle;
+    EmblemColor = emblemColor;
+    BorderStyle = borderStyle;
+    BorderColor = borderColor;
+}
+
+void ArenaTeam::SetRatingForAll(uint32 rating)
+{
+    Stats.Rating = rating;
+
+    for (MemberList::iterator itr = Members.begin(); itr != Members.end(); ++itr)
+    {
+        itr->PersonalRating = rating;
+    }
+}
+
+void ArenaTeam::CreateTempArenaTeam(std::vector<Player*> playerList, uint8 type, std::string const& teamName)
+{
+    auto playerCountInTeam = static_cast<uint32>(playerList.size());
+
+    const auto standardArenaType = { ARENA_TYPE_2v2, ARENA_TYPE_3v3, ARENA_TYPE_5v5 };
+    bool isStandardArenaType = std::find(std::begin(standardArenaType), std::end(standardArenaType), type) != std::end(standardArenaType);
+    if (isStandardArenaType)
+        ASSERT(playerCountInTeam == GetReqPlayersForType(type));
+
+    // Generate new arena team id
+    TeamId = sArenaTeamMgr->GenerateTempArenaTeamId();
+
+    // Assign member variables
+    CaptainGuid = playerList[0]->GetGUID();
+    Type = type;
+    TeamName = teamName;
+
+    BackgroundColor = 0;
+    EmblemStyle = 0;
+    EmblemColor = 0;
+    BorderStyle = 0;
+    BorderColor = 0;
+
+    Stats.WeekGames = 0;
+    Stats.SeasonGames = 0;
+    Stats.Rating = 0;
+    Stats.WeekWins = 0;
+    Stats.SeasonWins = 0;
+
+    for (auto const& _player : playerList)
+    {
+        ArenaTeam* team = sArenaTeamMgr->GetArenaTeamById(_player->GetArenaTeamId(GetSlotByType(type)));
+        if (!team)
+            continue;
+
+        ArenaTeamMember newMember;
+        for (auto const& itr : Members)
+            newMember = itr;
+
+        Stats.WeekGames += team->Stats.WeekGames;
+        Stats.SeasonGames += team->Stats.SeasonGames;
+        Stats.Rating += team->GetRating();
+        Stats.WeekWins += team->Stats.WeekWins;
+        Stats.SeasonWins += team->Stats.SeasonWins;
+
+        Members.push_back(newMember);
+    }
+
+    Stats.WeekGames /= playerCountInTeam;
+    Stats.SeasonGames /= playerCountInTeam;
+    Stats.Rating /= playerCountInTeam;
+    Stats.WeekWins /= playerCountInTeam;
+    Stats.SeasonWins /= playerCountInTeam;
+}
+
+// TODO in acore
+// void ArenaTeam::UpdateArenaPointsHelper(std::map<ObjectGuid, uint32>& playerPoints)
+// {
+//     // Called after a match has ended and the stats are already modified
+//     // Helper function for arena point distribution (this way, when distributing, no actual calculation is required, just a few comparisons)
+//     // 10 played games per week is a minimum
+//     if (Stats.WeekGames < sWorld->getIntConfig(CONFIG_ARENA_GAMES_REQUIRED))
+//         return;
+
+//     // To get points, a player has to participate in at least 30% of the matches
+//     uint32 requiredGames = (uint32)ceil(Stats.WeekGames * 0.3f);
+
+//     for (MemberList::const_iterator itr = Members.begin(); itr != Members.end(); ++itr)
+//     {
+//         // The player participated in enough games, update his points
+//         uint32 pointsToAdd = 0;
+//         if (itr->WeekGames >= requiredGames)
+//             pointsToAdd = GetPoints(itr->PersonalRating);
+
+//         std::map<ObjectGuid, uint32>::iterator plr_itr = playerPoints.find(itr->Guid);
+//         if (plr_itr != playerPoints.end())
+//         {
+//             // Check if there is already more points
+//             if (plr_itr->second < pointsToAdd)
+//                 playerPoints[itr->Guid] = pointsToAdd;
+//         }
+//         else
+//             playerPoints[itr->Guid] = pointsToAdd;
+//     }
+// }

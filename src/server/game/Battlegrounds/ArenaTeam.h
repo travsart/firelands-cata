@@ -128,6 +128,8 @@ class FC_GAME_API ArenaTeam
         ObjectGuid GetCaptain() const { return CaptainGuid; }
         std::string const& GetName() const { return TeamName; }
         ArenaTeamStats const& GetStats() const { return Stats; }
+        void SetArenaTeamStats(ArenaTeamStats& stats) { Stats = stats; }
+
 
         uint32 GetRating() const          { return Stats.Rating; }
         uint32 GetAverageMMR(Group* group) const;
@@ -141,6 +143,7 @@ class FC_GAME_API ArenaTeam
         bool   Empty() const                  { return Members.empty(); }
         MemberList::iterator m_membersBegin() { return Members.begin(); }
         MemberList::iterator m_membersEnd()   { return Members.end(); }
+        MemberList& GetMembers() { return Members; }
         bool IsMember(ObjectGuid guid) const;
 
         ArenaTeamMember* GetMember(ObjectGuid guid);
@@ -175,10 +178,17 @@ class FC_GAME_API ArenaTeam
         void   OfflineMemberLost(ObjectGuid guid, uint32 againstMatchmakerRating, int32 MatchmakerRatingChange = -12);
 
 
-
-
         void FinishWeek();
         void FinishGame(int32 mod);
+
+        void SetPreviousOpponents(uint32 arenaTeamId) { PreviousOpponents = arenaTeamId; }
+        uint32 GetPreviousOpponents() { return PreviousOpponents; }
+
+        // void UpdateArenaPointsHelper(std::map<ObjectGuid, uint32>& PlayerPoints);
+        void CreateTempArenaTeam(std::vector<Player*> playerList, uint8 type, std::string const& teamName);
+
+        void SetEmblem(uint32 backgroundColor, uint8 emblemStyle, uint32 emblemColor, uint8 borderStyle, uint32 borderColor);
+        void SetRatingForAll(uint32 rating);
 
     protected:
 
@@ -195,5 +205,7 @@ class FC_GAME_API ArenaTeam
 
         MemberList Members;
         ArenaTeamStats Stats;
+
+        uint32 PreviousOpponents = 0;
 };
 #endif
