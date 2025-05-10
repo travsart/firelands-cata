@@ -485,6 +485,18 @@ void WorldUpdateLoop()
     uint32 realCurrTime = 0;
     uint32 realPrevTime = getMSTime();
 
+    // TODO in acore
+    // uint32 maxCoreStuckTime = uint32(sConfigMgr->GetOption<int32>("MaxCoreStuckTime", 60)) * 1000;
+    // uint32 halfMaxCoreStuckTime = maxCoreStuckTime / 2;
+    // if (!halfMaxCoreStuckTime)
+    //     halfMaxCoreStuckTime = std::numeric_limits<uint32>::max();
+
+    // LoginDatabase.WarnAboutSyncQueries(true);
+    // CharacterDatabase.WarnAboutSyncQueries(true);
+    // WorldDatabase.WarnAboutSyncQueries(true);
+
+    sScriptMgr->OnDatabaseWarnAboutSyncQueries(true);
+
     ///- While we have not World::m_stopEvent, update the world
     while (!World::IsStopped())
     {
@@ -510,6 +522,13 @@ void WorldUpdateLoop()
             Sleep(1000);
 #endif
     }
+
+    sScriptMgr->OnDatabaseWarnAboutSyncQueries(false);
+
+    // TODO in acore
+    // LoginDatabase.WarnAboutSyncQueries(false);
+    // CharacterDatabase.WarnAboutSyncQueries(false);
+    // WorldDatabase.WarnAboutSyncQueries(false);
 }
 
 void SignalHandler(boost::system::error_code const &error, int /*signalNumber*/)
@@ -624,6 +643,11 @@ bool StartDB()
     if (!loader.Load())
         return false;
 
+    if (!sScriptMgr->OnDatabasesLoading())
+    {
+        return false;
+    }
+
     ///- Get the realm Id from the configuration file
     realm.Id.Realm = sConfigMgr->GetIntDefault("RealmID", 0);
     if (!realm.Id.Realm)
@@ -663,7 +687,7 @@ void StopDB()
     WorldDatabase.Close();
     LoginDatabase.Close();
     HotfixDatabase.Close();
-
+    sScriptMgr->OnDatabasesClosing();
     MySQL::Library_End();
 }
 
