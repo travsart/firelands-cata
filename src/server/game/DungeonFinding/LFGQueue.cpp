@@ -24,6 +24,7 @@
 #include "LFGQueue.h"
 #include "LFGMgr.h"
 #include "Log.h"
+#include "ScriptMgr.h"
 
 namespace lfg
 {
@@ -572,6 +573,11 @@ LfgCompatibility LFGQueue::CheckCompatibility(GuidList check)
     ObjectGuid gguid = check.front();
     proposal.queues = check;
     proposal.isNew = numLfgGroups != 1 || sLFGMgr->GetOldState(gguid) != LFG_STATE_DUNGEON;
+
+    if (!sScriptMgr->OnPlayerbotCheckLFGQueue(proposal.queues))
+    {
+        return LFG_INCOMPATIBLES_HAS_IGNORES;
+    }
 
     if (!sLFGMgr->AllQueued(check))
     {
