@@ -45,6 +45,7 @@ class FC_GAME_API ChannelMgr
         void LeftChannel(std::string const& name);
         void LeftChannel(uint32 channelId, AreaTableEntry const* zoneEntry);
 
+        const CustomChannelContainer& GetChannels() const { return _customChannels; }
     private:
         CustomChannelContainer _customChannels;
         BuiltinChannelContainer _channels;
