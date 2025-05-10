@@ -69,6 +69,8 @@ template <class T> class FC_DATABASE_API DBUpdater
 
     static inline std::string GetTableName();
 
+    static std::string GetSourceDirectory();
+
     static std::string GetBaseDirectory();
 
     static bool IsEnabled(uint32 const updateMask);

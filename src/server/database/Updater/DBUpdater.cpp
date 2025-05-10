@@ -69,7 +69,9 @@ template <> std::string DBUpdater<LoginDatabaseConnection>::GetConfigEntry() { r
 
 template <> std::string DBUpdater<LoginDatabaseConnection>::GetTableName() { return "Auth"; }
 
-template <> std::string DBUpdater<LoginDatabaseConnection>::GetBaseDirectory() { return BuiltInConfig::GetSourceDirectory() + "/data/sql/base/db_auth/"; }
+template <> std::string DBUpdater<LoginDatabaseConnection>::GetSourceDirectory() { return BuiltInConfig::GetSourceDirectory(); }
+
+template <> std::string DBUpdater<LoginDatabaseConnection>::GetBaseDirectory() { return DBUpdater<LoginDatabaseConnection>::GetSourceDirectory() + "/data/sql/base/db_auth/"; }
 
 template <> bool DBUpdater<LoginDatabaseConnection>::IsEnabled(uint32 const updateMask)
 {
@@ -79,12 +81,23 @@ template <> bool DBUpdater<LoginDatabaseConnection>::IsEnabled(uint32 const upda
 
 template <> std::string DBUpdater<LoginDatabaseConnection>::GetDBModuleName() { return "db-auth"; }
 
+
 // World Database
 template <> std::string DBUpdater<WorldDatabaseConnection>::GetConfigEntry() { return "Updates.World"; }
 
 template <> std::string DBUpdater<WorldDatabaseConnection>::GetTableName() { return "World"; }
 
-template <> std::string DBUpdater<WorldDatabaseConnection>::GetBaseDirectory() { return BuiltInConfig::GetSourceDirectory() + "/data/sql/base/db_world/"; }
+template<>
+std::string DBUpdater<WorldDatabaseConnection>::GetSourceDirectory()
+{
+    return BuiltInConfig::GetSourceDirectory();
+}
+
+template<>
+std::string DBUpdater<WorldDatabaseConnection>::GetBaseDirectory()
+{
+    return DBUpdater<WorldDatabaseConnection>::GetSourceDirectory() + "/data/sql/base/db_world/";
+}
 
 template <> bool DBUpdater<WorldDatabaseConnection>::IsEnabled(uint32 const updateMask)
 {
@@ -92,17 +105,31 @@ template <> bool DBUpdater<WorldDatabaseConnection>::IsEnabled(uint32 const upda
     return (updateMask & DatabaseLoader::DATABASE_WORLD) ? true : false;
 }
 
-template <> std::string DBUpdater<WorldDatabaseConnection>::GetDBModuleName() { return "db-world"; }
+template<>
+std::string DBUpdater<WorldDatabaseConnection>::GetDBModuleName()
+{
+    return "db-world";
+}
 
 template <> BaseLocation DBUpdater<WorldDatabaseConnection>::GetBaseLocationType() { return LOCATION_REPOSITORY; }
+
 
 // Character Database
 template <> std::string DBUpdater<CharacterDatabaseConnection>::GetConfigEntry() { return "Updates.Character"; }
 
 template <> std::string DBUpdater<CharacterDatabaseConnection>::GetTableName() { return "Character"; }
 
-template <> std::string DBUpdater<CharacterDatabaseConnection>::GetBaseDirectory() { return BuiltInConfig::GetSourceDirectory() + "/data/sql/base/db_characters"; }
+template<>
+std::string DBUpdater<CharacterDatabaseConnection>::GetSourceDirectory()
+{
+    return BuiltInConfig::GetSourceDirectory();
+}
 
+template<>
+std::string DBUpdater<CharacterDatabaseConnection>::GetBaseDirectory()
+{
+    return DBUpdater<CharacterDatabaseConnection>::GetSourceDirectory() + "/data/sql/base/db_characters/";
+}
 template <> bool DBUpdater<CharacterDatabaseConnection>::IsEnabled(uint32 const updateMask)
 {
     // This way silences warnings under msvc
@@ -111,10 +138,64 @@ template <> bool DBUpdater<CharacterDatabaseConnection>::IsEnabled(uint32 const 
 
 template <> std::string DBUpdater<CharacterDatabaseConnection>::GetDBModuleName() { return "db-characters"; }
 
+
+#ifdef MOD_PLAYERBOTS
+// Playerbots Database
+template<>
+std::string DBUpdater<PlayerbotsDatabaseConnection>::GetConfigEntry()
+{
+    return "Updates.Playerbots";
+}
+
+template<>
+std::string DBUpdater<PlayerbotsDatabaseConnection>::GetTableName()
+{
+    return "Playerbots";
+}
+
+template<>
+std::string DBUpdater<PlayerbotsDatabaseConnection>::GetSourceDirectory()
+{
+    return BuiltInConfig::GetSourceDirectory() + "/modules/mod-playerbots";
+}
+
+template<>
+std::string DBUpdater<PlayerbotsDatabaseConnection>::GetBaseDirectory()
+{
+    return DBUpdater<PlayerbotsDatabaseConnection>::GetSourceDirectory() + "/data/sql/playerbots/base/";
+}
+
+template<>
+bool DBUpdater<PlayerbotsDatabaseConnection>::IsEnabled(uint32 const updateMask)
+{
+    // This way silences warnings under msvc
+    return (updateMask & DatabaseLoader::DATABASE_PLAYERBOTS) ? true : false;
+}
+
+template<>
+std::string DBUpdater<PlayerbotsDatabaseConnection>::GetDBModuleName()
+{
+    return "db_playerbot";
+}
+#endif
+
+
 // Hotfix Database
 template <> std::string DBUpdater<HotfixDatabaseConnection>::GetConfigEntry() { return "Updates.Hotfix"; }
 
 template <> std::string DBUpdater<HotfixDatabaseConnection>::GetTableName() { return "Hotfixes"; }
+
+template<>
+std::string DBUpdater<HotfixDatabaseConnection>::GetSourceDirectory()
+{
+    return BuiltInConfig::GetSourceDirectory();
+}
+
+template<>
+std::string DBUpdater<HotfixDatabaseConnection>::GetBaseDirectory()
+{
+    return DBUpdater<HotfixDatabaseConnection>::GetSourceDirectory() + "/data/sql/db_hotfixes/";
+}
 
 template <> std::string DBUpdater<HotfixDatabaseConnection>::GetBaseDirectory() { return BuiltInConfig::GetSourceDirectory() + "/data/sql/base/db_hotfixes/"; }
 
@@ -127,6 +208,7 @@ template <> bool DBUpdater<HotfixDatabaseConnection>::IsEnabled(uint32 const upd
 template <> std::string DBUpdater<HotfixDatabaseConnection>::GetDBModuleName() { return "db-hotfixes"; }
 
 template <> BaseLocation DBUpdater<HotfixDatabaseConnection>::GetBaseLocationType() { return LOCATION_REPOSITORY; }
+
 
 // All
 template <class T> BaseLocation DBUpdater<T>::GetBaseLocationType() { return LOCATION_REPOSITORY; }
@@ -180,7 +262,7 @@ template <class T> bool DBUpdater<T>::Update(DatabaseWorkerPool<T>& pool, std::s
 
     LOG_INFO("sql.updates", "Updating %s database...", DBUpdater<T>::GetTableName().c_str());
 
-    Path const sourceDirectory(BuiltInConfig::GetSourceDirectory());
+    Path const sourceDirectory(DBUpdater<T>::GetSourceDirectory());
 
     if (!is_directory(sourceDirectory))
     {
@@ -253,7 +335,7 @@ template <class T> bool DBUpdater<T>::Update(DatabaseWorkerPool<T>& pool, std::v
         return false;
     }
 
-    Path const sourceDirectory(BuiltInConfig::GetSourceDirectory());
+    Path const sourceDirectory(DBUpdater<T>::GetSourceDirectory());
     if (!is_directory(sourceDirectory))
     {
         return false;
@@ -467,3 +549,7 @@ template class FC_DATABASE_API DBUpdater<LoginDatabaseConnection>;
 template class FC_DATABASE_API DBUpdater<WorldDatabaseConnection>;
 template class FC_DATABASE_API DBUpdater<CharacterDatabaseConnection>;
 template class FC_DATABASE_API DBUpdater<HotfixDatabaseConnection>;
+
+#ifdef MOD_PLAYERBOTS
+template class AC_DATABASE_API DBUpdater<PlayerbotsDatabaseConnection>;
+#endif
