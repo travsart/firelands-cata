@@ -1273,6 +1273,7 @@ void Creature::SaveToDB()
     // this should only be used when the creature has already been loaded
     // preferably after adding to map, because mapid may not be valid otherwise
     CreatureData const* data = sObjectMgr->GetCreatureData(m_spawnId);
+    
     if (!data)
     {
         LOG_ERROR("entities.unit", "Creature::SaveToDB failed, cannot get creature data!");
@@ -1294,6 +1295,7 @@ void Creature::SaveToDB(uint32 mapid, uint8 spawnMask)
         m_spawnId = sObjectMgr->GenerateCreatureSpawnId();
 
     CreatureData& data = sObjectMgr->NewOrExistCreatureData(m_spawnId);
+    data.spawnId = m_spawnId;
 
     uint32 displayId = GetNativeDisplayId();
     uint32 npcflag = GetUInt32Value(UNIT_NPC_FLAGS);
