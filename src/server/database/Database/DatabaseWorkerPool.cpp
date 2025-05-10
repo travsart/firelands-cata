@@ -35,6 +35,10 @@
 #include "MySQLWorkaround.h"
 #include <mysqld_error.h>
 
+#ifdef MOD_PLAYERBOTS
+#include "Implementation/PlayerbotsDatabase.h"
+#endif
+
 #define MIN_MYSQL_SERVER_VERSION 50100u
 #define MIN_MYSQL_CLIENT_VERSION 50100u
 
@@ -491,8 +495,16 @@ void DatabaseWorkerPool<T>::ExecuteOrAppend(SQLTransaction<T>& trans, PreparedSt
         trans->Append(stmt);
 }
 
+template <class T>
+std::size_t DatabaseWorkerPool<T>::QueueSize() const
+{
+    return _queue->Size();
+}
+
 template class FC_DATABASE_API DatabaseWorkerPool<LoginDatabaseConnection>;
 template class FC_DATABASE_API DatabaseWorkerPool<WorldDatabaseConnection>;
 template class FC_DATABASE_API DatabaseWorkerPool<CharacterDatabaseConnection>;
 template class FC_DATABASE_API DatabaseWorkerPool<HotfixDatabaseConnection>;
-
+#ifdef MOD_PLAYERBOTS
+template class AC_DATABASE_API DatabaseWorkerPool<PlayerbotsDatabaseConnection>;
+#endif

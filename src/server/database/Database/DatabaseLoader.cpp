@@ -186,3 +186,8 @@ template FC_DATABASE_API DatabaseLoader& DatabaseLoader::AddDatabase<LoginDataba
 template FC_DATABASE_API DatabaseLoader& DatabaseLoader::AddDatabase<CharacterDatabaseConnection>(DatabaseWorkerPool<CharacterDatabaseConnection>&, std::string const&);
 template FC_DATABASE_API DatabaseLoader& DatabaseLoader::AddDatabase<WorldDatabaseConnection>(DatabaseWorkerPool<WorldDatabaseConnection>&, std::string const&);
 template FC_DATABASE_API DatabaseLoader& DatabaseLoader::AddDatabase<HotfixDatabaseConnection>(DatabaseWorkerPool<HotfixDatabaseConnection>&, std::string const&);
+
+#ifdef MOD_PLAYERBOTS
+template AC_DATABASE_API
+DatabaseLoader& DatabaseLoader::AddDatabase<PlayerbotsDatabaseConnection>(DatabaseWorkerPool<PlayerbotsDatabaseConnection>&, std::string const&);
+#endif

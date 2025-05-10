@@ -48,8 +48,23 @@ class FC_DATABASE_API DatabaseLoader
         DATABASE_WORLD = 4,
         DATABASE_HOTFIX = 8,
 
-        DATABASE_MASK_ALL = DATABASE_LOGIN | DATABASE_CHARACTER | DATABASE_WORLD | DATABASE_HOTFIX
+#ifdef MOD_PLAYERBOTS
+        DATABASE_PLAYERBOTS = 8,
+        DATABASE_MASK_ALL   = DATABASE_LOGIN | DATABASE_CHARACTER | DATABASE_WORLD | DATABASE_PLAYERBOTS
+#else
+        DATABASE_MASK_ALL   = DATABASE_LOGIN | DATABASE_CHARACTER | DATABASE_WORLD
+#endif
     };
+
+    [[nodiscard]] uint32 GetUpdateFlags() const
+    {
+        return _updateFlags;
+    }
+
+    void SetUpdateFlags(uint32 newUpdateFlags)
+    {
+        _updateFlags |= newUpdateFlags;
+    }
 
   private:
     bool OpenDatabases();
