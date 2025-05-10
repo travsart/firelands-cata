@@ -428,9 +428,10 @@ bool WStrToUtf8(std::wstring const& wstr, std::string& utf8str)
 
 typedef wchar_t const* const* wstrlist;
 
-void wstrToUpper(std::wstring& str) { std::transform(str.begin(), str.end(), str.begin(), wcharToUpper); }
-
-void wstrToLower(std::wstring& str) { std::transform(str.begin(), str.end(), str.begin(), wcharToLower); }
+void wstrToUpper(std::wstring& str) { std::transform(std::begin(str), std::end(str), std::begin(str), wcharToUpper); }
+void wstrToLower(std::wstring& str) { std::transform(std::begin(str), std::end(str), std::begin(str), wcharToLower); }
+void strToUpper(std::string& str) { std::transform(std::begin(str), std::end(str), std::begin(str), charToUpper); }
+void strToLower(std::string& str) { std::transform(std::begin(str), std::end(str), std::begin(str), charToLower); }
 
 std::wstring GetMainPartOfName(std::wstring const& wname, uint32 declension)
 {

@@ -282,6 +282,8 @@ inline wchar_t wcharToLower(wchar_t wchar)
 
 FC_COMMON_API void wstrToUpper(std::wstring& str);
 FC_COMMON_API void wstrToLower(std::wstring& str);
+FC_COMMON_API void strToLower(std::string& str);
+FC_COMMON_API void strToUpper(std::string& str);
 
 FC_COMMON_API std::wstring GetMainPartOfName(std::wstring const& wname, uint32 declension);
 
