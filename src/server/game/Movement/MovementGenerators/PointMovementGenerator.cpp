@@ -48,7 +48,7 @@ void PointMovementGenerator<T>::DoInitialize(T* owner)
     Movement::MoveSplineInit init(owner);
 
     if (_orientationInversed)
-        init.SetOrientationInversed();
+        init.SetBackward();
         
     init.MoveTo(_x, _y, _z, _generatePath);
     if (_speed > 0.0f)
