@@ -26,7 +26,7 @@ template<class T>
 class PointMovementGenerator : public MovementGeneratorMedium< T, PointMovementGenerator<T> >
 {
     public:
-        PointMovementGenerator(uint32 id, float x, float y, float z, bool generatePath, float speed = 0.0f) : _movementId(id), _x(x), _y(y), _z(z), _speed(speed), _generatePath(generatePath), _recalculateSpeed(false), _interrupt(false) { }
+        PointMovementGenerator(uint32 id, float x, float y, float z, bool generatePath, float speed = 0.0f, bool orientationInversed = false) : _movementId(id), _x(x), _y(y), _z(z), _speed(speed), _generatePath(generatePath), _recalculateSpeed(false), _interrupt(false), _orientationInversed(orientationInversed) { }
 
         MovementGeneratorType GetMovementGeneratorType() const override { return POINT_MOTION_TYPE; }
 
@@ -45,6 +45,7 @@ class PointMovementGenerator : public MovementGeneratorMedium< T, PointMovementG
         bool _generatePath;
         bool _recalculateSpeed;
         bool _interrupt;
+        bool _orientationInversed;
 };
 
 class AssistanceMovementGenerator : public PointMovementGenerator<Creature>

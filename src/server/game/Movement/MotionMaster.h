@@ -199,7 +199,10 @@ class FC_GAME_API MotionMaster
         void MovePath(uint32 pathId, bool repeatable);
         void MovePath(WaypointPath& path, bool repeatable);
         void MoveRotate(uint32 time, RotateDirection direction);
-
+#ifdef MOD_PLAYERBOTS
+        void MoveKnockbackFromForPlayer(float srcX, float srcY, float speedXY, float speedZ);
+        void MovePointBackwards(uint32 id, float x, float y, float z, bool generatePath = true, bool forceDestination = true, MovementSlot slot = MOTION_SLOT_ACTIVE, float orientation = 0.0f);
+#endif
         void MoveFormation(Unit* leader, float range, float angle, int32 point1, int32 point2);
 
         void LaunchMoveSpline(Movement::MoveSplineInit&& init, uint32 id = 0, MovementSlot slot = MOTION_SLOT_ACTIVE, MovementGeneratorType type = EFFECT_MOTION_TYPE);
