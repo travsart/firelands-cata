@@ -1019,7 +1019,7 @@ void Item::SendTimeUpdate(Player* owner)
     owner->SendDirectMessage(&data);
 }
 
-Item* Item::CreateItem(uint32 itemEntry, uint32 count, Player const* player /*= nullptr*/)
+Item* Item::CreateItem(uint32 itemEntry, uint32 count, Player const* player, bool clone, uint32 randomPropertyId, bool temp)
 {
     if (count < 1)
         return nullptr;                                        //don't create item at zero count
@@ -1033,9 +1033,16 @@ Item* Item::CreateItem(uint32 itemEntry, uint32 count, Player const* player /*= 
         ASSERT(count != 0 && "pProto->Stackable == 0 but checked at loading already");
 
         Item* item = NewItemOrBag(proto);
-        if (item->Create(sObjectMgr->GetGenerator<HighGuid::Item>().Generate(), itemEntry, player))
+        uint32 guid = temp ? 0xFFFFFFFF : sObjectMgr->GetGenerator<HighGuid::Item>().Generate();
+        if (item->Create(guid, itemEntry, player))
         {
             item->SetCount(count);
+            ItemRandomEnchantmentId enchatment = (randomPropertyId) ? 
+            ItemRandomEnchantmentId(ItemRandomEnchantmentType::Property, randomPropertyId) : GenerateItemRandomPropertyId(itemEntry);
+            if (!clone)
+                item->SetItemRandomProperties(enchatment);
+            else if (randomPropertyId)
+                item->SetItemRandomProperties(enchatment);
             return item;
         }
         else

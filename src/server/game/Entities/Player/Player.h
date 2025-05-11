@@ -656,7 +656,7 @@ enum PlayerSlots
 
 #define INVENTORY_SLOT_BAG_0 255
 
-enum EquipmentSlots : uint8  // 19 slots
+enum EquipmentSlots : uint32  // 19 slots
 {
     EQUIPMENT_SLOT_START = 0,
     EQUIPMENT_SLOT_HEAD = 0,
@@ -2367,6 +2367,7 @@ class FC_GAME_API Player : public Unit, public GridObject<Player>
     void JoinedChannel(Channel* c);
     void LeftChannel(Channel* c);
     void CleanupChannels();
+    bool IsInChannel(const Channel* c);
     void UpdateLocalChannels(uint32 newZone);
     void LeaveLFGChannel();
 
@@ -2999,6 +3000,7 @@ class FC_GAME_API Player : public Unit, public GridObject<Player>
     Optional<uint8> GetFirstUnusedPetSlot();
     void DeleteFromPlayerPetDataStore(uint32 petNumber);
     void AddToPlayerPetDataStore(PlayerPetData* playerPetData);
+    void ResetSpeakTimers();
 
    protected:
     // Gamemaster whisper whitelist

@@ -11969,6 +11969,8 @@ void Unit::PlayOneShotAnimKitId(uint16 animKitId)
                     if (summoner->ToCreature() && summoner->IsAIEnabled())
                         summoner->ToCreature()->AI()->SummonedCreatureDies(creature, attacker);
 
+            sScriptMgr->OnPlayerbotCheckKillTask(player, victim);
+
             // Dungeon specific stuff, only applies to players killing creatures
             if (creature->GetInstanceId())
             {
@@ -12787,6 +12789,14 @@ void Unit::SendPlaySpellVisualKit(uint32 id, uint32 type, uint32 duration) const
     packet.KitType = type;
     packet.Duration = duration;
     SendMessageToSet(packet.Write(), IsPlayer());
+}
+
+void Unit::SendPlaySpellVisual(ObjectGuid guid, uint32 id)
+{
+    WorldPacket data(SMSG_PLAY_SPELL_VISUAL, 8 + 4);
+    data << guid;
+    data << uint32(id); // SpellVisualKit.dbc index
+    SendMessageToSet(&data, true);
 }
 
 void Unit::SendPlaySpellVisual(uint32 spellVisualId, Unit const* target /*= nullptr*/, Optional<Position> targetPosition /*= {}*/, float travelSpeed /*= 0.f*/, uint16 missReason /*= 0*/,
@@ -15462,4 +15472,20 @@ void Unit::SendMapObjectEvents(int32 mapObjectId, std::vector<uint8> values)
     mapObjectEvent.UniqueID = mapObjectId;
     mapObjectEvent.Events = values;
     map->SendToPlayers(mapObjectEvent.Write());
+}
+
+
+void Unit::SetCannotReachTargetUnit(bool cannotReach, bool isChase)
+{
+    if (cannotReach == m_cannotReachTarget)
+    {
+        return;
+    }
+
+    m_cannotReachTarget = cannotReach;
+}
+
+bool Unit::CanNotReachTarget() const
+{
+    return m_cannotReachTarget;
 }

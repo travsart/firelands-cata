@@ -3280,6 +3280,16 @@ bool Player::IsCurrentSpecMasterySpell(SpellInfo const* spellInfo) const
 
 void Player::LearnSpell(uint32 spell_id, bool dependent, uint32 fromSkill /*= 0*/)
 {
+    // Xinef: don't allow to learn active spell once more
+    if (HasActiveSpell(spell_id))
+    {
+#ifndef MOD_PLAYERBOTS
+        LOG_DEBUG("entities.player", "Player ({}) tries to learn already active spell: {}", GetGUID().ToString(), spell_id);
+#endif
+        return;
+    }
+    
+
     PlayerSpellMap::iterator itr = m_spells.find(spell_id);
 
     bool disabled = (itr != m_spells.end()) ? itr->second.disabled : false;
@@ -4757,6 +4767,15 @@ void Player::CleanupChannels()
         }
     }
     LOG_DEBUG("chat.system", "Player::CleanupChannels: Channels of player '%s' (%s) cleaned up.", GetName().c_str(), GetGUID().ToString().c_str());
+}
+
+// Playerbot helper if bot talks in a different locale
+bool Player::IsInChannel(const Channel* c)
+{
+    return std::any_of(m_channels.begin(), m_channels.end(), [c](const Channel* chan)
+    {
+        return c->GetChannelId() == chan->GetChannelId();
+    });
 }
 
 void Player::UpdateLocalChannels(uint32 newZone)
