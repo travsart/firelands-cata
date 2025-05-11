@@ -908,6 +908,11 @@ public:
 
     void ClearExpiredNews();
 
+    uint32 _GetRankRights(uint8 rankId) const;
+    bool _HasRankRight(Player const* player, uint32 right) const;
+    bool _MemberHasTabRights(ObjectGuid guid, uint8 tabId, uint32 rights) const;
+
+
 protected:
     ObjectGuid::LowType m_id;
     std::string m_name;
@@ -945,7 +950,6 @@ private:
     inline uint8 _GetRanksSize() const { return uint8(m_ranks.size()); }
     inline const RankInfo* GetRankInfo(uint8 rankId) const { return rankId < _GetRanksSize() ? &m_ranks[rankId] : nullptr; }
     inline RankInfo* GetRankInfo(uint8 rankId) { return rankId < _GetRanksSize() ? &m_ranks[rankId] : nullptr; }
-    bool _HasRankRight(Player const* player, uint32 right) const;
 
     inline uint8 _GetLowestRankId() const { return uint8(m_ranks.size() - 1); }
 
@@ -994,7 +998,7 @@ private:
     void _SetRankBankMoneyPerDay(uint8 rankId, uint32 moneyPerDay);
     void _SetRankBankTabRightsAndSlots(uint8 rankId, GuildBankRightsAndSlots rightsAndSlots, bool saveToDB = true);
     int8 _GetRankBankTabRights(uint8 rankId, uint8 tabId) const;
-    uint32 _GetRankRights(uint8 rankId) const;
+    
     uint32 _GetRankBankMoneyPerDay(uint8 rankId) const;
     int32 _GetRankBankTabSlotsPerDay(uint8 rankId, uint8 tabId) const;
     std::string _GetRankName(uint8 rankId) const;
@@ -1002,7 +1006,6 @@ private:
     int32 _GetMemberRemainingSlots(Member const* member, uint8 tabId) const;
     int64 _GetMemberRemainingMoney(Member const* member) const;
     void _UpdateMemberWithdrawSlots(CharacterDatabaseTransaction& trans, ObjectGuid guid, uint8 tabId);
-    bool _MemberHasTabRights(ObjectGuid guid, uint8 tabId, uint32 rights) const;
 
     void _LogEvent(GuildEventLogTypes eventType, ObjectGuid::LowType playerGuid1, ObjectGuid::LowType playerGuid2 = 0, uint8 newRank = 0);
     void _LogBankEvent(CharacterDatabaseTransaction& trans, GuildBankEventLogTypes eventType, uint8 tabId, ObjectGuid::LowType playerGuid, uint64 itemOrMoney, uint16 itemStackCount = 0, uint8 destTabId = 0);
