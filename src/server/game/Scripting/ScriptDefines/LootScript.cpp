@@ -15,28 +15,24 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _DURATION_H_
-#define _DURATION_H_
+#include "LootScript.h"
+#include "ScriptMgr.h"
+#include "ScriptMgrMacros.h"
 
-#include <chrono>
+void ScriptMgr::OnLootMoney(Player* player, uint32 gold)
+{
+    ASSERT(player);
 
-/// Milliseconds shorthand typedef.
-typedef std::chrono::milliseconds Milliseconds;
+    CALL_ENABLED_HOOKS(LootScript, LOOTHOOK_ON_LOOT_MONEY, script->OnLootMoney(player, gold));
+}
 
-/// Seconds shorthand typedef.
-typedef std::chrono::seconds Seconds;
+LootScript::LootScript(const char* name, std::vector<uint16> enabledHooks)
+    : ScriptObject(name, LOOTHOOK_END)
+{
+    // If empty - enable all available hooks.
+    if (enabledHooks.empty())
+        for (uint16 i = 0; i < LOOTHOOK_END; ++i)
+            enabledHooks.emplace_back(i);
 
-/// Minutes shorthand typedef.
-typedef std::chrono::minutes Minutes;
-
-/// Hours shorthand typedef.
-typedef std::chrono::hours Hours;
-
-/// Makes std::chrono_literals globally available.
-using namespace std::chrono_literals;
-
-/// time_point shorthand typedefs
-using TimePoint = std::chrono::steady_clock::time_point;
-using SystemTimePoint = std::chrono::system_clock::time_point;
-
-#endif // _DURATION_H_
+    ScriptRegistry<LootScript>::AddScript(this, std::move(enabledHooks));
+}

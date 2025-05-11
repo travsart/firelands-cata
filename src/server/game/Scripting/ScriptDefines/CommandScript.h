@@ -15,28 +15,20 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _DURATION_H_
-#define _DURATION_H_
+#ifndef SCRIPT_OBJECT_COMMAND_SCRIPT_H_
+#define SCRIPT_OBJECT_COMMAND_SCRIPT_H_
 
-#include <chrono>
+#include "ScriptObject.h"
+#include <vector>
 
-/// Milliseconds shorthand typedef.
-typedef std::chrono::milliseconds Milliseconds;
+class CommandScript : public ScriptObject
+{
+protected:
+    CommandScript(const char* name);
 
-/// Seconds shorthand typedef.
-typedef std::chrono::seconds Seconds;
+public:
+    // Should return a pointer to a valid command table (ChatCommand array) to be used by ChatHandler.
+    [[nodiscard]] virtual std::vector<Firelands::ChatCommands::ChatCommandBuilder> GetCommands() const = 0;
+};
 
-/// Minutes shorthand typedef.
-typedef std::chrono::minutes Minutes;
-
-/// Hours shorthand typedef.
-typedef std::chrono::hours Hours;
-
-/// Makes std::chrono_literals globally available.
-using namespace std::chrono_literals;
-
-/// time_point shorthand typedefs
-using TimePoint = std::chrono::steady_clock::time_point;
-using SystemTimePoint = std::chrono::system_clock::time_point;
-
-#endif // _DURATION_H_
+#endif

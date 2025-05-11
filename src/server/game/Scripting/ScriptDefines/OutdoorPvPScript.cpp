@@ -15,28 +15,22 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _DURATION_H_
-#define _DURATION_H_
+#include "OutdoorPvPScript.h"
+#include "OutdoorPvPMgr.h"
+#include "ScriptMgr.h"
 
-#include <chrono>
+OutdoorPvP* ScriptMgr::CreateOutdoorPvP(OutdoorPvPData const* data)
+{
+    ASSERT(data);
 
-/// Milliseconds shorthand typedef.
-typedef std::chrono::milliseconds Milliseconds;
+    auto tempScript = ScriptRegistry<OutdoorPvPScript>::GetScriptById(data->ScriptId);
+    return tempScript ? tempScript->GetOutdoorPvP() : nullptr;
+}
 
-/// Seconds shorthand typedef.
-typedef std::chrono::seconds Seconds;
+OutdoorPvPScript::OutdoorPvPScript(const char* name)
+    : ScriptObject(name)
+{
+    ScriptRegistry<OutdoorPvPScript>::AddScript(this);
+}
 
-/// Minutes shorthand typedef.
-typedef std::chrono::minutes Minutes;
-
-/// Hours shorthand typedef.
-typedef std::chrono::hours Hours;
-
-/// Makes std::chrono_literals globally available.
-using namespace std::chrono_literals;
-
-/// time_point shorthand typedefs
-using TimePoint = std::chrono::steady_clock::time_point;
-using SystemTimePoint = std::chrono::system_clock::time_point;
-
-#endif // _DURATION_H_
+template class FC_GAME_API ScriptRegistry<OutdoorPvPScript>;

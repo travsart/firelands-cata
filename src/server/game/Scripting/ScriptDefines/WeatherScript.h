@@ -15,28 +15,21 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _DURATION_H_
-#define _DURATION_H_
+#ifndef SCRIPT_OBJECT_WEATHER_SCRIPT_H_
+#define SCRIPT_OBJECT_WEATHER_SCRIPT_H_
 
-#include <chrono>
+#include "ScriptObject.h"
 
-/// Milliseconds shorthand typedef.
-typedef std::chrono::milliseconds Milliseconds;
+class WeatherScript : public ScriptObject, public UpdatableScript<Weather>
+{
+protected:
+    WeatherScript(const char* name);
 
-/// Seconds shorthand typedef.
-typedef std::chrono::seconds Seconds;
+public:
+    [[nodiscard]] bool IsDatabaseBound() const override { return true; }
 
-/// Minutes shorthand typedef.
-typedef std::chrono::minutes Minutes;
+    // Called when the weather changes in the zone, this script is associated with.
+    virtual void OnChange(Weather* /*weather*/, WeatherState /*state*/, float /*grade*/) { }
+};
 
-/// Hours shorthand typedef.
-typedef std::chrono::hours Hours;
-
-/// Makes std::chrono_literals globally available.
-using namespace std::chrono_literals;
-
-/// time_point shorthand typedefs
-using TimePoint = std::chrono::steady_clock::time_point;
-using SystemTimePoint = std::chrono::system_clock::time_point;
-
-#endif // _DURATION_H_
+#endif

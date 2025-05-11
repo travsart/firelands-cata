@@ -15,28 +15,22 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _DURATION_H_
-#define _DURATION_H_
+#include "AchievementCriteriaScript.h"
+#include "ScriptMgr.h"
 
-#include <chrono>
+bool ScriptMgr::OnCriteriaCheck(uint32 scriptId, Player* source, Unit* target, uint32 criteria_id)
+{
+    ASSERT(source);
+    // target can be nullptr.
 
-/// Milliseconds shorthand typedef.
-typedef std::chrono::milliseconds Milliseconds;
+    auto tempScript = ScriptRegistry<AchievementCriteriaScript>::GetScriptById(scriptId);
+    return tempScript ? tempScript->OnCheck(source, target, criteria_id) : false;
+}
 
-/// Seconds shorthand typedef.
-typedef std::chrono::seconds Seconds;
+AchievementCriteriaScript::AchievementCriteriaScript(char const* name) :
+    ScriptObject(name)
+{
+    ScriptRegistry<AchievementCriteriaScript>::AddScript(this);
+}
 
-/// Minutes shorthand typedef.
-typedef std::chrono::minutes Minutes;
-
-/// Hours shorthand typedef.
-typedef std::chrono::hours Hours;
-
-/// Makes std::chrono_literals globally available.
-using namespace std::chrono_literals;
-
-/// time_point shorthand typedefs
-using TimePoint = std::chrono::steady_clock::time_point;
-using SystemTimePoint = std::chrono::system_clock::time_point;
-
-#endif // _DURATION_H_
+template class FC_GAME_API ScriptRegistry<AchievementCriteriaScript>;

@@ -15,28 +15,33 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _DURATION_H_
-#define _DURATION_H_
+#ifndef SCRIPT_OBJECT_LOOT_SCRIPT_H_
+#define SCRIPT_OBJECT_LOOT_SCRIPT_H_
 
-#include <chrono>
+#include "ScriptObject.h"
+#include <vector>
 
-/// Milliseconds shorthand typedef.
-typedef std::chrono::milliseconds Milliseconds;
+enum LootHook
+{
+    LOOTHOOK_ON_LOOT_MONEY,
+    LOOTHOOK_END
+};
 
-/// Seconds shorthand typedef.
-typedef std::chrono::seconds Seconds;
+class LootScript : public ScriptObject
+{
+protected:
+    LootScript(const char* name, std::vector<uint16> enabledHooks = std::vector<uint16>());
 
-/// Minutes shorthand typedef.
-typedef std::chrono::minutes Minutes;
+public:
+    [[nodiscard]] bool IsDatabaseBound() const override { return false; }
 
-/// Hours shorthand typedef.
-typedef std::chrono::hours Hours;
+    /**
+     * @brief This hook called before money loot
+     *
+     * @param player Contains information about the Player
+     * @param gold Contains information about money
+     */
+    virtual void OnLootMoney(Player* /*player*/, uint32 /*gold*/) { }
+};
 
-/// Makes std::chrono_literals globally available.
-using namespace std::chrono_literals;
-
-/// time_point shorthand typedefs
-using TimePoint = std::chrono::steady_clock::time_point;
-using SystemTimePoint = std::chrono::system_clock::time_point;
-
-#endif // _DURATION_H_
+#endif

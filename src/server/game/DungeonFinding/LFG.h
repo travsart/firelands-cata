@@ -107,11 +107,389 @@ struct LfgLockInfoData
     float currentItemLevel;
 };
 
+class Lfg5Guids;
+
+typedef std::list<Lfg5Guids> Lfg5GuidsList;
 typedef std::set<uint32> LfgDungeonSet;
 typedef std::map<uint32, LfgLockInfoData> LfgLockMap;
 typedef std::map<ObjectGuid, LfgLockMap> LfgLockPartyMap;
 typedef std::map<ObjectGuid, uint8> LfgRolesMap;
 typedef std::map<ObjectGuid, ObjectGuid> LfgGroupsMap;
+
+class Lfg5Guids
+    {
+    public:
+        std::array<ObjectGuid, 5> guids = { };
+        LfgRolesMap* roles;
+        Lfg5Guids()
+        {
+            guids.fill(ObjectGuid::Empty);
+            roles = nullptr;
+        }
+
+        Lfg5Guids(ObjectGuid g)
+        {
+            guids.fill(ObjectGuid::Empty);
+            guids[0] = g;
+            roles = nullptr;
+        }
+
+        Lfg5Guids(Lfg5Guids const& x)
+        {
+            guids = x.guids;
+            roles = x.roles ? (new LfgRolesMap(*(x.roles))) : nullptr;
+        }
+
+        Lfg5Guids(Lfg5Guids const& x, bool /*copyRoles*/)
+        {
+            guids = x.guids;
+            roles = nullptr;
+        }
+
+        ~Lfg5Guids() { delete roles; }
+        void addRoles(LfgRolesMap const& r) { roles = new LfgRolesMap(r); }
+        void clear() { guids.fill(ObjectGuid::Empty); }
+        [[nodiscard]] bool empty() const { return guids[0] == ObjectGuid::Empty; }
+        [[nodiscard]] ObjectGuid front() const { return guids[0]; }
+
+        [[nodiscard]] uint8 size() const
+        {
+            if (guids[2])
+            {
+                if (guids[4])
+                {
+                    return 5;
+                }
+                else if (guids[3])
+                {
+                    return 4;
+                }
+
+                return 3;
+            }
+            else if (guids[1])
+            {
+                return 2;
+            }
+            else if (guids[0])
+            {
+                return 1;
+            }
+
+            return 0;
+        }
+
+        void insert(const ObjectGuid& g)
+        {
+            // avoid loops for performance
+            if (!guids[0])
+            {
+                guids[0] = g;
+                return;
+            }
+
+            if (g <= guids[0])
+            {
+                if (guids[3])
+                {
+                    guids[4] = guids[3];
+                }
+
+                if (guids[2])
+                {
+                    guids[3] = guids[2];
+                }
+
+                if (guids[1])
+                {
+                    guids[2] = guids[1];
+                }
+
+                guids[1] = guids[0];
+                guids[0] = g;
+
+                return;
+            }
+
+            if (!guids[1])
+            {
+                guids[1] = g;
+                return;
+            }
+
+            if (g <= guids[1])
+            {
+                if (guids[3])
+                {
+                    guids[4] = guids[3];
+                }
+
+                if (guids[2])
+                {
+                    guids[3] = guids[2];
+                }
+
+                guids[2] = guids[1];
+                guids[1] = g;
+
+                return;
+            }
+
+            if (!guids[2])
+            {
+                guids[2] = g;
+                return;
+            }
+
+            if (g <= guids[2])
+            {
+                if (guids[3])
+                {
+                    guids[4] = guids[3];
+                }
+
+                guids[3] = guids[2];
+                guids[2] = g;
+
+                return;
+            }
+
+            if (!guids[3])
+            {
+                guids[3] = g;
+                return;
+            }
+
+            if (g <= guids[3])
+            {
+                guids[4] = guids[3];
+                guids[3] = g;
+                return;
+            }
+
+            guids[4] = g;
+        }
+
+        void force_insert_front(const ObjectGuid& g)
+        {
+            if (guids[3])
+            {
+                guids[4] = guids[3];
+            }
+
+            if (guids[2])
+            {
+                guids[3] = guids[2];
+            }
+
+            if (guids[1])
+            {
+                guids[2] = guids[1];
+            }
+
+            guids[1] = guids[0];
+            guids[0] = g;
+        }
+
+        void remove(const ObjectGuid& g)
+        {
+            // avoid loops for performance
+            if (guids[0] == g)
+            {
+                if (guids[1])
+                {
+                    guids[0] = guids[1];
+                }
+                else
+                {
+                    guids[0].Clear();
+                    return;
+                }
+
+                if (guids[2])
+                {
+                    guids[1] = guids[2];
+                }
+                else
+                {
+                    guids[1].Clear();
+                    return;
+                }
+
+                if (guids[3])
+                {
+                    guids[2] = guids[3];
+                }
+                else
+                {
+                    guids[2].Clear();
+                    return;
+                }
+
+                if (guids[4])
+                {
+                    guids[3] = guids[4];
+                }
+                else
+                {
+                    guids[3].Clear();
+                    return;
+                }
+
+                guids[4].Clear();
+                return;
+            }
+
+            if (guids[1] == g)
+            {
+                if (guids[2])
+                {
+                    guids[1] = guids[2];
+                }
+                else
+                {
+                    guids[1].Clear();
+                    return;
+                }
+
+                if (guids[3])
+                {
+                    guids[2] = guids[3];
+                }
+                else
+                {
+                    guids[2].Clear();
+                    return;
+                }
+
+                if (guids[4])
+                {
+                    guids[3] = guids[4];
+                }
+                else
+                {
+                    guids[3].Clear();
+                    return;
+                }
+
+                guids[4].Clear();
+                return;
+            }
+
+            if (guids[2] == g)
+            {
+                if (guids[3])
+                {
+                    guids[2] = guids[3];
+                }
+                else
+                {
+                    guids[2].Clear();
+                    return;
+                }
+
+                if (guids[4])
+                {
+                    guids[3] = guids[4];
+                }
+                else
+                {
+                    guids[3].Clear();
+                    return;
+                }
+
+                guids[4].Clear();
+                return;
+            }
+
+            if (guids[3] == g)
+            {
+                if (guids[4])
+                {
+                    guids[3] = guids[4];
+                }
+                else
+                {
+                    guids[3].Clear();
+                    return;
+                }
+
+                guids[4].Clear();
+                return;
+            }
+
+            if (guids[4] == g)
+            {
+                guids[4].Clear();
+            }
+        }
+
+        [[nodiscard]] bool hasGuid(const ObjectGuid& g) const
+        {
+            return g && (guids[0] == g || guids[1] == g || guids[2] == g || guids[3] == g || guids[4] == g);
+        }
+
+        bool operator<(const Lfg5Guids& x) const
+        {
+            if (guids[0] <= x.guids[0])
+            {
+                if (guids[0] != x.guids[0])
+                {
+                    return true;
+                }
+
+                if (guids[1] <= x.guids[1])
+                {
+                    if (guids[1] != x.guids[1])
+                    {
+                        return true;
+                    }
+
+                    if (guids[2] <= x.guids[2])
+                    {
+                        if (guids[2] != x.guids[2])
+                        {
+                            return true;
+                        }
+
+                        if (guids[3] <= x.guids[3])
+                        {
+                            if (guids[3] != x.guids[3])
+                            {
+                                return true;
+                            }
+
+                            if (guids[4] <= x.guids[4])
+                            {
+                                return !(guids[4] == x.guids[4]);
+                            }
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        bool operator==(const Lfg5Guids& x) const
+        {
+            return guids[0] == x.guids[0] && guids[1] == x.guids[1] && guids[2] == x.guids[2] && guids[3] == x.guids[3] && guids[4] == x.guids[4];
+        }
+
+        void operator=(const Lfg5Guids& x)
+        {
+            guids = x.guids;
+            delete roles;
+            roles = x.roles ? (new LfgRolesMap(*(x.roles))) : nullptr;
+        }
+
+        [[nodiscard]] std::string toString() const // for debugging
+        {
+            std::ostringstream o;
+            o << guids[0].ToString() << "," << guids[1].ToString() << "," << guids[2].ToString() << "," << guids[3].ToString() << "," << guids[4].ToString() << ":" << (roles ? 1 : 0);
+            return o.str();
+        }
+    };
 
 FC_GAME_API std::string ConcatenateDungeons(LfgDungeonSet const& dungeons);
 FC_GAME_API std::string GetRolesString(uint8 roles);

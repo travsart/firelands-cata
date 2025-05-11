@@ -15,28 +15,23 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _DURATION_H_
-#define _DURATION_H_
+#include "DynamicObjectScript.h"
+#include "ScriptMgr.h"
 
-#include <chrono>
+void ScriptMgr::OnDynamicObjectUpdate(DynamicObject* dynobj, uint32 diff)
+{
+    ASSERT(dynobj);
 
-/// Milliseconds shorthand typedef.
-typedef std::chrono::milliseconds Milliseconds;
+    for (auto const& [scriptID, script] : ScriptRegistry<DynamicObjectScript>::ScriptPointerList)
+    {
+        script->OnUpdate(dynobj, diff);
+    }
+}
 
-/// Seconds shorthand typedef.
-typedef std::chrono::seconds Seconds;
+DynamicObjectScript::DynamicObjectScript(const char* name)
+    : ScriptObject(name)
+{
+    ScriptRegistry<DynamicObjectScript>::AddScript(this);
+}
 
-/// Minutes shorthand typedef.
-typedef std::chrono::minutes Minutes;
-
-/// Hours shorthand typedef.
-typedef std::chrono::hours Hours;
-
-/// Makes std::chrono_literals globally available.
-using namespace std::chrono_literals;
-
-/// time_point shorthand typedefs
-using TimePoint = std::chrono::steady_clock::time_point;
-using SystemTimePoint = std::chrono::system_clock::time_point;
-
-#endif // _DURATION_H_
+template class FC_GAME_API ScriptRegistry<DynamicObjectScript>;

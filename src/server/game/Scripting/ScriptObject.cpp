@@ -15,28 +15,29 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _DURATION_H_
-#define _DURATION_H_
+#include "ScriptObject.h"
+#include "DBCStores.h"
+#include "Log.h"
 
-#include <chrono>
+//ScriptObject::ScriptObject(char const* name) : _name(name)
+//{
+//    sScriptMgr->IncreaseScriptCount();
+//}
+//
+//ScriptObject::~ScriptObject()
+//{
+//    sScriptMgr->DecreaseScriptCount();
+//}
 
-/// Milliseconds shorthand typedef.
-typedef std::chrono::milliseconds Milliseconds;
+template<class TMap>
+void MapScript<TMap>::checkMap()
+{
+    _mapEntry = sMapStore.LookupEntry(_mapId);
 
-/// Seconds shorthand typedef.
-typedef std::chrono::seconds Seconds;
+    if (!_mapEntry)
+        LOG_ERROR("maps.script", "Invalid MapScript for {}; no such map ID.", _mapId);
+}
 
-/// Minutes shorthand typedef.
-typedef std::chrono::minutes Minutes;
-
-/// Hours shorthand typedef.
-typedef std::chrono::hours Hours;
-
-/// Makes std::chrono_literals globally available.
-using namespace std::chrono_literals;
-
-/// time_point shorthand typedefs
-using TimePoint = std::chrono::steady_clock::time_point;
-using SystemTimePoint = std::chrono::system_clock::time_point;
-
-#endif // _DURATION_H_
+template class FC_GAME_API MapScript<Map>;
+template class FC_GAME_API MapScript<InstanceMap>;
+template class FC_GAME_API MapScript<BattlegroundMap>;

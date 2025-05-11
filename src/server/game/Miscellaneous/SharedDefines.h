@@ -141,7 +141,7 @@ enum UnitClass
 
 #define PLAYER_MAX_BATTLEGROUND_QUEUES 2
 
-enum ReputationRank
+enum ReputationRank: uint8
 {
     REP_HATED = 0,
     REP_HOSTILE = 1,

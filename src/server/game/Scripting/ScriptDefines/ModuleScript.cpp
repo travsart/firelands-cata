@@ -15,28 +15,13 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _DURATION_H_
-#define _DURATION_H_
+#include "ModuleScript.h"
+#include "ScriptMgr.h"
 
-#include <chrono>
+ModuleScript::ModuleScript(const char* name)
+    : ScriptObject(name)
+{
+    ScriptRegistry<ModuleScript>::AddScript(this);
+}
 
-/// Milliseconds shorthand typedef.
-typedef std::chrono::milliseconds Milliseconds;
-
-/// Seconds shorthand typedef.
-typedef std::chrono::seconds Seconds;
-
-/// Minutes shorthand typedef.
-typedef std::chrono::minutes Minutes;
-
-/// Hours shorthand typedef.
-typedef std::chrono::hours Hours;
-
-/// Makes std::chrono_literals globally available.
-using namespace std::chrono_literals;
-
-/// time_point shorthand typedefs
-using TimePoint = std::chrono::steady_clock::time_point;
-using SystemTimePoint = std::chrono::system_clock::time_point;
-
-#endif // _DURATION_H_
+template class FC_GAME_API ScriptRegistry<ModuleScript>;

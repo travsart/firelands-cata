@@ -15,28 +15,26 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _DURATION_H_
-#define _DURATION_H_
+#ifndef SCRIPT_OBJECT_MAIL_SCRIPT_H_
+#define SCRIPT_OBJECT_MAIL_SCRIPT_H_
 
-#include <chrono>
+#include "ScriptObject.h"
+#include <vector>
 
-/// Milliseconds shorthand typedef.
-typedef std::chrono::milliseconds Milliseconds;
+enum MailHook
+{
+    MAILHOOK_ON_BEFORE_MAIL_DRAFT_SEND_MAIL_TO,
+    MAILHOOK_END
+};
 
-/// Seconds shorthand typedef.
-typedef std::chrono::seconds Seconds;
+class MailScript : public ScriptObject
+{
+protected:
+    MailScript(const char* name, std::vector<uint16> enabledHooks = std::vector<uint16>());
 
-/// Minutes shorthand typedef.
-typedef std::chrono::minutes Minutes;
+public:
+    // Called before mail is sent
+    virtual void OnBeforeMailDraftSendMailTo(MailDraft* /*mailDraft*/, MailReceiver const& /*receiver*/, MailSender const& /*sender*/, MailCheckMask& /*checked*/, uint32& /*deliver_delay*/, uint32& /*custom_expiration*/, bool& /*deleteMailItemsFromDB*/, bool& /*sendMail*/) { }
+};
 
-/// Hours shorthand typedef.
-typedef std::chrono::hours Hours;
-
-/// Makes std::chrono_literals globally available.
-using namespace std::chrono_literals;
-
-/// time_point shorthand typedefs
-using TimePoint = std::chrono::steady_clock::time_point;
-using SystemTimePoint = std::chrono::system_clock::time_point;
-
-#endif // _DURATION_H_
+#endif

@@ -15,28 +15,27 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _DURATION_H_
-#define _DURATION_H_
+#ifndef SCRIPT_OBJECT_MOVEMENT_SCRIPT_H_
+#define SCRIPT_OBJECT_MOVEMENT_SCRIPT_H_
 
-#include <chrono>
+#include "Object.h"
+#include "ScriptObject.h"
+#include <vector>
 
-/// Milliseconds shorthand typedef.
-typedef std::chrono::milliseconds Milliseconds;
+enum MovementHook
+{
+    MOVEMENTHOOK_ON_PLAYER_MOVE,
+    MOVEMENTHOOK_END
+};
 
-/// Seconds shorthand typedef.
-typedef std::chrono::seconds Seconds;
+class MovementHandlerScript : public ScriptObject
+{
+protected:
+    MovementHandlerScript(const char* name, std::vector<uint16> enabledHooks = std::vector<uint16>());
 
-/// Minutes shorthand typedef.
-typedef std::chrono::minutes Minutes;
+public:
+    //Called whenever a player moves
+    virtual void OnPlayerMove(Player* /*player*/, MovementInfo /*movementInfo*/, uint32 /*opcode*/) { }
+};
 
-/// Hours shorthand typedef.
-typedef std::chrono::hours Hours;
-
-/// Makes std::chrono_literals globally available.
-using namespace std::chrono_literals;
-
-/// time_point shorthand typedefs
-using TimePoint = std::chrono::steady_clock::time_point;
-using SystemTimePoint = std::chrono::system_clock::time_point;
-
-#endif // _DURATION_H_
+#endif

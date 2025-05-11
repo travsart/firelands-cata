@@ -15,28 +15,21 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _DURATION_H_
-#define _DURATION_H_
+#ifndef SCRIPT_OBJECT_BATTLEGROUND_SCRIPT_H_
+#define SCRIPT_OBJECT_BATTLEGROUND_SCRIPT_H_
 
-#include <chrono>
+#include "ScriptObject.h"
 
-/// Milliseconds shorthand typedef.
-typedef std::chrono::milliseconds Milliseconds;
+class BattlegroundScript : public ScriptObject
+{
+protected:
+    BattlegroundScript(const char* name);
 
-/// Seconds shorthand typedef.
-typedef std::chrono::seconds Seconds;
+public:
+    [[nodiscard]] bool IsDatabaseBound() const override { return true; }
 
-/// Minutes shorthand typedef.
-typedef std::chrono::minutes Minutes;
+    // Should return a fully valid Battleground object for the type ID.
+    [[nodiscard]] virtual Battleground* GetBattleground() const = 0;
+};
 
-/// Hours shorthand typedef.
-typedef std::chrono::hours Hours;
-
-/// Makes std::chrono_literals globally available.
-using namespace std::chrono_literals;
-
-/// time_point shorthand typedefs
-using TimePoint = std::chrono::steady_clock::time_point;
-using SystemTimePoint = std::chrono::system_clock::time_point;
-
-#endif // _DURATION_H_
+#endif

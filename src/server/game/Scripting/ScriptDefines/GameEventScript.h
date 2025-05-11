@@ -15,28 +15,34 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _DURATION_H_
-#define _DURATION_H_
+#ifndef SCRIPT_OBJECT_GAME_EVENT_SCRIPT_H_
+#define SCRIPT_OBJECT_GAME_EVENT_SCRIPT_H_
 
-#include <chrono>
+#include "ScriptObject.h"
+#include <vector>
 
-/// Milliseconds shorthand typedef.
-typedef std::chrono::milliseconds Milliseconds;
+enum GameEventHook
+{
+    GAMEEVENTHOOK_ON_START,
+    GAMEEVENTHOOK_ON_STOP,
+    GAMEEVENTHOOK_ON_EVENT_CHECK,
+    GAMEEVENTHOOK_END
+};
 
-/// Seconds shorthand typedef.
-typedef std::chrono::seconds Seconds;
+class GameEventScript : public ScriptObject
+{
+protected:
+    GameEventScript(const char* name, std::vector<uint16> enabledHooks = std::vector<uint16>());
 
-/// Minutes shorthand typedef.
-typedef std::chrono::minutes Minutes;
+public:
+    // Runs on start event
+    virtual void OnStart(uint16 /*EventID*/) { }
 
-/// Hours shorthand typedef.
-typedef std::chrono::hours Hours;
+    // Runs on stop event
+    virtual void OnStop(uint16 /*EventID*/) { }
 
-/// Makes std::chrono_literals globally available.
-using namespace std::chrono_literals;
+    // Runs on event check
+    virtual void OnEventCheck(uint16 /*EventID*/) { }
+};
 
-/// time_point shorthand typedefs
-using TimePoint = std::chrono::steady_clock::time_point;
-using SystemTimePoint = std::chrono::system_clock::time_point;
-
-#endif // _DURATION_H_
+#endif

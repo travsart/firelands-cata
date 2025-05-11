@@ -221,6 +221,15 @@ template <typename T> struct ChatCommandStoreLastArg { static void store(T&, Com
 template <> struct ChatCommandStoreLastArg<char const*> { static void store(char const*& arg, CommandArgs& args) { arg = args.GetRemainingArgs(); } };
 template <> struct ChatCommandStoreLastArg<CommandArgs*> { static void store(CommandArgs*& arg, CommandArgs& args) { arg = &args; } };
 
+
+struct CommandPermissions
+{
+    CommandPermissions() : RequiredLevel{}, AllowConsole{} { }
+    CommandPermissions(uint32 securityLevel, bool console) : RequiredLevel{ securityLevel }, AllowConsole{ console } {}
+    uint32 RequiredLevel;
+    bool AllowConsole;
+};
+
 class FC_GAME_API ChatCommand
 {
     using wrapper_func = bool(void*, ChatHandler*, char const*);
