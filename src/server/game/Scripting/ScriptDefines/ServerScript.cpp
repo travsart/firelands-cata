@@ -52,6 +52,15 @@ void ScriptMgr::OnPacketReceived(WorldSession* session, WorldPacket const& packe
     });
 }
 
+void ScriptMgr::OnPacketSend(WorldSession* session, WorldPacket const& packet)
+{
+    WorldPacket copy(packet);
+    ExecuteScript<ServerScript>([&](ServerScript* script)
+    {
+        script->OnPacketSend(session, copy);
+    });
+}
+
 bool ScriptMgr::CanPacketSend(WorldSession* session, WorldPacket const& packet)
 {
     ASSERT(session);

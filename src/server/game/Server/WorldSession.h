@@ -34,6 +34,7 @@
 #include "ObjectGuid.h"
 #include "Packet.h"
 #include "SharedDefines.h"
+#include "QueryHolder.h"
 
 class BigNumber;
 class Creature;
@@ -41,7 +42,6 @@ class GameClient;
 class GameObject;
 class InstanceSave;
 class Item;
-class LoginQueryHolder;
 class Object;
 class Player;
 class Quest;
@@ -374,6 +374,11 @@ class CharacterCreateInfo {
   friend class WorldSession;
   friend class Player;
 
+  public:
+    CharacterCreateInfo(std::string const name = "", uint8 _race = 0, uint8 _class = 0, uint8 gender = 0, uint8 skin = 0, uint8 face = 0,
+        uint8 hairStyle = 0, uint8 hairColor = 0, uint8 facialHair = 0)
+        : Name(name), Race(_race), Class(_class), Gender(gender), Skin(skin), Face(face), HairStyle(hairStyle), HairColor(hairColor), FacialHair(facialHair) { }
+
  protected:
   /// User specified variables
   std::string Name;
@@ -431,7 +436,8 @@ class FC_GAME_API WorldSession {
  public:
   WorldSession(uint32 id, std::string&& name, std::shared_ptr<WorldSocket> sock,
                AccountTypes sec, uint8 expansion, time_t mute_time,
-               LocaleConstant locale, uint32 recruiter, bool isARecruiter);
+               LocaleConstant locale, uint32 recruiter, bool isARecruiter,
+               bool skipQueue, uint32 TotalTime, bool isBot);
   ~WorldSession();
 
   bool PlayerLoading() const { return !m_playerLoading.IsEmpty(); }
@@ -1318,11 +1324,29 @@ class FC_GAME_API WorldSession {
 
   uint64 GetConnectToInstanceKey() const { return _instanceConnectKey.Raw; }
 
+  void SetOfflineTime(uint32 time) { _offlineTime = time; }
+  uint32 GetOfflineTime() const { return _offlineTime; }
+  bool IsKicked() const { return _kicked; }
+  void SetKicked(bool val) { _kicked = val; }
+  bool IsSocketClosed() const;
+
+  void SetAddress(std::string const& address) { m_Address = address; }
+
  public:
   QueryCallbackProcessor& GetQueryProcessor() { return _queryProcessor; }
   TransactionCallback& AddTransactionCallback(TransactionCallback&& callback);
   SQLQueryHolderCallback& AddQueryHolderCallback(
       SQLQueryHolderCallback&& callback);
+
+  void InitializeSession();
+  void InitializeSessionCallback(CharacterDatabaseQueryHolder const& realmHolder, uint32 clientCacheVersion);
+
+  LockedQueue<WorldPacket*>& GetPacketQueue();
+
+  [[nodiscard]] bool IsBot() const
+  {
+      return _isBot;
+  }
 
   // Compact Unit Frames (4.x)
   void HandleSaveCUFProfiles(WorldPacket& recvPacket);
@@ -1398,10 +1422,12 @@ class FC_GAME_API WorldSession {
   // Remote Adress - we can not set attempted ip for a non-existing session!
 
   AccountTypes _security;
+  bool _skipQueue;
   uint32 _accountId;
   std::string _accountName;
   uint8 m_accountExpansion;
   uint8 m_expansion;
+  uint32 m_total_time;
 
   // Warden
   Warden* _warden;  // Remains nullptr if Warden system is not enabled by config
@@ -1445,6 +1471,9 @@ class FC_GAME_API WorldSession {
   uint32 expireTime;
   bool forceExit;
   ObjectGuid m_currentBankerGUID;
+  uint32 _offlineTime;
+  bool _kicked;
+  bool _isBot;
 
   boost::circular_buffer<std::pair<int64, uint32>>
       _timeSyncClockDeltaQueue;  // first member: clockDelta. Second member:

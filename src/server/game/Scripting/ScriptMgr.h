@@ -170,6 +170,7 @@ public: /* ServerScript */
     bool CanPacketReceive(WorldSession* session, WorldPacket const& packet);
     void OnPacketReceived(WorldSession* session, WorldPacket const& packet);
     bool CanPacketSend(WorldSession* session, WorldPacket const& packet);
+    void OnPacketSend(WorldSession* session, WorldPacket const& packet);
 
 public: /* WorldScript */
     void OnLoadCustomDatabaseTable();

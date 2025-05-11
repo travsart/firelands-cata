@@ -108,7 +108,8 @@ WorldSession::WorldSession(uint32 id, std::string &&name,
                            std::shared_ptr<WorldSocket> sock, AccountTypes sec,
                            uint8 expansion, time_t mute_time,
                            LocaleConstant locale, uint32 recruiter,
-                           bool isARecruiter)
+                           bool isARecruiter, bool skipQueue, 
+                           uint32 TotalTime, bool isBot)
     : m_muteTime(mute_time),
       m_timeOutTime(0),
       AntiDOS(this),
@@ -133,6 +134,9 @@ WorldSession::WorldSession(uint32 id, std::string &&name,
       _filterAddonMessages(false),
       recruiterId(recruiter),
       isRecruiter(isARecruiter),
+      m_total_time(TotalTime),
+      _isBot(isBot),
+      _skipQueue(skipQueue),
       _RBACData(nullptr),
       expireTime(60000),  // 1 min after socket loss, session is deleted
       forceExit(false),
@@ -151,6 +155,10 @@ WorldSession::WorldSession(uint32 id, std::string &&name,
     ResetTimeOutTime();
     LoginDatabase.PExecute("UPDATE account SET online = 1 WHERE id = %u;",
                            GetAccountId());  // One-time query
+  }
+  else if (isBot)
+  {
+      m_Address = "bot";
   }
 
   m_Socket = sock;
@@ -233,6 +241,10 @@ void WorldSession::SendPacket(WorldPacket const *packet,
               packet->GetOpcode(), GetPlayerInfo().c_str());
     return;
   }
+
+#ifdef MOD_PLAYERBOTS
+  sScriptMgr->OnPlayerbotPacketSent(GetPlayer(), packet);
+#endif
 
   if (!m_Socket) {
     LOG_ERROR(
@@ -387,7 +399,12 @@ bool WorldSession::Update(uint32 diff, PacketFilter &updater) {
             }
           } else if (_player->IsInWorld() &&
                      AntiDOS.EvaluateOpcode(*packet, currentTime)) {
-            sScriptMgr->OnPacketReceive(this, *packet);
+            if (!sScriptMgr->CanPacketReceive(this, *packet))
+              break;
+
+            opHandle->Call(this, *packet);
+            LogUnprocessedTail(packet);
+            sScriptMgr->OnPacketReceived(this, *packet);
             opHandle->Call(this, *packet);
           } else
             processedPackets =
@@ -408,7 +425,12 @@ bool WorldSession::Update(uint32 diff, PacketFilter &updater) {
                 "the player has not logged in yet and not recently logout");
           else if (AntiDOS.EvaluateOpcode(*packet, currentTime)) {
             // not expected _player or must checked in packet hanlder
-            sScriptMgr->OnPacketReceive(this, *packet);
+            if (!sScriptMgr->CanPacketReceive(this, *packet))
+              break;
+
+            opHandle->Call(this, *packet);
+            LogUnprocessedTail(packet);
+            sScriptMgr->OnPacketReceived(this, *packet);
             opHandle->Call(this, *packet);
           } else
             processedPackets =
@@ -421,11 +443,13 @@ bool WorldSession::Update(uint32 diff, PacketFilter &updater) {
           if (!_player)
             LogUnexpectedOpcode(packet, "STATUS_TRANSFER",
                                 "the player has not logged in yet");
-          else if (_player->IsInWorld())
-            LogUnexpectedOpcode(packet, "STATUS_TRANSFER",
-                                "the player is still in world");
-          else if (AntiDOS.EvaluateOpcode(*packet, currentTime)) {
-            sScriptMgr->OnPacketReceive(this, *packet);
+          else if (_player->IsInWorld() && AntiDOS.EvaluateOpcode(*packet, currentTime)) {
+            if (!sScriptMgr->CanPacketReceive(this, *packet))
+              break;
+
+            opHandle->Call(this, *packet);
+            LogUnprocessedTail(packet);
+            sScriptMgr->OnPacketReceived(this, *packet);
             opHandle->Call(this, *packet);
           } else
             processedPackets =
@@ -450,7 +474,12 @@ bool WorldSession::Update(uint32 diff, PacketFilter &updater) {
             m_playerRecentlyLogout = false;
 
           if (AntiDOS.EvaluateOpcode(*packet, currentTime)) {
-            sScriptMgr->OnPacketReceive(this, *packet);
+            if (!sScriptMgr->CanPacketReceive(this, *packet))
+              break;
+
+            opHandle->Call(this, *packet);
+            LogUnprocessedTail(packet);
+            sScriptMgr->OnPacketReceived(this, *packet);
             opHandle->Call(this, *packet);
           } else
             processedPackets =
@@ -525,6 +554,10 @@ bool WorldSession::Update(uint32 diff, PacketFilter &updater) {
   // check if we are safe to proceed with logout
   // logout procedure should happen only in World::UpdateSessions() method!!!
   if (updater.ProcessUnsafe()) {
+
+#ifdef MOD_PLAYERBOTS
+    sScriptMgr->OnPlayerbotUpdateSessions(GetPlayer());
+#endif
     time_t currTime = GameTime::GetGameTime();
     ///- If necessary, log the player out
     if (ShouldLogOut(currTime) && m_playerLoading.IsEmpty()) LogoutPlayer(true);
@@ -561,6 +594,10 @@ void WorldSession::LogoutPlayer(bool save) {
     if (ObjectGuid lguid = _player->GetLootGUID()) {
       DoLootRelease(lguid);
     }
+
+#ifdef MOD_PLAYERBOTS
+    sScriptMgr->OnPlayerbotLogout(_player);
+#endif
 
     ///- If the player just died before logging out, make him appear as a ghost
     if (_player->GetDeathTimer()) {
@@ -1655,4 +1692,54 @@ bool WorldSession::IsRightUnitBeingMoved(ObjectGuid guid) {
   }
 
   return true;
+}
+
+void WorldSession::InitializeSession()
+{
+    uint32 cacheVersion = sWorld->getIntConfig(CONFIG_CLIENTCACHE_VERSION);
+    sScriptMgr->OnBeforeFinalizePlayerWorldSession(cacheVersion);
+
+    std::shared_ptr<AccountInfoQueryHolderPerRealm> realmHolder = std::make_shared<AccountInfoQueryHolderPerRealm>();
+    if (!realmHolder->Initialize(GetAccountId()))
+    {
+        SendAuthResponse(AUTH_SYSTEM_ERROR, false);
+        return;
+    }
+
+    AddQueryHolderCallback(CharacterDatabase.DelayQueryHolder(realmHolder)).AfterComplete([this, cacheVersion](SQLQueryHolderBase const& holder)
+    {
+        InitializeSessionCallback(static_cast<AccountInfoQueryHolderPerRealm const&>(holder), cacheVersion);
+    });
+}
+
+void WorldSession::InitializeSessionCallback(CharacterDatabaseQueryHolder const& realmHolder, uint32 clientCacheVersion)
+{
+    LoadAccountData(realmHolder.GetPreparedResult(AccountInfoQueryHolderPerRealm::GLOBAL_ACCOUNT_DATA), GLOBAL_CACHE_MASK);
+    LoadTutorialsData(realmHolder.GetPreparedResult(AccountInfoQueryHolderPerRealm::TUTORIALS));
+
+    if (!m_inQueue)
+    {
+      SendAuthResponse(AUTH_OK, 1);
+    }
+    else
+    {
+      SendAuthResponse(AUTH_WAIT_QUEUE, 6);
+    }
+
+    SetInQueue(false);
+    ResetTimeOutTime();
+
+    SendAddonsInfo();
+    SendClientCacheVersion(clientCacheVersion);
+    SendTutorialsData();
+}
+
+LockedQueue<WorldPacket*>& WorldSession::GetPacketQueue()
+{
+    return _recvQueue;
+}
+
+bool WorldSession::IsSocketClosed() const
+{
+    return !m_Socket || !m_Socket->IsOpen();
 }
