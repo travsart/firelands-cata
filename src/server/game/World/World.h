@@ -864,6 +864,11 @@ class FC_GAME_API World
         // used World DB version
         void LoadDBVersion();
         char const* GetDBVersion() const { return m_DBVersion.c_str(); }
+        virtual SQLQueryHolderCallback& AddQueryHolderCallback(SQLQueryHolderCallback&& callback);
+
+#ifdef MOD_PLAYERBOTS
+        [[nodiscard]] char const* GetPlayerbotsDBRevision() const override { return m_PlayerbotsDBRevision.c_str(); }
+#endif
 
         void LoadAutobroadcasts();
 
@@ -974,6 +979,10 @@ class FC_GAME_API World
         // used versions
         std::string m_DBVersion;
 
+#ifdef MOD_PLAYERBOTS
+        std::string m_PlayerbotsDBRevision;
+#endif
+
         typedef std::map<uint8, std::string> AutobroadcastsMap;
         AutobroadcastsMap m_Autobroadcasts;
 
@@ -986,6 +995,7 @@ class FC_GAME_API World
         void DoGuidWarningRestart();
         void DoGuidAlertRestart();
         QueryCallbackProcessor _queryProcessor;
+        AsyncCallbackProcessor<SQLQueryHolderCallback> _queryHolderProcessor;
 
         std::string _guidWarningMsg;
         std::string _alertRestartReason;
