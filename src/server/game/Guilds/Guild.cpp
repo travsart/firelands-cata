@@ -1725,6 +1725,12 @@ void Guild::HandleSetEmblem(WorldSession* session, EmblemInfo const& emblemInfo)
     }
 }
 
+void Guild::HandleSetEmblem(EmblemInfo const& emblemInfo)
+{
+    m_emblemInfo = emblemInfo;
+    m_emblemInfo.SaveToDB(m_id);
+}
+
 void Guild::HandleSetNewGuildMaster(WorldSession* session, std::string const& name, bool isSelfPromote)
 {
     Player* player = session->GetPlayer();
@@ -1812,7 +1818,31 @@ void Guild::HandleSetRankInfo(WorldSession* session, uint8 rankId, std::string c
         for (auto itr = rightsAndSlots.begin(); itr != rightsAndSlots.end(); ++itr)
             _SetRankBankTabRightsAndSlots(rankId, *itr);
 
-        _BroadcastEvent(GE_RANK_UPDATED, ObjectGuid::Empty, std::to_string(rankId).c_str(), name.c_str());
+        _BroadcastEvent(GE_RANK_UPDATED, ObjectGuid::Empty, 
+            std::to_string(rankId).c_str(), name.c_str());
+    }
+}
+
+void Guild::HandleSetRankInfo(uint8 rankId, uint32 rights, std::string name, uint32 moneyPerDay)
+{
+    if (RankInfo* rankInfo = GetRankInfo(rankId))
+    {
+        if (!name.empty())
+        {
+            rankInfo->SetName(name);
+        }
+
+        if (rights > 0)
+        {
+            rankInfo->SetRights(rights);
+        }
+
+        if (moneyPerDay > 0)
+        {
+            _SetRankBankMoneyPerDay(rankId, moneyPerDay);
+        }
+        _BroadcastEvent(GE_RANK_UPDATED, ObjectGuid::Empty, 
+            std::to_string(rankId).c_str(), name.c_str());
     }
 }
 
@@ -2849,8 +2879,13 @@ void Guild::MassInviteToEvent(WorldSession* session, uint32 minLevel, uint32 max
 bool Guild::_HasRankRight(Player const* player, uint32 right) const
 {
     if (player)
+    {
         if (Member const* member = GetMember(player->GetGUID()))
+        {
             return (_GetRankRights(member->GetRankId()) & right) != GR_RIGHT_EMPTY;
+        }
+    }
+
     return false;
 }
 
@@ -3372,6 +3407,8 @@ inline void Guild::_UpdateMemberWithdrawSlots(CharacterDatabaseTransaction& tran
     if (Member* member = GetMember(guid))
         member->UpdateBankTabWithdrawValue(trans, tabId, 1);
 }
+
+
 
 inline bool Guild::_MemberHasTabRights(ObjectGuid guid, uint8 tabId, uint32 rights) const
 {

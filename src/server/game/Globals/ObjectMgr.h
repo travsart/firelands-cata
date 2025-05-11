@@ -1110,6 +1110,7 @@ class FC_GAME_API ObjectMgr
         void LoadGraveyardZones();
         GraveyardData const* FindGraveyardData(uint32 id, uint32 zone) const;
 
+        AreaTriggerContainer const& GetAllAreaTriggerTeleports() const { return _areaTriggerStore; };
         AreaTriggerStruct const* GetAreaTrigger(uint32 trigger) const;
         AccessRequirement const* GetAccessRequirement(uint32 mapid, Difficulty difficulty) const;
         AreaTriggerStruct const* GetGoBackTrigger(uint32 Map) const;

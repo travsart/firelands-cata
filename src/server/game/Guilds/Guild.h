@@ -278,7 +278,6 @@ class FC_GAME_API EmblemInfo
 {
 public:
     EmblemInfo() : m_style(0), m_color(0), m_borderStyle(0), m_borderColor(0), m_backgroundColor(0) { }
-
     void LoadFromDB(Field* fields);
     void SaveToDB(ObjectGuid::LowType guildId) const;
     void ReadPacket(WorldPacket& recv);
@@ -790,10 +789,12 @@ public:
     void HandleSetMOTD(WorldSession* session, std::string const& motd);
     void HandleSetInfo(WorldSession* session, std::string const& info);
     void HandleSetEmblem(WorldSession* session, EmblemInfo const& emblemInfo);
+    void HandleSetEmblem(EmblemInfo const& emblemInfo);
     void HandleSetNewGuildMaster(WorldSession* session, std::string const& name, bool isSelfPromote);
     void HandleSetBankTabInfo(WorldSession* session, uint8 tabId, std::string const& name, std::string const& icon);
     void HandleSetMemberNote(WorldSession* session, std::string const& note, ObjectGuid guid, bool isPublic);
     void HandleSetRankInfo(WorldSession* session, uint8 rankId, std::string const& name, uint32 rights, uint32 moneyPerDay, GuildBankRightsAndSlotsVec const& rightsAndSlots);
+    void HandleSetRankInfo(uint8 rankId, uint32 rights = 0, std::string name = "", uint32 moneyPerDay = 0);
     void HandleBuyBankTab(WorldSession* session, uint8 tabId);
     void HandleInviteMember(WorldSession* session, std::string const& name);
     void HandleAcceptMember(WorldSession* session);
