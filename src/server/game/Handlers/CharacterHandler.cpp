@@ -64,18 +64,9 @@
 #include "WorldSession.h"
 #include "boost/asio/ip/address.hpp"
 
-class LoginQueryHolder : public CharacterDatabaseQueryHolder
+LoginQueryHolder::LoginQueryHolder(uint32 accountId, ObjectGuid guid) : m_accountId(accountId), m_guid(guid)
 {
-  private:
-    uint32 m_accountId;
-    ObjectGuid m_guid;
-
-  public:
-    LoginQueryHolder(uint32 accountId, ObjectGuid guid) : m_accountId(accountId), m_guid(guid) {}
-    ObjectGuid GetGuid() const { return m_guid; }
-    uint32 GetAccountId() const { return m_accountId; }
-    bool Initialize();
-};
+}
 
 bool LoginQueryHolder::Initialize()
 {
@@ -826,7 +817,7 @@ void WorldSession::HandleLoadScreenOpcode(WorldPackets::Character::LoadingScreen
 void WorldSession::HandlePlayerLogin(LoginQueryHolder const& holder)
 {
     ObjectGuid playerGuid = holder.GetGuid();
-
+    
     Player* pCurrChar = new Player(this);
     // for send server info and strings (config)
     ChatHandler chH = ChatHandler(pCurrChar->GetSession());

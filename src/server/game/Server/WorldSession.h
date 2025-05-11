@@ -315,6 +315,20 @@ enum TutorialsFlag : uint8 {
   TUTORIALS_FLAG_LOADED_FROM_DB = 0x02
 };
 
+class LoginQueryHolder : public CharacterDatabaseQueryHolder
+{
+    private:
+        uint32 m_accountId;
+        ObjectGuid m_guid;
+
+    public:
+        LoginQueryHolder(uint32 accountId, ObjectGuid guid);
+
+        ObjectGuid GetGuid() const { return m_guid; }
+        uint32 GetAccountId() const { return m_accountId; }
+        bool Initialize();
+};
+
 // class to deal with packet processing
 // allows to determine if next packet is safe to be processed
 class PacketFilter {
