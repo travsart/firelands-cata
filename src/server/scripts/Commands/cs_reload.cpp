@@ -52,7 +52,7 @@ class reload_commandscript : public CommandScript
 public:
     reload_commandscript() : CommandScript("reload_commandscript") { }
 
-    std::vector<ChatCommand> GetCommands() const override
+    ChatCommandTable GetCommands() const override
     {
         static std::vector<ChatCommand> reloadAllCommandTable =
         {

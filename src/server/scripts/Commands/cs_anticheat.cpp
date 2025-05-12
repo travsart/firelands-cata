@@ -43,7 +43,7 @@ class anticheat_commandscript : public CommandScript
 public:
     anticheat_commandscript() : CommandScript("anticheat_commandscript") { }
 
-    std::vector<ChatCommand> GetCommands() const override
+    ChatCommandTable GetCommands() const override
     {
         static std::vector<ChatCommand> anticheatCommandTable =
         {

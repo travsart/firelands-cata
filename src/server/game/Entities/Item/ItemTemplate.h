@@ -731,4 +731,21 @@ struct FC_GAME_API ItemTemplate
     bool GetWeaponDamage(Player const* owner, float& minValue, float& maxValue, float& dps) const;
 };
 
+struct ItemLocale
+{
+    std::vector<std::string> Name;
+    std::vector<std::string> Description;
+};
+
+struct ItemSetNameEntry
+{
+    std::string name;
+    uint32 InventoryType;
+};
+
+struct ItemSetNameLocale
+{
+    std::vector<std::string> Name;
+};
+
 #endif

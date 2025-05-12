@@ -62,7 +62,7 @@ class misc_commandscript : public CommandScript
     {
     }
 
-    std::vector<ChatCommand> GetCommands() const override
+    ChatCommandTable GetCommands() const override
     {
         static std::vector<ChatCommand> commandTable = {
             {"additem", rbac::RBAC_PERM_COMMAND_ADDITEM, false, &HandleAddItemCommand, ""},

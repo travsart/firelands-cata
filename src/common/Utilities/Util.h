@@ -24,6 +24,13 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <algorithm>
+#include <boost/core/demangle.hpp>
+#include <cctype>
+#include <cstdarg>
+#include <sstream>
+#include <string>
+#include <utf8.h>
 
 class FC_COMMON_API Tokenizer
 {
@@ -105,6 +112,21 @@ inline bool Utf8toWStr(const std::string& utf8str, wchar_t* wstr, size_t& wsize)
     return Utf8toWStr(utf8str.c_str(), utf8str.size(), wstr, wsize);
 }
 
+inline bool Utf8toWStr(std::string_view utf8str, std::wstring& wstr)
+{
+    wstr.clear();
+    try
+    {
+        utf8::utf8to16(utf8str.begin(), utf8str.end(), std::back_inserter(wstr));
+    }
+    catch (std::exception const&)
+    {
+        wstr.clear();
+        return false;
+    }
+
+    return true;
+}
 FC_COMMON_API bool WStrToUtf8(std::wstring const& wstr, std::string& utf8str);
 // size==real string size
 FC_COMMON_API bool WStrToUtf8(wchar_t const* wstr, size_t size, std::string& utf8str);

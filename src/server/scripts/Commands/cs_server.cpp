@@ -24,6 +24,7 @@ EndScriptData */
 
 #include "ScriptMgr.h"
 #include "Chat.h"
+#include "CommandScript.h"
 #include "Config.h"
 #include "DatabaseEnv.h"
 #include "DatabaseLoader.h"
@@ -31,6 +32,7 @@ EndScriptData */
 #include "GitRevision.h"
 #include "Language.h"
 #include "Log.h"
+#include "ModuleMgr.h"
 #include "MySQLThreading.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
@@ -55,7 +57,7 @@ class server_commandscript : public CommandScript
 public:
     server_commandscript() : CommandScript("server_commandscript") { }
 
-    std::vector<ChatCommand> GetCommands() const override
+    ChatCommandTable GetCommands() const override
     {
         static std::vector<ChatCommand> serverIdleRestartCommandTable =
         {
@@ -244,9 +246,49 @@ public:
                 availableLocales += " ";
         }
 
+        std::string lldb = "No updates found!";
+        if (QueryResult resL = LoginDatabase.Query("SELECT name FROM updates ORDER BY name DESC LIMIT 1"))
+        {
+            Field* fields = resL->Fetch();
+            lldb = fields[0].GetString();
+        }
+        std::string lcdb = "No updates found!";
+        if (QueryResult resC = CharacterDatabase.Query("SELECT name FROM updates ORDER BY name DESC LIMIT 1"))
+        {
+            Field* fields = resC->Fetch();
+            lcdb = fields[0].GetString();
+        }
+        std::string lwdb = "No updates found!";
+        if (QueryResult resW = WorldDatabase.Query("SELECT name FROM updates ORDER BY name DESC LIMIT 1"))
+        {
+            Field* fields = resW->Fetch();
+            lwdb = fields[0].GetString();
+        }
+
         handler->PSendSysMessage("Using %s DBC Locale as default. All available DBC locales: %s", localeNames[defaultLocale], availableLocales.c_str());
 
-        handler->PSendSysMessage("Using World DB: %s", sWorld->GetDBVersion());
+        handler->PSendSysMessage("Latest LoginDatabase update: {}", lldb);
+        handler->PSendSysMessage("Latest CharacterDatabase update: {}", lcdb);
+        handler->PSendSysMessage("Latest WorldDatabase update: {}", lwdb);
+
+        handler->PSendSysMessage("LoginDatabase queue size: {}", LoginDatabase.QueueSize());
+        handler->PSendSysMessage("CharacterDatabase queue size: {}", CharacterDatabase.QueueSize());
+        handler->PSendSysMessage("WorldDatabase queue size: {}", WorldDatabase.QueueSize());
+#ifdef MOD_PLAYERBOTS
+        handler->PSendSysMessage("PlayerbotsDatabase queue size: {}", PlayerbotsDatabase.QueueSize());
+#endif
+        
+
+        if (Firelands::Module::GetEnableModulesList().empty())
+            handler->PSendSysMessage("No modules are enabled");
+        else
+            handler->PSendSysMessage("List of enabled modules:");
+
+        for (auto const& modName : Firelands::Module::GetEnableModulesList())
+        {
+            handler->PSendSysMessage("|- {}", modName);
+        }
+
         return true;
     }
 

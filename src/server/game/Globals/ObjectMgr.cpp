@@ -8727,6 +8727,29 @@ GameTele const* ObjectMgr::GetGameTele(const std::string& name) const
     return alt;
 }
 
+GameTele const* ObjectMgr::GetGameTele(std::string_view name, bool exactSearch) const
+{
+    // explicit name case
+    std::wstring wname;
+    if (!Utf8toWStr(name, wname))
+        return nullptr;
+
+    // converting string that we try to find to lower case
+    wstrToLower(wname);
+
+    // Alternative first GameTele what contains wnameLow as substring in case no GameTele location found
+    const GameTele* alt = nullptr;
+    for (GameTeleContainer::const_iterator itr = _gameTeleStore.begin(); itr != _gameTeleStore.end(); ++itr)
+    {
+        if (itr->second.wnameLow == wname)
+            return &itr->second;
+        else if (!exactSearch && !alt && itr->second.wnameLow.find(wname) != std::wstring::npos)
+            alt = &itr->second;
+    }
+
+    return alt;
+}
+
 GameTele const* ObjectMgr::GetGameTeleExactName(const std::string& name) const
 {
     // explicit name case
