@@ -26,6 +26,16 @@ enum class AnimationTier : uint8;
 
 namespace Movement
 {
+    // xinef: moved declaration here so it can be accessed out of MoveSplineInit.cpp
+    UnitMoveType SelectSpeedType(uint32 moveFlags);
+
+    enum AnimType
+    {
+        ToGround    = 0, // 460 = ToGround, index of AnimationData.dbc
+        FlyToFly    = 1, // 461 = FlyToFly?
+        ToFly       = 2, // 458 = ToFly
+        FlyToGround = 3  // 463 = FlyToGround
+    };
     // Transforms coordinates from global to transport offsets
     class FC_GAME_API TransportPathTransform
     {
@@ -37,6 +47,21 @@ namespace Movement
     private:
         Unit* _owner;
         bool _transformForTransport;
+    };
+
+    // Xinef: transforms z coordinate with hover offset
+    class HoverMovementTransform
+    {
+    public:
+        HoverMovementTransform(float z_offset) : _offset(z_offset) { }
+        Vector3 operator()(Vector3 input)
+        {
+            input.z += _offset;
+            return input;
+        }
+
+    private:
+        float _offset;
     };
 
     /*  Initializes and launches spline movement
@@ -134,7 +159,7 @@ namespace Movement
         /* Exits transport. Disabled by default
          */
         void SetTransportExit();
-
+        
         /* Inverses unit model orientation. Disabled by default
          */
         void SetBackward();

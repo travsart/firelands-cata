@@ -22,6 +22,7 @@
 #include "Duration.h"
 #include "GridReference.h"
 #include "GridRefManager.h"
+#include "Map.h"
 #include "ModelIgnoreFlags.h"
 #include "MovementInfo.h"
 #include "ObjectDefines.h"

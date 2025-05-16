@@ -45,6 +45,8 @@
 #define MAX_AGGRO_RESET_TIME 10 // in seconds
 #define MAX_AGGRO_RADIUS 45.0f  // yards
 
+constexpr float DEFAULT_FOLLOW_ANGLE = float(M_PI / 2);
+
 enum VictimState
 {
     VICTIMSTATE_INTACT = 0, // set when attacker misses
@@ -797,7 +799,7 @@ class FC_GAME_API Unit : public WorldObject
 
   public:
     typedef std::set<Unit*> AttackerSet;
-    typedef std::set<Unit*> ControlList;
+    typedef std::set<Unit*> ControlSet;
     typedef std::vector<Unit*> UnitVector;
 
     typedef std::multimap<uint32, Aura*> AuraMap;
@@ -880,6 +882,34 @@ class FC_GAME_API Unit : public WorldObject
     
     uint32 m_extraAttacks;
     bool m_canDualWield;
+
+    ControlSet m_Controlled;
+
+    SafeUnitPointer m_movedByPlayer;
+
+    ObjectGuid m_SummonSlot[MAX_SUMMON_SLOT];
+    ObjectGuid m_ObjectSlot[MAX_GAMEOBJECT_SLOT];
+
+    float m_modMeleeHitChance;
+    float m_modRangedHitChance;
+    float m_modSpellHitChance;
+    int32 m_baseSpellCritChance;
+
+    float m_threatModifier[MAX_SPELL_SCHOOL];
+    float m_modAttackSpeedPct[3];
+
+    SpellImmuneList m_spellImmune[MAX_SPELL_IMMUNITY];
+    uint32 m_lastSanctuaryTime;
+
+    // pet auras
+    typedef std::set<PetAura const*> PetAuraSet;
+    PetAuraSet m_petAuras;
+
+    bool IsAIEnabled;
+    bool NeedChangeAI;
+
+    bool m_ControlledByPlayer;
+    bool m_CreatedByPlayer;
 
     void _addAttacker(Unit* pAttacker);    // must be called only from Unit::Attack(Unit*)
     void _removeAttacker(Unit* pAttacker); // must be called only from Unit::AttackStop()
@@ -1026,6 +1056,13 @@ class FC_GAME_API Unit : public WorldObject
     void SetStandFlags(uint8 flags) { SetByteFlag(UNIT_FIELD_BYTES_1, UNIT_BYTES_1_OFFSET_VIS_FLAG, flags); }
     void RemoveStandFlags(uint8 flags) { RemoveByteFlag(UNIT_FIELD_BYTES_1, UNIT_BYTES_1_OFFSET_VIS_FLAG, flags); }
 
+    // DeathState
+    DeathState getDeathState() { return m_deathState; };
+    virtual void setDeathState(DeathState s, bool despawn = false);           // overwrited in Creature/Player/Pet
+    [[nodiscard]] bool IsAlive() const { return (m_deathState == DeathState::ALIVE); };
+    [[nodiscard]] bool isDying() const { return (m_deathState == DeathState::JUST_DIED); };
+    [[nodiscard]] bool isDead() const { return (m_deathState == DeathState::DEAD || m_deathState == DeathState::CORPSE); };
+
     bool IsMounted() const { return HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_MOUNT); }
     uint32 GetMountID() const { return GetUInt32Value(UNIT_FIELD_MOUNTDISPLAYID); }
     void Mount(uint32 mount, uint32 vehicleId = 0, uint32 creatureEntry = 0);
@@ -1163,10 +1200,56 @@ class FC_GAME_API Unit : public WorldObject
     bool HasBreakableByDamageAuraType(AuraType type, uint32 excludeAura = 0) const;
     bool HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel = nullptr) const;
 
-    bool HasStealthAura() const { return HasAuraType(SPELL_AURA_MOD_STEALTH); }
-    bool HasInvisibilityAura() const { return HasAuraType(SPELL_AURA_MOD_INVISIBILITY); }
-    bool isFeared() const { return HasAuraType(SPELL_AURA_MOD_FEAR); }
-    bool isInRoots() const { return HasAuraType(SPELL_AURA_MOD_ROOT); }
+    // Spell Aura helpers
+    [[nodiscard]] bool HasGhostAura()               const { return HasAuraType(SPELL_AURA_GHOST); };
+    [[nodiscard]] bool HasMountedAura()             const { return HasAuraType(SPELL_AURA_MOUNTED); };
+    [[nodiscard]] bool HasWaterWalkAura()           const { return HasAuraType(SPELL_AURA_WATER_WALK); };
+    [[nodiscard]] bool HasFeatherFallAura()         const { return HasAuraType(SPELL_AURA_FEATHER_FALL); };
+    [[nodiscard]] bool HasHoverAura()               const { return HasAuraType(SPELL_AURA_HOVER); };
+    [[nodiscard]] bool HasFlyAura()                 const { return HasAuraType(SPELL_AURA_FLY); };
+    [[nodiscard]] bool HasSpiritOfRedemptionAura()  const { return HasAuraType(SPELL_AURA_SPIRIT_OF_REDEMPTION); };
+    [[nodiscard]] bool HasPreventsFleeingAura()     const { return HasAuraType(SPELL_AURA_PREVENTS_FLEEING); };
+    [[nodiscard]] bool HasPreventDurabilityLossAura()  const { return HasAuraType(SPELL_AURA_PREVENT_DURABILITY_LOSS); };
+    [[nodiscard]] bool HasPreventResurectionAura()  const { return HasAuraType(SPELL_AURA_PREVENT_RESURRECTION); };
+    [[nodiscard]] bool HasTransformAura()           const { return HasAuraType(SPELL_AURA_TRANSFORM); };
+    [[nodiscard]] bool HasInterruptRegenAura()      const { return HasAuraType(SPELL_AURA_INTERRUPT_REGEN); };
+    [[nodiscard]] bool HasNoPVPCreditAura()         const { return HasAuraType(SPELL_AURA_NO_PVP_CREDIT); };
+    [[nodiscard]] bool HasWaterBreathingAura()      const { return HasAuraType(SPELL_AURA_WATER_BREATHING); };
+    [[nodiscard]] bool HasIgnoreHitDirectionAura()  const { return HasAuraType(SPELL_AURA_IGNORE_HIT_DIRECTION); };
+    [[nodiscard]] bool HasSpellMagnetAura()         const { return HasAuraType(SPELL_AURA_SPELL_MAGNET); };
+    [[nodiscard]] bool HasOpenStableAura()          const { return HasAuraType(SPELL_AURA_OPEN_STABLE); };
+    [[nodiscard]] bool HasCloneCasterAura()         const { return HasAuraType(SPELL_AURA_CLONE_CASTER); };
+    [[nodiscard]] bool HasReflectSpellsAura()       const { return HasAuraType(SPELL_AURA_REFLECT_SPELLS); };
+    [[nodiscard]] bool HasDetectAmoreAura()         const { return HasAuraType(SPELL_AURA_DETECT_AMORE); };
+    [[nodiscard]] bool HasAllowOnlyAbilityAura()    const { return HasAuraType(SPELL_AURA_ALLOW_ONLY_ABILITY); };
+    [[nodiscard]] bool HasPeriodicDummyAura()       const { return HasAuraType(SPELL_AURA_PERIODIC_DUMMY); };
+    [[nodiscard]] bool HasControlVehicleAura()      const { return HasAuraType(SPELL_AURA_CONTROL_VEHICLE); };
+    [[nodiscard]] bool HasAOECharmAura()            const { return HasAuraType(SPELL_AURA_AOE_CHARM); };
+    [[nodiscard]] bool HasDetectSpellsAura()        const { return HasAuraType(SPELL_AURA_DEFLECT_SPELLS); };
+    [[nodiscard]] bool HasPacifySilenceAura()       const { return HasAuraType(SPELL_AURA_MOD_PACIFY_SILENCE); }
+    [[nodiscard]] bool HasSilenceAura()             const { return HasAuraType(SPELL_AURA_MOD_SILENCE); }
+    [[nodiscard]] bool HasShapeshiftAura()          const { return HasAuraType(SPELL_AURA_MOD_SHAPESHIFT); }
+    [[nodiscard]] bool HasDecreaseSpeedAura()       const { return HasAuraType(SPELL_AURA_MOD_DECREASE_SPEED); }
+    [[nodiscard]] bool HasPacifyAura()              const { return HasAuraType(SPELL_AURA_MOD_PACIFY); }
+    [[nodiscard]] bool HasIgnoreTargetResistAura()  const { return HasAuraType(SPELL_AURA_MOD_IGNORE_TARGET_RESIST); }
+    [[nodiscard]] bool HasIncreaseMountedSpeedAura() const { return HasAuraType(SPELL_AURA_MOD_INCREASE_MOUNTED_SPEED); }
+    [[nodiscard]] bool HasIncreaseMountedFlightSpeedAura() const { return HasAuraType(SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED); }
+    [[nodiscard]] bool HasThreatAura()              const { return HasAuraType(SPELL_AURA_MOD_THREAT); }
+    [[nodiscard]] bool HasAttackerSpellCritChanceAura() const { return HasAuraType(SPELL_AURA_MOD_ATTACKER_SPELL_CRIT_CHANCE); }
+    [[nodiscard]] bool HasUnattackableAura()        const { return HasAuraType(SPELL_AURA_MOD_UNATTACKABLE); }
+    [[nodiscard]] bool HasHealthRegenInCombatAura() const { return HasAuraType(SPELL_AURA_MOD_HEALTH_REGEN_IN_COMBAT); }
+    [[nodiscard]] bool HasRegenDuringCombatAura()   const { return HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT); }
+    [[nodiscard]] bool HasFearAura()                const { return HasAuraType(SPELL_AURA_MOD_FEAR); }
+    [[nodiscard]] bool HasConfuseAura()             const { return HasAuraType(SPELL_AURA_MOD_CONFUSE); }
+    [[nodiscard]] bool HasRootAura()                const { return HasAuraType(SPELL_AURA_MOD_ROOT); }
+    [[nodiscard]] bool HasStunAura()                const { return HasAuraType(SPELL_AURA_MOD_STUN); }
+    [[nodiscard]] bool HasTauntAura()               const { return HasAuraType(SPELL_AURA_MOD_TAUNT); }
+    [[nodiscard]] bool HasStealthAura()             const { return HasAuraType(SPELL_AURA_MOD_STEALTH); }
+    [[nodiscard]] bool HasStealthDetectAura()       const { return HasAuraType(SPELL_AURA_MOD_STEALTH_DETECT); }
+    [[nodiscard]] bool HasInvisibilityAura()        const { return HasAuraType(SPELL_AURA_MOD_INVISIBILITY); }
+    [[nodiscard]] bool HasInvisibilityDetectAura()  const { return HasAuraType(SPELL_AURA_MOD_INVISIBILITY_DETECT); }
+
+
     bool IsPolymorphed() const;
 
     bool isFrozen() const;
@@ -1704,6 +1787,10 @@ class FC_GAME_API Unit : public WorldObject
 
     // Makes the unit follow the given target. Use this function above using the MotionMaster::MoveFollow for default follow behaivior.
     void FollowTarget(Unit* target);
+     // Followers
+    void addFollower(FollowerReference* pRef) { m_FollowingRefMgr.insertFirst(pRef); }
+    void removeFollower(FollowerReference* /*pRef*/) { /* nothing to do yet */ }
+    [[nodiscard]] virtual float GetFollowAngle() const { return DEFAULT_FOLLOW_ANGLE; }
 
     FormationFollowerGUIDContainer GetFormationFollowers() { return _formationFollowers; }
     void AddFormationFollower(Unit* follower) { _formationFollowers.push_back(follower->GetGUID()); }
@@ -2022,6 +2109,13 @@ class FC_GAME_API Unit : public WorldObject
     TimeTrackerSmall m_splineSyncTimer;
 
     DiminishingReturn m_Diminishing[DIMINISHING_MAX];
+
+    Diminishing m_Diminishing;
+    // Manage all Units that are threatened by us
+    HostileRefMgr m_HostileRefMgr;
+
+    FollowerRefMgr m_FollowingRefMgr;
+
 
     // Threat+combat management
     bool m_isEngaged;

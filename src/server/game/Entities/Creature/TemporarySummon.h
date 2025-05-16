@@ -22,41 +22,22 @@
 
 struct SummonPropertiesEntry;
 
-enum PetEntries
+enum SummonerType
 {
-    // Warlock Pet/Minions
-    ENTRY_IMP                       = 416,
-    ENTRY_VOIDWALKER                = 1860,
-    ENTRY_SUCCUBUS                  = 1863,
-    ENTRY_FELHUNTER                 = 417,
-    ENTRY_FELGUARD                  = 17252,
-    ENTRY_INFERNAL                  = 89,
-    ENTRY_EBON_IMP                  = 50675,
-
-    // Mage Pet
-    ENTRY_WATER_ELEMENTAL           = 510,
-
-    // Druid Minion
-    ENTRY_TREANT                    = 1964,
-
-    // Shaman Minions
-    ENTRY_EARTH_ELEMENTAL           = 15352,
-    ENTRY_FIRE_ELEMENTAL            = 15438,
-    ENTRY_SPIRIT_WOLF               = 29264,
-
-    // Death Knight Pet/Minions
-    ENTRY_GHOUL                     = 26125,
-    ENTRY_RISEN_ALLY                = 30230,
-    ENTRY_BLOODWORM                 = 28017,
-    ENTRY_RUNIC_WEAPON              = 27893,
-    ENTRY_GARGOYLE                  = 27829,
-    ENTRY_SHADOWFIEND               = 19668,
-    ENTRY_ARMY_OF_THE_DEAD_GHOUL    = 24207,
-
-    // Hunter Trap Adds
-    ENTRY_VENOMOUS_SNAKE            = 19833,
-    ENTRY_VIPER                     = 19921
+    SUMMONER_TYPE_CREATURE      = 0,
+    SUMMONER_TYPE_GAMEOBJECT    = 1,
+    SUMMONER_TYPE_MAP           = 2
 };
+
+/// Stores data for temp summons
+struct TempSummonData
+{
+    uint32 entry;        ///< Entry of summoned creature
+    Position pos;        ///< Position, where should be creature spawned
+    TempSummonType type; ///< Summon type, see TempSummonType for available types
+    uint32 time;         ///< Despawn time, usable only with certain temp summon types
+};
+
 
 enum PlayerPetSpells
 {
@@ -71,7 +52,7 @@ enum PlayerPetSpells
 class FC_GAME_API TempSummon : public Creature
 {
     public:
-        explicit TempSummon(SummonPropertiesEntry const* properties, Unit* owner, bool isWorldObject);
+        explicit TempSummon(SummonPropertiesEntry const* properties, ObjectGuid owner, bool isWorldObject);
         virtual ~TempSummon() { }
         void Update(uint32 time) override;
         virtual void InitStats(uint32 lifetime);
@@ -81,11 +62,17 @@ class FC_GAME_API TempSummon : public Creature
         void RemoveFromWorld() override;
         void SetTempSummonType(TempSummonType type);
         void SaveToDB(uint32 /*mapid*/, uint8 /*spawnMask*/) override { }
-        Unit* GetSummoner() const;
-        Creature* GetSummonerCreatureBase() const;
+        [[nodiscard]] WorldObject* GetSummoner() const;
+        [[nodiscard]] Unit* GetSummonerUnit() const;
+        [[nodiscard]] Creature* GetSummonerCreatureBase() const;
+        [[nodiscard]] GameObject* GetSummonerGameObject() const;
         ObjectGuid GetSummonerGUID() const { return m_summonerGUID; }
         TempSummonType const& GetSummonType() { return m_type; }
         uint32 GetTimer() const { return m_timer; }
+        void SetTimer(uint32 t) { m_timer = t; }
+
+        void SetVisibleBySummonerOnly(bool visibleBySummonerOnly) { _visibleBySummonerOnly = visibleBySummonerOnly; }
+        [[nodiscard]] bool IsVisibleBySummonerOnly() const { return _visibleBySummonerOnly; }
 
         SummonPropertiesEntry const* const m_Properties;
     private:
@@ -93,28 +80,33 @@ class FC_GAME_API TempSummon : public Creature
         uint32 m_timer;
         uint32 m_lifetime;
         ObjectGuid m_summonerGUID;
+        bool _visibleBySummonerOnly;
 };
 
 class FC_GAME_API Minion : public TempSummon
 {
     public:
-        Minion(SummonPropertiesEntry const* properties, Unit* owner, bool isWorldObject);
+        Minion(SummonPropertiesEntry const* properties, ObjectGuid owner, bool isWorldObject);
         void InitStats(uint32 duration) override;
         void RemoveFromWorld() override;
-        Unit* GetOwner() const { return m_owner; }
-        bool IsPetGhoul() const { return GetEntry() == ENTRY_GHOUL; } // Ghoul may be guardian or pet
-        bool IsRisenAlly() const { return GetEntry() == ENTRY_RISEN_ALLY; }
-        bool IsSpiritWolf() const { return GetEntry() == ENTRY_SPIRIT_WOLF; } // Spirit wolf from feral spirits
+        [[nodiscard]] Unit* GetOwner() const;
+        [[nodiscard]] float GetFollowAngle() const override { return m_followAngle; }
+        void SetFollowAngle(float angle) { m_followAngle = angle; }
+        bool IsPetGhoul() const { return GetEntry() == NPC_GHOUL; } // Ghoul may be guardian or pet
+        bool IsRisenAlly() const { return GetEntry() == NPC_RISEN_ALLY; }
+        bool IsSpiritWolf() const { return GetEntry() == NPC_SPIRIT_WOLF; } // Spirit wolf from feral spirits
         bool IsGuardianPet() const;
         bool IsWarlockMinion() const;
+        void setDeathState(DeathState s, bool despawn = false) override;                   // override virtual Unit::setDeathState
     protected:
-        Unit* const m_owner;
+        ObjectGuid const m_owner;
+        float m_followAngle;
 };
 
 class FC_GAME_API Guardian : public Minion
 {
     public:
-        Guardian(SummonPropertiesEntry const* properties, Unit* owner, bool isWorldObject);
+        Guardian(SummonPropertiesEntry const* properties, ObjectGuid owner, bool isWorldObject);
         void InitStats(uint32 duration) override;
         bool InitStatsForLevel(uint8 level);
         void InitSummon() override;
@@ -139,11 +131,14 @@ class FC_GAME_API Guardian : public Minion
 class FC_GAME_API Puppet : public Minion
 {
     public:
-        Puppet(SummonPropertiesEntry const* properties, Unit* owner);
+        Puppet(SummonPropertiesEntry const* properties, ObjectGuid owner);
         void InitStats(uint32 duration) override;
         void InitSummon() override;
         void Update(uint32 time) override;
         void RemoveFromWorld() override;
+    protected:
+        [[nodiscard]] Player* GetOwner() const;
+        const ObjectGuid m_owner;
 };
 
 class FC_GAME_API ForcedUnsummonDelayEvent : public BasicEvent

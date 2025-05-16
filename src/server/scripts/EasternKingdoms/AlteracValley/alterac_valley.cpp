@@ -15,8 +15,9 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ScriptMgr.h"
-#include "ScriptedCreature.h"
+ #include "BattlegroundAV.h"
+ #include "CreatureScript.h"
+ #include "ScriptedCreature.h"
 
 enum Spells
 {
@@ -77,6 +78,11 @@ SpellPair const _auraPairs[MAX_SPELL_PAIRS] =
     { NPC_ICEBLOOD_WARMASTER,       SPELL_ICEBLOOD_WARMASTER }
 };
 
+enum Factions
+{
+    FACTION_AV_ALLIANCE = 1534
+};
+
 class npc_av_marshal_or_warmaster : public CreatureScript
 {
     public:
@@ -99,17 +105,70 @@ class npc_av_marshal_or_warmaster : public CreatureScript
                 Initialize();
 
                 events.Reset();
-                events.ScheduleEvent(EVENT_CHARGE_TARGET, urand(2 * IN_MILLISECONDS, 12 * IN_MILLISECONDS));
-                events.ScheduleEvent(EVENT_CLEAVE, urand(1 * IN_MILLISECONDS, 11 * IN_MILLISECONDS));
-                events.ScheduleEvent(EVENT_DEMORALIZING_SHOUT, 2000);
-                events.ScheduleEvent(EVENT_WHIRLWIND, urand(5 * IN_MILLISECONDS, 20 * IN_MILLISECONDS));
-                events.ScheduleEvent(EVENT_ENRAGE, urand(5 * IN_MILLISECONDS, 20 * IN_MILLISECONDS));
-                events.ScheduleEvent(EVENT_CHECK_RESET, 5000);
+                events.ScheduleEvent(EVENT_CHARGE_TARGET, 2s, 12s);
+                events.ScheduleEvent(EVENT_CLEAVE, 1s, 11s);
+                events.ScheduleEvent(EVENT_DEMORALIZING_SHOUT, 2s);
+                events.ScheduleEvent(EVENT_WHIRLWIND, 5s, 20s);
+                events.ScheduleEvent(EVENT_ENRAGE, 5s, 20s);
+                events.ScheduleEvent(EVENT_CHECK_RESET, 5s);
+
+                _hasAura = false;
+                _attacked = false;
             }
 
             void JustAppeared() override
             {
                 Reset();
+            }
+
+            void AttackStart(Unit* victim) override
+            {
+                ScriptedAI::AttackStart(victim);
+
+                if (!_attacked)
+                {
+                    _attacked = true;
+
+                    // Boss should attack as well
+                    if (BattlegroundMap* bgMap = me->GetMap()->ToBattlegroundMap())
+                    {
+                        if (Battleground* bg = bgMap->GetBG())
+                        {
+                            if (Creature* mainBoss = bg->GetBGCreature((me->GetFaction() == FACTION_AV_ALLIANCE ? AV_CPLACE_A_BOSS : AV_CPLACE_H_BOSS)))
+                            {
+                                if (mainBoss->IsAIEnabled() && !mainBoss->GetVictim())
+                                {
+                                    mainBoss->AI()->AttackStart(victim);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            void EnterEvadeMode(EvadeReason why) override
+            {
+                ScriptedAI::EnterEvadeMode(why);
+
+                if (_attacked)
+                {
+                    _attacked = false;
+
+                    // Evade boss
+                    if (BattlegroundMap* bgMap = me->GetMap()->ToBattlegroundMap())
+                    {
+                        if (Battleground* bg = bgMap->GetBG())
+                        {
+                            if (Creature* mainBoss = bg->GetBGCreature((me->GetFaction() == FACTION_AV_ALLIANCE ? AV_CPLACE_A_BOSS : AV_CPLACE_H_BOSS)))
+                            {
+                                if (mainBoss->IsAIEnabled && !mainBoss->IsInEvadeMode())
+                                {
+                                    mainBoss->AI()->EnterEvadeMode();
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             void UpdateAI(uint32 diff) override
@@ -178,6 +237,7 @@ class npc_av_marshal_or_warmaster : public CreatureScript
         private:
             EventMap events;
             bool _hasAura;
+            bool _attacked;
         };
 
         CreatureAI* GetAI(Creature* creature) const override

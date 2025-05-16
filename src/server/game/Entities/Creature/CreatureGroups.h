@@ -23,27 +23,47 @@
 #include <unordered_map>
 #include <map>
 
-enum GroupAIFlags
+enum class GroupAIFlags : uint16
 {
-    FLAG_AGGRO_NONE            = 0,                                                         // No creature group behavior
-    FLAG_MEMBERS_ASSIST_LEADER = 0x00000001,                                                // The member aggroes if the leader aggroes
-    FLAG_LEADER_ASSISTS_MEMBER = 0x00000002,                                                // The leader aggroes if the member aggroes
-    FLAG_MEMBERS_ASSIST_MEMBER = (FLAG_MEMBERS_ASSIST_LEADER | FLAG_LEADER_ASSISTS_MEMBER), // every member will assist if any member is attacked
-    FLAG_IDLE_IN_FORMATION     = 0x00000200,                                                // The member will follow the leader when pathing idly
-};
+    GROUP_AI_FLAG_MEMBER_ASSIST_LEADER          = 0x001,
+    GROUP_AI_FLAG_LEADER_ASSIST_MEMBER          = 0x002,
+    GROUP_AI_FLAG_EVADE_TOGETHER                = 0x004,
+    GROUP_AI_FLAG_RESPAWN_ON_EVADE              = 0x008,
+    GROUP_AI_FLAG_DONT_RESPAWN_LEADER_ON_EVADE  = 0x010,
+    GROUP_AI_FLAG_ACQUIRE_NEW_TARGET_ON_EVADE   = 0x020,
+    //GROUP_AI_FLAG_UNK5                        = 0x040,
+    //GROUP_AI_FLAG_UNK6                        = 0x080,
+    //GROUP_AI_FLAG_UNK7                        = 0x100,
+    GROUP_AI_FLAG_FOLLOW_LEADER                 = 0x200,
 
-class Creature;
-class CreatureGroup;
-class Unit;
+    GROUP_AI_FLAG_ASSIST_MASK                   = GROUP_AI_FLAG_MEMBER_ASSIST_LEADER | GROUP_AI_FLAG_LEADER_ASSIST_MEMBER,
+    GROUP_AI_FLAG_EVADE_MASK                    = GROUP_AI_FLAG_EVADE_TOGETHER | GROUP_AI_FLAG_RESPAWN_ON_EVADE,
+
+    // Used to verify valid and usable flags
+    GROUP_AI_FLAG_SUPPORTED                     = GROUP_AI_FLAG_ASSIST_MASK | GROUP_AI_FLAG_EVADE_MASK | GROUP_AI_FLAG_DONT_RESPAWN_LEADER_ON_EVADE |
+                                                  GROUP_AI_FLAG_FOLLOW_LEADER | GROUP_AI_FLAG_ACQUIRE_NEW_TARGET_ON_EVADE
+};
 
 struct FormationInfo
 {
-    uint32 LeaderGUID       = 0;
-    float FollowDistance    = 0.f;
-    float FollowAngle       = 0.f;
-    uint32 GroupAI          = 0;
-    int32 InversionPoint1   = 0;
-    int32 InversionPoint2   = 0;
+    FormationInfo() :
+        leaderGUID(0),
+        follow_dist(0.0f),
+        follow_angle(0.0f),
+        groupAI(0),
+        point_1(0),
+        point_2(0)
+    {
+    }
+
+    ObjectGuid::LowType leaderGUID;
+    float follow_dist;
+    float follow_angle;
+    uint16 groupAI;
+    uint32 point_1;
+    uint32 point_2;
+
+    bool HasGroupFlag(uint16 flag) const { return !!(groupAI & flag); }
 };
 
 typedef std::unordered_map<uint32 /*memberDBGUID*/, FormationInfo>   CreatureGroupInfoType;
@@ -63,19 +83,9 @@ class FC_GAME_API FormationMgr
         CreatureGroupInfoType CreatureGroupMap;
 };
 
-struct Position;
-
 class FC_GAME_API CreatureGroup
-{
-    private:
-        Creature* m_leader; //Important do not forget sometimes to work with pointers instead synonims :D:D
+{    public:
         typedef std::map<Creature*, FormationInfo>  CreatureGroupMemberType;
-        CreatureGroupMemberType m_members;
-
-        uint32 m_groupID;
-        bool m_Formed;
-
-    public:
         //Group cannot be created empty
         explicit CreatureGroup(uint32 id) : m_leader(nullptr), m_groupID(id), m_Formed(false) { }
         ~CreatureGroup() { }
@@ -85,14 +95,31 @@ class FC_GAME_API CreatureGroup
         bool isEmpty() const { return m_members.empty(); }
         bool isFormed() const { return m_Formed; }
         bool IsLeader(Creature const* creature) const { return m_leader == creature; }
+        const CreatureGroupMemberType& GetMembers() const { return m_members; }
+
 
         void AddMember(Creature* member);
         void RemoveMember(Creature* member);
-        void FormationReset(bool dismiss);
+        void FormationReset(bool dismiss, bool initMotionMaster);
 
         void LeaderStartedMoving();
         void MemberEngagingTarget(Creature* member, Unit* target);
         bool CanLeaderStartMoving() const;
+
+        void LeaderMoveTo(float x, float y, float z, uint32 move_type);
+        Unit* GetNewTargetForMember(Creature* member);
+        void MemberEvaded(Creature* member);
+        void RespawnFormation(bool force = false);
+        [[nodiscard]] bool IsFormationInCombat();
+        [[nodiscard]] bool IsAnyMemberAlive(bool ignoreLeader = false);
+    private:
+        Creature* m_leader; //Important do not forget sometimes to work with pointers instead synonims :D:D
+        
+        CreatureGroupMemberType m_members;
+
+        uint32 m_groupID;
+        bool m_Formed;
+
 };
 
 #define sFormationMgr FormationMgr::instance()

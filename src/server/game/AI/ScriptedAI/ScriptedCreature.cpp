@@ -53,10 +53,10 @@ void SummonList::DoZoneInCombat(uint32 entry)
     {
         Creature* summon = ObjectAccessor::GetCreature(*me, *i);
         ++i;
-        if (summon && summon->IsAIEnabled()
+        if (summon && summon->IsAIEnabled
                 && (!entry || summon->GetEntry() == entry))
         {
-            summon->AI()->DoZoneInCombat(nullptr);
+            summon->AI()->DoZoneInCombat();
         }
     }
 }
@@ -112,6 +112,19 @@ bool SummonList::HasEntry(uint32 entry) const
     return false;
 }
 
+uint32 SummonList::GetEntryCount(uint32 entry) const
+{
+    uint32 count = 0;
+    for (StorageType::const_iterator i = storage_.begin(); i != storage_.end(); ++i)
+    {
+        Creature* summon = ObjectAccessor::GetCreature(*me, *i);
+        if (summon && summon->GetEntry() == entry)
+            ++count;
+    }
+
+    return count;
+}
+
 void SummonList::DoActionImpl(int32 action, StorageType const& summons)
 {
     for (auto const& guid : summons)
@@ -122,13 +135,75 @@ void SummonList::DoActionImpl(int32 action, StorageType const& summons)
     }
 }
 
+void SummonList::Respawn()
+{
+    for (StorageType::iterator i = storage_.begin(); i != storage_.end();)
+    {
+        if (Creature* summon = ObjectAccessor::GetCreature(*me, *i))
+        {
+            summon->Respawn(true);
+            ++i;
+        }
+        else
+            i = storage_.erase(i);
+    }
+}
+
+bool SummonList::IsAnyCreatureAlive() const
+{
+    for (auto const& guid : storage_)
+    {
+        if (Creature* summon = ObjectAccessor::GetCreature(*me, guid))
+        {
+            if (summon->IsAlive())
+            {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool SummonList::IsAnyCreatureWithEntryAlive(uint32 entry) const
+{
+    for (auto const& guid : storage_)
+    {
+        if (Creature* summon = ObjectAccessor::GetCreature(*me, guid))
+        {
+            if (summon->GetEntry() == entry && summon->IsAlive())
+            {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool SummonList::IsAnyCreatureInCombat() const
+{
+    for (auto const& guid : storage_)
+    {
+        if (Creature* summon = ObjectAccessor::GetCreature(*me, guid))
+        {
+            if (summon->IsInCombat())
+            {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 ScriptedAI::ScriptedAI(Creature* creature) : CreatureAI(creature),
-    IsFleeing(false),
-    _isCombatMovementAllowed(true),
-    _checkHomeTimer(5000)
+    me(creature)
 {
     _isHeroic = me->GetMap()->IsHeroic();
     _difficulty = Difficulty(me->GetMap()->GetSpawnMode());
+    _invincible = false;
+    _canAutoAttack = true;
 }
 
 void ScriptedAI::AttackStartNoMove(Unit* who)
@@ -142,7 +217,7 @@ void ScriptedAI::AttackStartNoMove(Unit* who)
 
 void ScriptedAI::AttackStart(Unit* who)
 {
-    if (IsCombatMovementAllowed())
+    if (me->IsCombatMovementAllowed())
         CreatureAI::AttackStart(who);
     else
         AttackStartNoMove(who);

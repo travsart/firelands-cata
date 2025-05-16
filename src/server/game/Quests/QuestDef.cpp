@@ -298,6 +298,7 @@ void Quest::BuildQuestRewards(WorldPackets::Quest::QuestRewards& rewards, Player
     rewards.XP = GetXPReward(player) * sWorld->getRate(RATE_XP_QUEST);
     rewards.Title = GetCharTitleId();
     rewards.FactionFlags = GetRewardReputationMask();
+    rewards.Honor = CalculateHonorGain(GetQuestLevel());
     rewards.SpellCompletionDisplayID = GetRewSpell();
     rewards.SpellCompletionID = GetRewSpellCast();
     rewards.SkillLineID = GetRewardSkillId();
@@ -389,16 +390,18 @@ uint32 Quest::CalculateHonorGain(uint8 level) const
 
     uint32 honor = 0;
 
-    /*if (GetRewHonorAddition() > 0 || GetRewHonorMultiplier() > 0.0f)
+    if (GetRewHonorAddition() > 0 || GetRewHonorMultiplier() > 0.0f)
     {
         // values stored from 0.. for 1...
         TeamContributionPointsEntry const* tc = sTeamContributionPointsStore.LookupEntry(level);
         if (!tc)
             return 0;
+        honor = uint32(tc->value * GetRewHonorMultiplier() * 0.1000000014901161);
 
-        honor = uint32(tc->value * GetRewHonorMultiplier() * 0.1f);
+        // Xinef: exactly this is calculated above, however with higher precision...
+        //honor += Acore::Honor::hk_honor_at_level(level, GetRewHonorMultiplier());
         honor += GetRewHonorAddition();
-    }*/
+    }
 
     return honor;
 }

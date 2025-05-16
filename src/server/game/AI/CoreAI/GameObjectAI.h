@@ -22,6 +22,10 @@
 #include "ObjectGuid.h"
 #include "Optional.h"
 #include "QuestDef.h"
+#include "CreatureAI.h"
+#include "GameObject.h"
+#include "Object.h"
+#include "QuestDef.h"
 
 class GameObject;
 class Unit;
@@ -51,7 +55,7 @@ class FC_GAME_API GameObjectAI
         static int32 Permissible(GameObject const* go);
 
         // Called when the dialog status between a player and the gameobject is requested.
-        virtual Optional<QuestGiverStatus> GetDialogStatus(Player* /*player*/) { return std::nullopt; }
+        virtual Optional<QuestGiverStatus> GetDialogStatus(Player* /*player*/) { return DIALOG_STATUS_SCRIPTED_NO_STATUS; }
 
         // Called when a player opens a gossip dialog with the gameobject.
         virtual bool GossipHello(Player* /*player*/) { return false; }
@@ -85,6 +89,16 @@ class FC_GAME_API GameObjectAI
         virtual void OnStateChanged(uint32 /*state*/) { }
         virtual void EventInform(uint32 /*eventId*/) { }
         virtual void SpellHit(Unit* /*unit*/, SpellInfo const* /*spellInfo*/) { }
+
+        virtual bool CanBeSeen(Player const* /*seer*/) { return true; }
+
+        // Called when the gameobject summon successfully other creature
+        virtual void JustSummoned(Creature* /*summon*/) {}
+        virtual void SummonedCreatureDespawn(Creature* /*summon*/) {}
+
+        virtual void SummonedCreatureDies(Creature* /*summon*/, Unit* /*killer*/) {}
+
+        virtual void SummonedCreatureEvade(Creature* /*summon*/) {}
 };
 
 class FC_GAME_API NullGameObjectAI : public GameObjectAI

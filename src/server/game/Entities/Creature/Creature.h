@@ -194,7 +194,7 @@ class FC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         // override WorldObject function for proper name localization
         std::string const& GetNameForLocaleIdx(LocaleConstant locale_idx) const override;
 
-        void setDeathState(DeathState s) override;                   // override virtual Unit::setDeathState
+        void setDeathState(DeathState s, bool despawn = false) override;    // override virtual Unit::setDeathState
 
         bool LoadFromDB(ObjectGuid::LowType spawnId, Map* map, bool addToMap, bool allowDuplicate);
         void SaveToDB();
@@ -387,6 +387,52 @@ class FC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         void ResetNoNpcDamageBelowPctHealthValue() { _noNpcDamageBelowPctHealth = 0.f; }
         float GetNoNpcDamageBelowPctHealthValue() const { return _noNpcDamageBelowPctHealth; }
 
+        // Part of Evade mechanics
+        std::shared_ptr<time_t> const& GetLastLeashExtensionTimePtr() const;
+        void SetLastLeashExtensionTimePtr(std::shared_ptr<time_t> const& timer);
+        void ClearLastLeashExtensionTimePtr();
+        time_t GetLastLeashExtensionTime() const;
+        void UpdateLeashExtensionTime();
+        bool IsFreeToMove();
+        static constexpr uint32 MOVE_CIRCLE_CHECK_INTERVAL = 3000;
+        static constexpr uint32 MOVE_BACKWARDS_CHECK_INTERVAL = 2000;
+        uint32 m_moveCircleMovementTime = MOVE_CIRCLE_CHECK_INTERVAL;
+        uint32 m_moveBackwardsMovementTime = MOVE_BACKWARDS_CHECK_INTERVAL;
+
+        [[nodiscard]] bool HasSwimmingFlagOutOfCombat() const
+        {
+            return !_isMissingSwimmingFlagOutOfCombat;
+        }
+        void RefreshSwimmingFlag(bool recheck = false);
+
+        void SetAssistanceTimer(uint32 value) { m_assistanceTimer = value; }
+
+        void ModifyThreatPercentTemp(Unit* victim, int32 percent, Milliseconds duration);
+
+        /**
+         * @brief Helper to resume chasing current victim.
+         */
+        void ResumeChasingVictim() { GetMotionMaster()->MoveChase(GetVictim()); };
+
+        /**
+         * @brief Returns true if the creature is able to cast the spell.
+         */
+        bool CanCastSpell(uint32 spellID) const;
+
+        /**
+         * @brief Helper to get the creature's summoner GUID, if it is a summon
+         */
+        [[nodiscard]] ObjectGuid GetSummonerGUID() const;
+
+        // Used to control if MoveChase() is to be used or not in AttackStart(). Some creatures does not chase victims
+        // NOTE: If you use SetCombatMovement while the creature is in combat, it will do NOTHING - This only affects AttackStart
+        //       You should make the necessary to make it happen so.
+        //       Remember that if you modified _isCombatMovementAllowed (e.g: using SetCombatMovement) it will not be reset at Reset().
+        //       It will keep the last value you set.
+        void SetCombatMovement(bool allowMovement);
+        bool IsCombatMovementAllowed() const { return _isCombatMovementAllowed; }
+
+
     protected:
         bool CreateFromProto(ObjectGuid::LowType guidlow, uint32 entry, CreatureData const* data = nullptr, uint32 vehId = 0);
         bool InitEntry(uint32 entry, CreatureData const* data = nullptr);
@@ -448,6 +494,7 @@ class FC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
     private:
         void ForcedDespawn(uint32 timeMSToDespawn = 0, Seconds forceRespawnTimer = 0s);
         bool CheckNoGrayAggroConfig(uint32 playerLevel, uint32 creatureLevel) const; // No aggro from gray creatures
+        [[nodiscard]] bool CanPeriodicallyCallForAssistance() const;
 
         // Waypoint path
         uint32 _waypointPathId;
@@ -472,6 +519,24 @@ class FC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         CreatureMovementInfo _creatureMovementInfo;
 
         float _noNpcDamageBelowPctHealth;
+
+        // Shared timer between mobs who assist another.
+        // Damaging one extends leash range on all of them.
+        mutable std::shared_ptr<time_t> m_lastLeashExtensionTime;
+
+        ObjectGuid m_cannotReachTarget;
+        uint32 m_cannotReachTimer;
+
+        Spell const* _focusSpell;   ///> Locks the target during spell cast for proper facing
+
+        bool _isMissingSwimmingFlagOutOfCombat;
+
+        uint32 m_assistanceTimer;
+
+        uint32 _playerDamageReq;
+        bool _damagedByPlayer;
+        bool _isCombatMovementAllowed;
+    };
 };
 
 class FC_GAME_API AssistDelayEvent : public BasicEvent

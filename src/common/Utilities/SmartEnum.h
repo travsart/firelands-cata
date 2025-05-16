@@ -31,7 +31,7 @@
      char const* const Description;
  };
  
- namespace Acore::Impl::EnumUtilsImpl
+ namespace Firelands::Impl::EnumUtilsImpl
  {
      template <typename Enum>
      struct EnumUtils
@@ -47,20 +47,20 @@
  {
  public:
      template <typename Enum>
-     static std::size_t Count() { return Acore::Impl::EnumUtilsImpl::EnumUtils<Enum>::Count(); }
+     static std::size_t Count() { return Firelands::Impl::EnumUtilsImpl::EnumUtils<Enum>::Count(); }
      template <typename Enum>
-     static EnumText ToString(Enum value) { return Acore::Impl::EnumUtilsImpl::EnumUtils<Enum>::ToString(value); }
+     static EnumText ToString(Enum value) { return Firelands::Impl::EnumUtilsImpl::EnumUtils<Enum>::ToString(value); }
      template <typename Enum>
-     static Enum FromIndex(std::size_t index) { return Acore::Impl::EnumUtilsImpl::EnumUtils<Enum>::FromIndex(index); }
+     static Enum FromIndex(std::size_t index) { return Firelands::Impl::EnumUtilsImpl::EnumUtils<Enum>::FromIndex(index); }
      template <typename Enum>
-     static uint32 ToIndex(Enum value) { return Acore::Impl::EnumUtilsImpl::EnumUtils<Enum>::ToIndex(value);}
+     static uint32 ToIndex(Enum value) { return Firelands::Impl::EnumUtilsImpl::EnumUtils<Enum>::ToIndex(value);}
  
      template<typename Enum>
      static bool IsValid(Enum value)
      {
          try
          {
-             Acore::Impl::EnumUtilsImpl::EnumUtils<Enum>::ToIndex(value);
+             Firelands::Impl::EnumUtilsImpl::EnumUtils<Enum>::ToIndex(value);
              return true;
          }
          catch (...)
@@ -117,7 +117,7 @@
      static Iterator<Enum> End() { return Iterator<Enum>(); }
  
      template <typename Enum>
-     static Acore::IteratorPair<Iterator<Enum>> Iterate() { return { Begin<Enum>(), End<Enum>() }; }
+     static Firelands::IteratorPair<Iterator<Enum>> Iterate() { return { Begin<Enum>(), End<Enum>() }; }
  
      template <typename Enum>
      static char const* ToConstant(Enum value) { return ToString(value).Constant; }

@@ -1,9 +1,9 @@
 /*
- * This file is part of the FirelandsCore Project. See AUTHORS file for Copyright information
+ * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 2 of the License, or (at your
+ * Free Software Foundation; either version 3 of the License, or (at your
  * option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
@@ -11,7 +11,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
  * more details.
  *
- * You should have received a copy of the GNU Affero General Public License along
+ * You should have received a copy of the GNU General Public License along
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
@@ -22,13 +22,13 @@ Comment: All honor related commands
 Category: commandscripts
 EndScriptData */
 
-#include "ScriptMgr.h"
 #include "Chat.h"
+#include "CommandScript.h"
 #include "Language.h"
-#include "ObjectMgr.h"
 #include "Player.h"
-#include "RBAC.h"
 #include "WorldSession.h"
+
+using namespace Firelands::ChatCommands;
 
 class honor_commandscript : public CommandScript
 {
@@ -37,35 +37,31 @@ public:
 
     ChatCommandTable GetCommands() const override
     {
-        static std::vector<ChatCommand> honorAddCommandTable =
+        static ChatCommandTable honorAddCommandTable =
         {
-            { "kill", rbac::RBAC_PERM_COMMAND_HONOR_ADD_KILL, false, &HandleHonorAddKillCommand,         "" },
-            { "",     rbac::RBAC_PERM_COMMAND_HONOR_ADD,      false, &HandleHonorAddCommand,             "" },
+            { "kill", HandleHonorAddKillCommand, SEC_GAMEMASTER, Console::No },
+            { "",     HandleHonorAddCommand,     SEC_GAMEMASTER, Console::No }
         };
 
-        static std::vector<ChatCommand> honorCommandTable =
+        static ChatCommandTable honorCommandTable =
         {
-            { "add",    rbac::RBAC_PERM_COMMAND_HONOR_ADD,    false, nullptr,               "", honorAddCommandTable },
-            { "update", rbac::RBAC_PERM_COMMAND_HONOR_UPDATE, false, &HandleHonorUpdateCommand,          "" },
+            { "add",    honorAddCommandTable },
+            { "update", HandleHonorUpdateCommand, SEC_GAMEMASTER, Console::No }
         };
 
-        static std::vector<ChatCommand> commandTable =
+        static ChatCommandTable commandTable =
         {
-            { "honor", rbac::RBAC_PERM_COMMAND_HONOR, false, nullptr, "", honorCommandTable },
+            { "honor", honorCommandTable }
         };
         return commandTable;
     }
 
-    static bool HandleHonorAddCommand(ChatHandler* handler, char const* args)
+    static bool HandleHonorAddCommand(ChatHandler* handler, uint32 amount)
     {
-        if (!*args)
-            return false;
-
         Player* target = handler->getSelectedPlayer();
         if (!target)
         {
-            handler->SendSysMessage(LANG_PLAYER_NOT_FOUND);
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage(LANG_PLAYER_NOT_FOUND);
             return false;
         }
 
@@ -73,18 +69,16 @@ public:
         if (handler->HasLowerSecurity(target, ObjectGuid::Empty))
             return false;
 
-        uint32 amount = (uint32)atoi(args);
         target->RewardHonor(nullptr, 1, amount);
         return true;
     }
 
-    static bool HandleHonorAddKillCommand(ChatHandler* handler, char const* /*args*/)
+    static bool HandleHonorAddKillCommand(ChatHandler* handler)
     {
         Unit* target = handler->getSelectedUnit();
         if (!target)
         {
-            handler->SendSysMessage(LANG_PLAYER_NOT_FOUND);
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage(LANG_PLAYER_NOT_FOUND);
             return false;
         }
 
@@ -97,13 +91,12 @@ public:
         return true;
     }
 
-    static bool HandleHonorUpdateCommand(ChatHandler* handler, char const* /*args*/)
+    static bool HandleHonorUpdateCommand(ChatHandler* handler)
     {
         Player* target = handler->getSelectedPlayer();
         if (!target)
         {
-            handler->SendSysMessage(LANG_PLAYER_NOT_FOUND);
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage(LANG_PLAYER_NOT_FOUND);
             return false;
         }
 

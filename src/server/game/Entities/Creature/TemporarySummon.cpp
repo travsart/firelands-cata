@@ -16,27 +16,41 @@
  */
 
 #include "TemporarySummon.h"
-#include "CreatureAI.h"
-#include "DBCStructure.h"
+#include "GameObject.h"
+#include "GameObjectAI.h"
 #include "Log.h"
-#include "Map.h"
+#include "Object.h"
 #include "ObjectAccessor.h"
 #include "Pet.h"
 #include "Player.h"
+#include "ScriptMgr.h"
 
-TempSummon::TempSummon(SummonPropertiesEntry const* properties, Unit* owner, bool isWorldObject) :
+
+TempSummon::TempSummon(SummonPropertiesEntry const* properties, ObjectGuid owner, bool isWorldObject) :
 Creature(isWorldObject), m_Properties(properties), m_type(TEMPSUMMON_MANUAL_DESPAWN),
 m_timer(0), m_lifetime(0)
 {
     if (owner)
-        m_summonerGUID = owner->GetGUID();
+    {
+        m_summonerGUID = owner;
+    }
 
     m_unitTypeMask |= UNIT_MASK_SUMMON;
 }
 
-Unit* TempSummon::GetSummoner() const
+WorldObject* TempSummon::GetSummoner() const
 {
-    return m_summonerGUID ? ObjectAccessor::GetUnit(*this, m_summonerGUID) : nullptr;
+    return m_summonerGUID ? ObjectAccessor::GetWorldObject(*this, m_summonerGUID) : nullptr;
+}
+
+Unit* TempSummon::GetSummonerUnit() const
+{
+    if (WorldObject* summoner = GetSummoner())
+    {
+        return summoner->ToUnit();
+    }
+
+    return nullptr;
 }
 
 Creature* TempSummon::GetSummonerCreatureBase() const
@@ -48,7 +62,7 @@ void TempSummon::Update(uint32 diff)
 {
     Creature::Update(diff);
 
-    if (m_deathState == DEAD)
+    if (m_deathState == DeathState::DEAD)
     {
         UnSummon();
         return;
@@ -104,17 +118,22 @@ void TempSummon::Update(uint32 diff)
         case TEMPSUMMON_CORPSE_DESPAWN:
         {
             // if m_deathState is DEAD, CORPSE was skipped
-            if (m_deathState == CORPSE)
+            if (m_deathState == DeathState::CORPSE)
             {
-                UnSummon();
-                return;
+                if (m_timer <= diff)
+                {
+                    UnSummon();
+                    return;
+                }
+
+                m_timer -= diff;
             }
 
             break;
         }
         case TEMPSUMMON_TIMED_OR_CORPSE_DESPAWN:
         {
-            if (m_deathState == CORPSE)
+            if (m_deathState == DeathState::CORPSE)
             {
                 UnSummon();
                 return;
@@ -161,20 +180,30 @@ void TempSummon::InitStats(uint32 duration)
 {
     ASSERT(!IsPet());
 
+    Unit* owner = GetSummonerUnit();
+    if (owner)
+        if (Player* player = owner->ToPlayer())
+            sScriptMgr->OnPlayerBeforeTempSummonInitStats(player, this, duration);
+
     m_timer = duration;
     m_lifetime = duration;
 
     if (m_type == TEMPSUMMON_MANUAL_DESPAWN)
         m_type = (duration == 0) ? TEMPSUMMON_DEAD_DESPAWN : TEMPSUMMON_TIMED_DESPAWN;
 
-    Unit* owner = GetSummoner();
-
-    if (owner && IsTrigger() && m_spells[0])
+    if (owner)
     {
-        SetFaction(owner->GetFaction());
-        SetLevel(owner->getLevel());
-        if (owner->GetTypeId() == TYPEID_PLAYER)
-            m_ControlledByPlayer = true;
+        if (IsTrigger() && m_spells[0])
+        {
+            SetFaction(owner->GetFaction());
+            SetLevel(owner->getLevel());
+            if (owner->IsPlayer())
+                m_ControlledByPlayer = true;
+        }
+
+        if (owner->IsPlayer()) { 
+            m_CreatedByPlayer = true;
+        }
     }
 
     if (!m_Properties)
@@ -221,18 +250,33 @@ void TempSummon::InitStats(uint32 duration)
     // If property has a faction defined, use it.
     if (m_Properties->Faction)
         SetFaction(m_Properties->Faction);
+    else if (IsVehicle() && owner) // properties should be vehicle
+        SetFaction(owner->GetFaction());
 }
 
 void TempSummon::InitSummon()
 {
-    if (Unit* owner = GetSummoner())
+    WorldObject* owner = GetSummoner();
+    if (owner)
     {
-        owner->AddSummonedCreature(GetGUID(), GetEntry());
+        if (owner->IsCreature())
+        {
+            if (owner->ToCreature()->IsAIEnabled)
+            {
+                owner->ToCreature()->AI()->JustSummoned(this);
+            }
+        }
+        else if (owner->IsGameObject())
+        {
+            if (owner->ToGameObject()->AI())
+            {
+                owner->ToGameObject()->AI()->JustSummoned(this);
+            }
+        }
 
-        if (owner->GetTypeId() == TYPEID_UNIT && owner->ToCreature()->IsAIEnabled())
-            owner->ToCreature()->AI()->JustSummoned(this);
-        if (IsAIEnabled())
+        if (IsAIEnabled) {
             AI()->IsSummonedBy(owner);
+        }
     }
 }
 
@@ -256,6 +300,10 @@ void TempSummon::UnSummon(uint32 msTime)
         return;
     }
 
+    if (m_type == TEMPSUMMON_MANUAL_DESPAWN)
+        return;
+    SetTempSummonType(TEMPSUMMON_MANUAL_DESPAWN);
+
     //ASSERT(!IsPet());
     if (IsPet())
     {
@@ -264,13 +312,14 @@ void TempSummon::UnSummon(uint32 msTime)
         return;
     }
 
-    Unit* owner = GetSummoner();
-    if (owner)
+    if (WorldObject* owner = GetSummoner())
     {
-        owner->RemoveSummonedCreature(GetGUID());
-
-        if (owner->GetTypeId() == TYPEID_UNIT && owner->ToCreature()->IsAIEnabled())
+        if (owner->IsCreature() && owner->ToCreature()->IsAIEnabled) {
             owner->ToCreature()->AI()->SummonedCreatureDespawn(this);
+        }
+        else if (owner->IsGameObject() && owner->ToGameObject()->AI()) {
+            owner->ToGameObject()->AI()->SummonedCreatureDespawn(this);
+        }
     }
 
     AddObjectToRemoveList();
@@ -291,7 +340,7 @@ void TempSummon::RemoveFromWorld()
     {
         int32 slot = m_Properties->Slot;
         if (slot > 0)
-            if (Unit* owner = GetSummoner())
+            if (Unit* owner = GetSummonerUnit())
                 if (owner->m_SummonSlot[slot] == GetGUID())
                     owner->m_SummonSlot[slot].Clear();
     }
@@ -302,11 +351,12 @@ void TempSummon::RemoveFromWorld()
     Creature::RemoveFromWorld();
 }
 
-Minion::Minion(SummonPropertiesEntry const* properties, Unit* owner, bool isWorldObject)
-    : TempSummon(properties, owner, isWorldObject), m_owner(owner)
+Minion::Minion(SummonPropertiesEntry const* properties, ObjectGuid owner, bool isWorldObject) : TempSummon(properties, owner, isWorldObject)
+    , m_owner(owner)
 {
     ASSERT(m_owner);
     m_unitTypeMask |= UNIT_MASK_MINION;
+    m_followAngle = DEFAULT_FOLLOW_ANGLE;
 }
 
 void Minion::InitStats(uint32 duration)
@@ -314,17 +364,26 @@ void Minion::InitStats(uint32 duration)
     TempSummon::InitStats(duration);
     SetReactState(REACT_PASSIVE);
 
+    if (Unit* owner = GetOwner())
+    {
+        SetCreatorGUID(owner->GetGUID());
+        SetFaction(owner->GetFaction());
+    }
+
     // Controlable guardians and minions shall receive a summoner guid
-    if ((IsMinion() || IsControlableGuardian()) && !IsTotem() && !IsVehicle())
+    if ((IsMinion() || IsControlableGuardian()) && !IsTotem() && !IsVehicle()) {
         GetOwner()->SetMinion(this, true);
+    }
     else if (!IsPet() && !IsHunterPet())
     {
         GetOwner()->m_Controlled.insert(this);
 
         // Store the totem elementals in players controlled list as well to trigger aggro mechanics
-        if (GetOwner()->IsTotem())
-            if (Unit* totemOwner = GetOwner()->GetOwner())
+        if (GetOwner()->IsTotem()) {
+            if (Unit* totemOwner = GetOwner()->GetOwner()) { 
                 totemOwner->m_Controlled.insert(this);
+            }
+        }
     }
 
     if (m_Properties && m_Properties->Slot == SUMMON_SLOT_MINIPET)
@@ -342,19 +401,25 @@ void Minion::RemoveFromWorld()
 
     Unit* owner = GetOwner();
 
-    if ((IsMinion() || IsControlableGuardian()) && !IsTotem() && !IsVehicle())
+    if ((IsMinion() || IsControlableGuardian()) && !IsTotem() && !IsVehicle()) {
         owner->SetMinion(this, false);
+    }
     else if (!IsPet() && !IsHunterPet())
     {
-        if (owner->m_Controlled.find(this) != owner->m_Controlled.end())
+        if (owner->m_Controlled.find(this) != owner->m_Controlled.end()) {
             owner->m_Controlled.erase(this);
-        else
+        }
+        else {
             LOG_FATAL("entities.unit", "Minion::RemoveFromWorld: Owner %s tried to remove a non-existing controlled unit %s from controlled unit set.", owner->GetGUID().ToString().c_str(), GetGUID().ToString().c_str());
+        }
 
-        if (owner->IsTotem())
-            if (Unit* totemOwner = owner->GetOwner())
-                if (totemOwner->m_Controlled.find(this) != totemOwner->m_Controlled.end())
+        if (owner->IsTotem()) {
+            if (Unit* totemOwner = owner->GetOwner()) {
+                if (totemOwner->m_Controlled.find(this) != totemOwner->m_Controlled.end()) {
                     totemOwner->m_Controlled.erase(this);
+                }
+            }
+        }
     }
 
     TempSummon::RemoveFromWorld();
@@ -369,18 +434,43 @@ bool Minion::IsWarlockMinion() const
 {
     switch (GetEntry())
     {
-        case ENTRY_IMP:
-        case ENTRY_VOIDWALKER:
-        case ENTRY_SUCCUBUS:
-        case ENTRY_FELHUNTER:
-        case ENTRY_FELGUARD:
+        case NPC_IMP:
+        case NPC_VOIDWALKER:
+        case NPC_SUCCUBUS:
+        case NPC_FELHUNTER:
+        case NPC_FELGUARD:
             return true;
         default:
             return false;
     }
 }
 
-Guardian::Guardian(SummonPropertiesEntry const* properties, Unit* owner, bool isWorldObject) : Minion(properties, owner, isWorldObject)
+Unit* Minion::GetOwner() const
+{
+    return ObjectAccessor::GetUnit(*this, m_owner);
+}
+
+void Minion::setDeathState(DeathState s, bool despawn)
+{
+    Creature::setDeathState(s, despawn);
+
+    if (s == DeathState::JUST_DIED && IsGuardianPet()) {
+        if (Unit* owner = GetOwner()) {
+            if (owner->IsPlayer() && owner->GetMinionGUID() == GetGUID()) {
+                for (Unit::ControlSet::const_iterator itr = owner->m_Controlled.begin(); itr != owner->m_Controlled.end(); ++itr) {
+                    if ((*itr)->IsAlive() && (*itr)->GetEntry() == GetEntry())
+                    {
+                        owner->SetMinionGUID((*itr)->GetGUID());
+                        owner->SetPetGUID((*itr)->GetGUID());
+                        owner->ToPlayer()->CharmSpellInitialize();
+                    }
+                }
+            }
+        }
+    }
+}
+
+Guardian::Guardian(SummonPropertiesEntry const* properties, ObjectGuid owner, bool isWorldObject) : Minion(properties, owner, isWorldObject)
 , m_bonusSpellDamage(0)
 {
     memset(m_statFromOwner, 0, sizeof(float)*MAX_STATS);
@@ -396,10 +486,14 @@ void Guardian::InitStats(uint32 duration)
 {
     Minion::InitStats(duration);
 
-    InitStatsForLevel(GetOwner()->getLevel());
+     if (Unit* m_owner = GetOwner())
+    {
+        InitStatsForLevel(m_owner->getLevel());
 
-    if (GetOwner()->GetTypeId() == TYPEID_PLAYER && HasUnitTypeMask(UNIT_MASK_CONTROLABLE_GUARDIAN))
-        m_charmInfo->InitCharmCreateSpells();
+        if (m_owner->IsPlayer() && HasUnitTypeMask(UNIT_MASK_CONTROLABLE_GUARDIAN)) {
+            m_charmInfo->InitCharmCreateSpells();
+        }
+    }
 
     SetReactState(REACT_AGGRESSIVE);
 }
@@ -408,18 +502,18 @@ void Guardian::InitSummon()
 {
     TempSummon::InitSummon();
 
-    if (GetOwner()->GetTypeId() == TYPEID_PLAYER
-            && GetOwner()->GetMinionGUID() == GetGUID()
-            && !GetOwner()->GetCharmedGUID())
+    if (Unit* m_owner = GetOwner())
     {
-        GetOwner()->ToPlayer()->CharmSpellInitialize();
+        if (m_owner->IsPlayer() && m_owner->GetMinionGUID() == GetGUID() && !m_owner->GetCharmedGUID())
+        {
+            m_owner->ToPlayer()->CharmSpellInitialize();
+        }
     }
 }
 
-Puppet::Puppet(SummonPropertiesEntry const* properties, Unit* owner)
-    : Minion(properties, owner, false) //maybe true?
+Puppet::Puppet(SummonPropertiesEntry const* properties, ObjectGuid owner) : Minion(properties, owner, false), m_owner(owner)
 {
-    ASSERT(m_owner->GetTypeId() == TYPEID_PLAYER);
+    ASSERT(owner.IsPlayer());
     m_unitTypeMask |= UNIT_MASK_PUPPET;
 }
 
@@ -458,4 +552,9 @@ void Puppet::RemoveFromWorld()
 
     RemoveCharmedBy(nullptr);
     Minion::RemoveFromWorld();
+}
+
+Player* Puppet::GetOwner() const
+{
+    return ObjectAccessor::GetPlayer(*this, m_owner);
 }

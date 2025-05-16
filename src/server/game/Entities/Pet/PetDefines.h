@@ -18,6 +18,8 @@
 #ifndef _FIRELANDS_PET_DEFINES_H
 #define _FIRELANDS_PET_DEFINES_H
 
+enum ReactStates : uint8;
+
 enum PetType
 {
     SUMMON_PET              = 0,
@@ -78,9 +80,129 @@ enum PetTalk
     PET_TALK_ATTACK         = 1
 };
 
+enum PetLoadState
+{
+    PET_LOAD_OK                 = 0,
+    PET_LOAD_NO_RESULT          = 1,
+    PET_LOAD_ERROR              = 2
+};
+
+enum NPCEntries
+{
+    // Warlock
+    NPC_INFERNAL                = 89,
+    NPC_IMP                     = 416,
+    NPC_FELHUNTER               = 417,
+    NPC_VOIDWALKER              = 1860,
+    NPC_SUCCUBUS                = 1863,
+    NPC_DOOMGUARD               = 11859,
+    NPC_FELGUARD                = 17252,
+    NPC_EYE_OF_KILROGG          = 4277,
+    NPC_EBON_IMP                  = 50675,
+
+    // Mage
+    NPC_WATER_ELEMENTAL_TEMP    = 510,
+    NPC_MIRROR_IMAGE            = 31216,
+    NPC_WATER_ELEMENTAL_PERM    = 37994,
+
+    // Druid
+    NPC_TREANT                  = 1964,
+
+    // Priest
+    NPC_SHADOWFIEND             = 19668,
+
+    // Shaman
+    NPC_FIRE_ELEMENTAL          = 15438,
+    NPC_EARTH_ELEMENTAL         = 15352,
+    NPC_SPIRIT_WOLF             = 29264,
+
+    // Death Knight
+    NPC_GHOUL                   = 26125,
+    NPC_BLOODWORM               = 28017,
+    NPC_ARMY_OF_THE_DEAD        = 24207,
+    NPC_EBON_GARGOYLE           = 27829,
+    NPC_RISEN_ALLY              = 30230,
+    NPC_RUNIC_WEAPON            = 27893,
+    NPC_SHADOWFIEND             = 19668,
+
+    // Hunter
+    NPC_VENOMOUS_SNAKE          = 19833,
+    NPC_VIPER                   = 19921,
+
+    // Generic
+    NPC_GENERIC_IMP             = 12922,
+    NPC_GENERIC_VOIDWALKER      = 8996
+};
+
+enum PetScalingSpells
+{
+    SPELL_PET_AVOIDANCE                 = 32233,
+    SPELL_PET_SCALING_MASTER_06         = 67561, // Serverside - Pet Scaling - Master Spell 06 - Spell Hit, Expertise, Spell Penetration
+
+    // Hunter
+    SPELL_HUNTER_PET_SCALING_01         = 34902,
+    SPELL_HUNTER_PET_SCALING_02         = 34903,
+    SPELL_HUNTER_PET_SCALING_03         = 34904,
+    SPELL_HUNTER_PET_SCALING_04         = 61017, // Hit / Expertise
+
+    // Warlock
+    SPELL_WARLOCK_PET_SCALING_01        = 34947,
+    SPELL_WARLOCK_PET_SCALING_02        = 34956,
+    SPELL_WARLOCK_PET_SCALING_03        = 34957,
+    SPELL_WARLOCK_PET_SCALING_04        = 34958,
+    SPELL_WARLOCK_PET_SCALING_05        = 61013, // Hit / Expertise
+    SPELL_GLYPH_OF_FELGUARD             = 56246,
+    SPELL_GLYPH_OF_VOIDWALKER           = 56247,
+    SPELL_INFERNAL_SCALING_01           = 36186,
+    SPELL_INFERNAL_SCALING_02           = 36188,
+    SPELL_INFERNAL_SCALING_03           = 36189,
+    SPELL_INFERNAL_SCALING_04           = 36190,
+    SPELL_RITUAL_ENSLAVEMENT            = 22987,
+
+    // Shaman
+    SPELL_FERAL_SPIRIT_SPIRIT_HUNT      = 58877,
+    SPELL_FERAL_SPIRIT_SCALING_01       = 35674,
+    SPELL_FERAL_SPIRIT_SCALING_02       = 35675,
+    SPELL_FERAL_SPIRIT_SCALING_03       = 35676,
+    SPELL_FIRE_ELEMENTAL_SCALING_01     = 35665,
+    SPELL_FIRE_ELEMENTAL_SCALING_02     = 35666,
+    SPELL_FIRE_ELEMENTAL_SCALING_03     = 35667,
+    SPELL_FIRE_ELEMENTAL_SCALING_04     = 35668,
+    SPELL_EARTH_ELEMENTAL_SCALING_01    = 65225,
+    SPELL_EARTH_ELEMENTAL_SCALING_02    = 65226,
+    SPELL_EARTH_ELEMENTAL_SCALING_03    = 65227,
+    SPELL_EARTH_ELEMENTAL_SCALING_04    = 65228,
+    SPELL_ORC_RACIAL_COMMAND_SHAMAN     = 65223,
+
+    // Priest
+    SPELL_SHADOWFIEND_SCALING_01        = 35661,
+    SPELL_SHADOWFIEND_SCALING_02        = 35662,
+    SPELL_SHADOWFIEND_SCALING_03        = 35663,
+    SPELL_SHADOWFIEND_SCALING_04        = 35664,
+
+    // Druid
+    SPELL_TREANT_SCALING_01             = 35669,
+    SPELL_TREANT_SCALING_02             = 35670,
+    SPELL_TREANT_SCALING_03             = 35671,
+    SPELL_TREANT_SCALING_04             = 35672,
+
+    // Mage
+    SPELL_MAGE_PET_SCALING_01           = 35657,
+    SPELL_MAGE_PET_SCALING_02           = 35658,
+    SPELL_MAGE_PET_SCALING_03           = 35659,
+    SPELL_MAGE_PET_SCALING_04           = 35660,
+
+    // Death Knight
+    SPELL_ORC_RACIAL_COMMAND_DK         = 65221,
+    SPELL_NIGHT_OF_THE_DEAD_AVOIDANCE   = 62137,
+    SPELL_DK_PET_SCALING_01             = 54566,
+    SPELL_DK_PET_SCALING_02             = 51996,
+    SPELL_DK_PET_SCALING_03             = 61697,
+    SPELL_DK_AVOIDANCE                  = 65220,
+    SPELL_DK_ARMY_OF_THE_DEAD_PASSIVE   = 49040,
+};
+
 // Used by companions (minipets) and quest slot summons
 constexpr float DEFAULT_FOLLOW_DISTANCE = 2.5f;
 constexpr float DEFAULT_FOLLOW_DISTANCE_PET = 3.f;
-constexpr float DEFAULT_FOLLOW_ANGLE = float(M_PI);
-
 #endif

@@ -26,6 +26,7 @@ GossipMenu::GossipMenu()
 {
     _menuId = 0;
     _locale = DEFAULT_LOCALE;
+    _senderGUID.Clear();
 }
 
 GossipMenu::~GossipMenu()
@@ -201,7 +202,7 @@ void PlayerMenu::SendGossipMenu(uint32 titleTextId, ObjectGuid objectGUID)
     _interactionData.Reset();
     _interactionData.SourceGuid = objectGUID;
 
-    WorldPacket data(SMSG_GOSSIP_MESSAGE, 100);         // guess size
+    WorldPacket data(SMSG_GOSSIP_MESSAGE, 24 + _gossipMenu.GetMenuItemCount() * 100 + _questMenu.GetMenuItemCount() * 75);     // guess size
     data << uint64(objectGUID);
     data << uint32(_gossipMenu.GetMenuId());            // new 2.4.0
     data << uint32(titleTextId);
@@ -274,11 +275,13 @@ void PlayerMenu::SendPointOfInterest(uint32 id) const
 
     std::string name = poi->Name;
     LocaleConstant localeConstant = _session->GetSessionDbLocaleIndex();
-    if (localeConstant != LOCALE_enUS)
-        if (PointOfInterestLocale const* localeData = sObjectMgr->GetPointOfInterestLocale(id))
+    if (localeConstant != LOCALE_enUS) {
+        if (PointOfInterestLocale const* localeData = sObjectMgr->GetPointOfInterestLocale(id)) {
             ObjectMgr::GetLocaleString(localeData->Name, localeConstant, name);
+        }
+    }
 
-    WorldPacket data(SMSG_GOSSIP_POI, 4 + 4 + 4 + 4 + 4 + 10);  // guess size
+    WorldPacket data(SMSG_GOSSIP_POI, 4 + 4 + 4 + 4 + 4 + 20);  // guess size
     data << uint32(poi->Flags);
     data << float(poi->PositionX);
     data << float(poi->PositionY);

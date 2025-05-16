@@ -333,6 +333,8 @@ namespace WorldPackets
             int32 XP = 0;
             int32 Title = 0;
             int32 FactionFlags = 0;
+            int32 Honor = 0;  // @todo is this the correct place?
+            float honorMultiplier = 0.0f;
             int32 SpellCompletionID = 0;
             int32 SpellCompletionDisplayID = 0;
             int32 SkillLineID = 0;

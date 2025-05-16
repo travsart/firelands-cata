@@ -1,9 +1,9 @@
 /*
- * This file is part of the FirelandsCore Project. See AUTHORS file for Copyright information
+ * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 2 of the License, or (at your
+ * Free Software Foundation; either version 3 of the License, or (at your
  * option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
@@ -11,7 +11,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
  * more details.
  *
- * You should have received a copy of the GNU Affero General Public License along
+ * You should have received a copy of the GNU General Public License along
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
@@ -22,19 +22,30 @@ Comment: All ban related commands
 Category: commandscripts
 EndScriptData */
 
-#include "ScriptMgr.h"
 #include "AccountMgr.h"
+#include "BanMgr.h"
 #include "CharacterCache.h"
 #include "Chat.h"
-#include "DatabaseEnv.h"
+#include "CommandScript.h"
 #include "GameTime.h"
 #include "Language.h"
 #include "ObjectAccessor.h"
 #include "ObjectMgr.h"
 #include "Player.h"
-#include "RBAC.h"
-#include "World.h"
-#include "WorldSession.h"
+
+/// Ban function modes
+enum BanMode
+{
+    BAN_ACCOUNT,
+    BAN_CHARACTER,
+    BAN_IP
+};
+
+#if AC_COMPILER == AC_COMPILER_GNU
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
+using namespace Firelands::ChatCommands;
 
 class ban_commandscript : public CommandScript
 {
@@ -43,39 +54,44 @@ public:
 
     ChatCommandTable GetCommands() const override
     {
-        static std::vector<ChatCommand> unbanCommandTable =
+        static ChatCommandTable unbanCommandTable =
         {
-            { "account",        rbac::RBAC_PERM_COMMAND_UNBAN_ACCOUNT,       true,  &HandleUnBanAccountCommand,          "" },
-            { "character",      rbac::RBAC_PERM_COMMAND_UNBAN_CHARACTER,     true,  &HandleUnBanCharacterCommand,        "" },
-            { "playeraccount",  rbac::RBAC_PERM_COMMAND_UNBAN_PLAYERACCOUNT, true,  &HandleUnBanAccountByCharCommand,    "" },
-            { "ip",             rbac::RBAC_PERM_COMMAND_UNBAN_IP,            true,  &HandleUnBanIPCommand,               "" },
+            { "account",       HandleUnBanAccountCommand,       SEC_ADMINISTRATOR, Console::Yes },
+            { "character",     HandleUnBanCharacterCommand,     SEC_ADMINISTRATOR, Console::Yes },
+            { "playeraccount", HandleUnBanAccountByCharCommand, SEC_ADMINISTRATOR, Console::Yes },
+            { "ip",            HandleUnBanIPCommand,            SEC_ADMINISTRATOR, Console::Yes }
         };
-        static std::vector<ChatCommand> banlistCommandTable =
+
+        static ChatCommandTable banlistCommandTable =
         {
-            { "account",        rbac::RBAC_PERM_COMMAND_BANLIST_ACCOUNT,   true,  &HandleBanListAccountCommand,        "" },
-            { "character",      rbac::RBAC_PERM_COMMAND_BANLIST_CHARACTER, true,  &HandleBanListCharacterCommand,      "" },
-            { "ip",             rbac::RBAC_PERM_COMMAND_BANLIST_IP,        true,  &HandleBanListIPCommand,             "" },
+            { "account",      HandleBanListAccountCommand,   SEC_GAMEMASTER, Console::Yes },
+            { "character",    HandleBanListCharacterCommand, SEC_GAMEMASTER, Console::Yes },
+            { "ip",           HandleBanListIPCommand,        SEC_GAMEMASTER, Console::Yes }
         };
-        static std::vector<ChatCommand> baninfoCommandTable =
+
+        static ChatCommandTable baninfoCommandTable =
         {
-            { "account",        rbac::RBAC_PERM_COMMAND_BANINFO_ACCOUNT,   true,  &HandleBanInfoAccountCommand,        "" },
-            { "character",      rbac::RBAC_PERM_COMMAND_BANINFO_CHARACTER, true,  &HandleBanInfoCharacterCommand,      "" },
-            { "ip",             rbac::RBAC_PERM_COMMAND_BANINFO_IP,        true,  &HandleBanInfoIPCommand,             "" },
+            { "account",      HandleBanInfoAccountCommand,   SEC_GAMEMASTER, Console::Yes },
+            { "character",    HandleBanInfoCharacterCommand, SEC_GAMEMASTER, Console::Yes },
+            { "ip",           HandleBanInfoIPCommand,        SEC_GAMEMASTER, Console::Yes }
         };
-        static std::vector<ChatCommand> banCommandTable =
+
+        static ChatCommandTable banCommandTable =
         {
-            { "account",        rbac::RBAC_PERM_COMMAND_BAN_ACCOUNT,       true,  &HandleBanAccountCommand,            "" },
-            { "character",      rbac::RBAC_PERM_COMMAND_BAN_CHARACTER,     true,  &HandleBanCharacterCommand,          "" },
-            { "playeraccount",  rbac::RBAC_PERM_COMMAND_BAN_PLAYERACCOUNT, true,  &HandleBanAccountByCharCommand,      "" },
-            { "ip",             rbac::RBAC_PERM_COMMAND_BAN_IP,            true,  &HandleBanIPCommand,                 "" },
+            { "account",      HandleBanAccountCommand,       SEC_GAMEMASTER, Console::Yes },
+            { "character",    HandleBanCharacterCommand,     SEC_GAMEMASTER, Console::Yes },
+            { "playeraccount",HandleBanAccountByCharCommand, SEC_GAMEMASTER, Console::Yes },
+            { "ip",           HandleBanIPCommand,            SEC_GAMEMASTER, Console::Yes }
         };
-        static std::vector<ChatCommand> commandTable =
+
+        static ChatCommandTable commandTable =
         {
-            { "ban",            rbac::RBAC_PERM_COMMAND_BAN,     true,  nullptr,                                "", banCommandTable },
-            { "baninfo",        rbac::RBAC_PERM_COMMAND_BANINFO, true,  nullptr,                                "", baninfoCommandTable },
-            { "banlist",        rbac::RBAC_PERM_COMMAND_BANLIST, true,  nullptr,                                "", banlistCommandTable },
-            { "unban",          rbac::RBAC_PERM_COMMAND_UNBAN,   true,  nullptr,                                "", unbanCommandTable },
+            { "ban",     banCommandTable },
+            { "baninfo", baninfoCommandTable },
+            { "banlist", banlistCommandTable },
+            { "unban",   unbanCommandTable }
         };
+
         return commandTable;
     }
 
@@ -105,39 +121,29 @@ public:
 
         if (!normalizePlayerName(name))
         {
-            handler->SendSysMessage(LANG_PLAYER_NOT_FOUND);
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage(LANG_PLAYER_NOT_FOUND);
             return false;
         }
 
-        std::string author = handler->GetSession() ? handler->GetSession()->GetPlayerName() : "Server";
-
-        switch (sWorld->BanCharacter(name, durationStr, reasonStr, author))
+        switch (sBan->BanCharacter(name, durationStr, reasonStr, handler->GetSession() ? handler->GetSession()->GetPlayerName() : ""))
         {
             case BAN_SUCCESS:
-            {
                 if (atoi(durationStr) > 0)
                 {
-                    if (sWorld->getBoolConfig(CONFIG_SHOW_BAN_IN_WORLD))
-                        sWorld->SendWorldText(LANG_BAN_CHARACTER_YOUBANNEDMESSAGE_WORLD, author.c_str(), name.c_str(), secsToTimeString(TimeStringToSecs(durationStr), true).c_str(), reasonStr);
-                    else
-                        handler->PSendSysMessage(LANG_BAN_YOUBANNED, name.c_str(), secsToTimeString(TimeStringToSecs(durationStr), true).c_str(), reasonStr);
+                    if (!sWorld->getBoolConfig(CONFIG_SHOW_BAN_IN_WORLD))
+                        handler->PSendSysMessage(LANG_BAN_YOUBANNED, name, secsToTimeString(TimeStringToSecs(durationStr), true), reasonStr);
                 }
                 else
                 {
-                    if (sWorld->getBoolConfig(CONFIG_SHOW_BAN_IN_WORLD))
-                        sWorld->SendWorldText(LANG_BAN_CHARACTER_YOUPERMBANNEDMESSAGE_WORLD, author.c_str(), name.c_str(), reasonStr);
-                    else
-                        handler->PSendSysMessage(LANG_BAN_YOUPERMBANNED, name.c_str(), reasonStr);
+                    if (!sWorld->getBoolConfig(CONFIG_SHOW_BAN_IN_WORLD))
+                        handler->PSendSysMessage(LANG_BAN_YOUPERMBANNED, name, reasonStr);
                 }
                 break;
-            }
             case BAN_NOTFOUND:
-            {
-                handler->PSendSysMessage(LANG_BAN_NOTFOUND, "character", name.c_str());
-                handler->SetSentErrorMessage(true);
-                return false;
-            }
+                {
+                    handler->SendErrorMessage(LANG_BAN_NOTFOUND, "character", name);
+                    return false;
+                }
             default:
                 break;
         }
@@ -179,16 +185,14 @@ public:
             case BAN_ACCOUNT:
                 if (!Utf8ToUpperOnlyLatin(nameOrIP))
                 {
-                    handler->PSendSysMessage(LANG_ACCOUNT_NOT_EXIST, nameOrIP.c_str());
-                    handler->SetSentErrorMessage(true);
+                    handler->SendErrorMessage(LANG_ACCOUNT_NOT_EXIST, nameOrIP);
                     return false;
                 }
                 break;
             case BAN_CHARACTER:
                 if (!normalizePlayerName(nameOrIP))
                 {
-                    handler->SendSysMessage(LANG_PLAYER_NOT_FOUND);
-                    handler->SetSentErrorMessage(true);
+                    handler->SendErrorMessage(LANG_PLAYER_NOT_FOUND);
                     return false;
                 }
                 break;
@@ -198,24 +202,34 @@ public:
                 break;
         }
 
-        std::string author = handler->GetSession() ? handler->GetSession()->GetPlayerName() : "Server";
+        BanReturn banReturn;
 
-        switch (sWorld->BanAccount(mode, nameOrIP, durationStr, reasonStr, author))
+        switch (mode)
+        {
+            case BAN_ACCOUNT:
+                banReturn = sBan->BanAccount(nameOrIP, durationStr, reasonStr, handler->GetSession() ? handler->GetSession()->GetPlayerName() : "Console");
+                break;
+            case BAN_CHARACTER:
+                banReturn = sBan->BanAccountByPlayerName(nameOrIP, durationStr, reasonStr, handler->GetSession() ? handler->GetSession()->GetPlayerName() : "Console");
+                break;
+            case BAN_IP:
+            default:
+                banReturn = sBan->BanIP(nameOrIP, durationStr, reasonStr, handler->GetSession() ? handler->GetSession()->GetPlayerName() : "Console");
+                break;
+        }
+
+        switch (banReturn)
         {
             case BAN_SUCCESS:
                 if (atoi(durationStr) > 0)
                 {
-                    if (sWorld->getBoolConfig(CONFIG_SHOW_BAN_IN_WORLD))
-                        sWorld->SendWorldText(LANG_BAN_ACCOUNT_YOUBANNEDMESSAGE_WORLD, author.c_str(), nameOrIP.c_str(), secsToTimeString(TimeStringToSecs(durationStr), true).c_str(), reasonStr);
-                    else
-                        handler->PSendSysMessage(LANG_BAN_YOUBANNED, nameOrIP.c_str(), secsToTimeString(TimeStringToSecs(durationStr), true).c_str(), reasonStr);
+                    if (!sWorld->getBoolConfig(CONFIG_SHOW_BAN_IN_WORLD))
+                        handler->PSendSysMessage(LANG_BAN_YOUBANNED, nameOrIP, secsToTimeString(TimeStringToSecs(durationStr), true), reasonStr);
                 }
                 else
                 {
-                    if (sWorld->getBoolConfig(CONFIG_SHOW_BAN_IN_WORLD))
-                        sWorld->SendWorldText(LANG_BAN_ACCOUNT_YOUPERMBANNEDMESSAGE_WORLD, author.c_str(), nameOrIP.c_str(), reasonStr);
-                    else
-                        handler->PSendSysMessage(LANG_BAN_YOUPERMBANNED, nameOrIP.c_str(), reasonStr);
+                    if (!sWorld->getBoolConfig(CONFIG_SHOW_BAN_IN_WORLD))
+                        handler->PSendSysMessage(LANG_BAN_YOUPERMBANNED, nameOrIP, reasonStr);
                 }
                 break;
             case BAN_SYNTAX_ERROR:
@@ -224,19 +238,20 @@ public:
                 switch (mode)
                 {
                     default:
-                        handler->PSendSysMessage(LANG_BAN_NOTFOUND, "account", nameOrIP.c_str());
+                        handler->SendErrorMessage(LANG_BAN_NOTFOUND, "account", nameOrIP);
                         break;
                     case BAN_CHARACTER:
-                        handler->PSendSysMessage(LANG_BAN_NOTFOUND, "character", nameOrIP.c_str());
+                        handler->SendErrorMessage(LANG_BAN_NOTFOUND, "character", nameOrIP);
                         break;
                     case BAN_IP:
-                        handler->PSendSysMessage(LANG_BAN_NOTFOUND, "ip", nameOrIP.c_str());
+                        handler->SendErrorMessage(LANG_BAN_NOTFOUND, "ip", nameOrIP);
                         break;
                 }
-                handler->SetSentErrorMessage(true);
                 return false;
-            case BAN_EXISTS:
-                handler->PSendSysMessage(LANG_BAN_EXISTS);
+            case BAN_LONGER_EXISTS:
+                handler->PSendSysMessage("Unsuccessful! A longer ban is already present on this account!");
+                break;
+            default:
                 break;
         }
 
@@ -255,15 +270,14 @@ public:
         std::string accountName = nameStr;
         if (!Utf8ToUpperOnlyLatin(accountName))
         {
-            handler->PSendSysMessage(LANG_ACCOUNT_NOT_EXIST, accountName.c_str());
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage(LANG_ACCOUNT_NOT_EXIST, accountName);
             return false;
         }
 
         uint32 accountId = AccountMgr::GetId(accountName);
         if (!accountId)
         {
-            handler->PSendSysMessage(LANG_ACCOUNT_NOT_EXIST, accountName.c_str());
+            handler->PSendSysMessage(LANG_ACCOUNT_NOT_EXIST, accountName);
             return true;
         }
 
@@ -272,7 +286,7 @@ public:
 
     static bool HandleBanInfoHelper(uint32 accountId, char const* accountName, ChatHandler* handler)
     {
-        QueryResult result = LoginDatabase.PQuery("SELECT FROM_UNIXTIME(bandate), unbandate-bandate, active, unbandate, banreason, bannedby FROM account_banned WHERE id = '%u' ORDER BY bandate ASC", accountId);
+        QueryResult result = LoginDatabase.Query("SELECT FROM_UNIXTIME(bandate, '%Y-%m-%d..%H:%i:%s') as bandate, unbandate-bandate, active, unbandate, banreason, bannedby FROM account_banned WHERE id = '{}' ORDER BY bandate ASC", accountId);
         if (!result)
         {
             handler->PSendSysMessage(LANG_BANINFO_NOACCOUNTBAN, accountName);
@@ -284,16 +298,15 @@ public:
         {
             Field* fields = result->Fetch();
 
-            time_t unbanDate = time_t(fields[3].GetUInt32());
+            time_t unbanDate = time_t(fields[3].Get<uint32>());
             bool active = false;
-            if (fields[2].GetBool() && (fields[1].GetUInt64() == uint64(0) || unbanDate >= GameTime::GetGameTime()))
+            if (fields[2].Get<bool>() && (fields[1].Get<uint64>() == uint64(0) || unbanDate >= GameTime::GetGameTime().count()))
                 active = true;
-            bool permanent = (fields[1].GetUInt64() == uint64(0));
-            std::string banTime = permanent ? handler->GetFirelandsString(LANG_BANINFO_INFINITE) : secsToTimeString(fields[1].GetUInt64(), true);
+            bool permanent = (fields[1].Get<uint64>() == uint64(0));
+            std::string banTime = permanent ? handler->GetAcoreString(LANG_BANINFO_INFINITE) : secsToTimeString(fields[1].Get<uint64>(), true);
             handler->PSendSysMessage(LANG_BANINFO_HISTORYENTRY,
-                fields[0].GetCString(), banTime.c_str(), active ? handler->GetFirelandsString(LANG_YES) : handler->GetFirelandsString(LANG_NO), fields[4].GetCString(), fields[5].GetCString());
-        }
-        while (result->NextRow());
+                fields[0].Get<std::string>(), banTime, active ? handler->GetAcoreString(LANG_YES) : handler->GetAcoreString(LANG_NO), fields[4].Get<std::string>(), fields[5].Get<std::string>());
+        } while (result->NextRow());
 
         return true;
     }
@@ -303,55 +316,45 @@ public:
         if (!*args)
             return false;
 
+        Player* target = ObjectAccessor::FindPlayerByName(args, false);
+        ObjectGuid targetGuid;
         std::string name(args);
-        if (!normalizePlayerName(name))
-        {
-            handler->SendSysMessage(LANG_BANINFO_NOCHARACTER);
-            handler->SetSentErrorMessage(true);
-            return false;
-        }
-
-        Player* target = ObjectAccessor::FindPlayerByName(name);
-        ObjectGuid::LowType targetGuid = 0;
 
         if (!target)
         {
-            ObjectGuid fullGuid = sCharacterCache->GetCharacterGuidByName(name);
-            if (fullGuid.IsEmpty())
+            targetGuid = sCharacterCache->GetCharacterGuidByName(name);
+            if (!targetGuid)
             {
-                handler->SendSysMessage(LANG_BANINFO_NOCHARACTER);
-                handler->SetSentErrorMessage(true);
+                handler->PSendSysMessage(LANG_BANINFO_NOCHARACTER);
                 return false;
             }
-
-            targetGuid = fullGuid.GetCounter();
         }
         else
-            targetGuid = target->GetGUID().GetCounter();
+            targetGuid = target->GetGUID();
 
         CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_BANINFO);
-        stmt->setUInt32(0, targetGuid);
+        stmt->SetData(0, targetGuid.GetCounter());
+
         PreparedQueryResult result = CharacterDatabase.Query(stmt);
         if (!result)
         {
-            handler->PSendSysMessage(LANG_CHAR_NOT_BANNED, name.c_str());
+            handler->PSendSysMessage(LANG_CHAR_NOT_BANNED, name);
             return true;
         }
 
-        handler->PSendSysMessage(LANG_BANINFO_BANHISTORY, name.c_str());
+        handler->PSendSysMessage(LANG_BANINFO_BANHISTORY, name);
         do
         {
             Field* fields = result->Fetch();
-            time_t unbanDate = time_t(fields[3].GetUInt32());
+            time_t unbanDate = time_t(fields[3].Get<uint32>());
             bool active = false;
-            if (fields[2].GetUInt8() && (!fields[1].GetUInt32() || unbanDate >= GameTime::GetGameTime()))
+            if (fields[2].Get<uint8>() && (!fields[1].Get<uint32>() || unbanDate >= GameTime::GetGameTime().count()))
                 active = true;
-            bool permanent = (fields[1].GetUInt32() == uint32(0));
-            std::string banTime = permanent ? handler->GetFirelandsString(LANG_BANINFO_INFINITE) : secsToTimeString(fields[1].GetUInt32(), true);
+            bool permanent = (fields[1].Get<uint32>() == uint32(0));
+            std::string banTime = permanent ? handler->GetAcoreString(LANG_BANINFO_INFINITE) : secsToTimeString(fields[1].Get<uint64>(), true);
             handler->PSendSysMessage(LANG_BANINFO_HISTORYENTRY,
-                TimeToTimestampStr(fields[0].GetUInt32()).c_str(), banTime.c_str(), active ? handler->GetFirelandsString(LANG_YES) : handler->GetFirelandsString(LANG_NO), fields[4].GetCString(), fields[5].GetCString());
-        }
-        while (result->NextRow());
+                fields[0].Get<std::string>(), banTime, active ? handler->GetAcoreString(LANG_YES) : handler->GetAcoreString(LANG_NO), fields[4].Get<std::string>(), fields[5].Get<std::string>());
+        } while (result->NextRow());
 
         return true;
     }
@@ -371,7 +374,14 @@ public:
         std::string IP = ipStr;
 
         LoginDatabase.EscapeString(IP);
-        QueryResult result = LoginDatabase.PQuery("SELECT ip, FROM_UNIXTIME(bandate), FROM_UNIXTIME(unbandate), unbandate-UNIX_TIMESTAMP(), banreason, bannedby, unbandate-bandate FROM ip_banned WHERE ip = '%s'", IP.c_str());
+        QueryResult result = LoginDatabase.Query("\
+            SELECT \
+                ip, FROM_UNIXTIME(bandate, '%Y-%m-%d %H:%i:%s'), FROM_UNIXTIME(unbandate, '%Y-%m-%d %H:%i:%s'), \
+                IF (unbandate > UNIX_TIMESTAMP(), unbandate - UNIX_TIMESTAMP(), 0) AS timeRemaining, \
+                banreason, bannedby, unbandate - bandate = 0 AS permanent \
+            FROM ip_banned \
+            WHERE ip = '{}' \
+        ", IP);
         if (!result)
         {
             handler->PSendSysMessage(LANG_BANINFO_NOIP);
@@ -379,20 +389,17 @@ public:
         }
 
         Field* fields = result->Fetch();
-        bool permanent = !fields[6].GetUInt64();
+        bool permanent = fields[6].Get<uint64>() == 1;
         handler->PSendSysMessage(LANG_BANINFO_IPENTRY,
-            fields[0].GetCString(), fields[1].GetCString(), permanent ? handler->GetFirelandsString(LANG_BANINFO_NEVER) : fields[2].GetCString(),
-            permanent ? handler->GetFirelandsString(LANG_BANINFO_INFINITE) : secsToTimeString(fields[3].GetUInt64(), true).c_str(), fields[4].GetCString(), fields[5].GetCString());
-
+            fields[0].Get<std::string>(), fields[1].Get<std::string>(), permanent ? handler->GetAcoreString(LANG_BANINFO_NEVER) : fields[2].Get<std::string>(),
+            permanent ? handler->GetAcoreString(LANG_BANINFO_INFINITE) : secsToTimeString(fields[3].Get<uint64>(), true), fields[4].Get<std::string>(), fields[5].Get<std::string>());
 
         return true;
     }
 
     static bool HandleBanListAccountCommand(ChatHandler* handler, char const* args)
     {
-        LoginDatabasePreparedStatement* stmt = nullptr;
-
-        stmt = LoginDatabase.GetPreparedStatement(LOGIN_DEL_EXPIRED_IP_BANS);
+        LoginDatabasePreparedStatement* stmt = LoginDatabase.GetPreparedStatement(LOGIN_DEL_EXPIRED_IP_BANS);
         LoginDatabase.Execute(stmt);
 
         char* filterStr = strtok((char*)args, " ");
@@ -402,14 +409,14 @@ public:
 
         if (filter.empty())
         {
-            stmt = LoginDatabase.GetPreparedStatement(LOGIN_SEL_ACCOUNT_BANNED_ALL);
-            result = LoginDatabase.Query(stmt);
+            LoginDatabasePreparedStatement* stmt2 = LoginDatabase.GetPreparedStatement(LOGIN_SEL_ACCOUNT_BANNED_ALL);
+            result = LoginDatabase.Query(stmt2);
         }
         else
         {
-            stmt = LoginDatabase.GetPreparedStatement(LOGIN_SEL_ACCOUNT_BANNED_BY_USERNAME);
-            stmt->setString(0, filter);
-            result = LoginDatabase.Query(stmt);
+            LoginDatabasePreparedStatement* stmt2 = LoginDatabase.GetPreparedStatement(LOGIN_SEL_ACCOUNT_BANNED_BY_USERNAME);
+            stmt2->SetData(0, filter);
+            result = LoginDatabase.Query(stmt2);
         }
 
         if (!result)
@@ -431,16 +438,15 @@ public:
             do
             {
                 Field* fields = result->Fetch();
-                uint32 accountid = fields[0].GetUInt32();
+                uint32 accountid = fields[0].Get<uint32>();
 
-                QueryResult banResult = LoginDatabase.PQuery("SELECT account.username FROM account, account_banned WHERE account_banned.id='%u' AND account_banned.id=account.id", accountid);
+                QueryResult banResult = LoginDatabase.Query("SELECT account.username FROM account, account_banned WHERE account_banned.id='{}' AND account_banned.id=account.id", accountid);
                 if (banResult)
                 {
                     Field* fields2 = banResult->Fetch();
-                    handler->PSendSysMessage("%s", fields2[0].GetCString());
+                    handler->PSendSysMessage("{}", fields2[0].Get<std::string>());
                 }
-            }
-            while (result->NextRow());
+            } while (result->NextRow());
         }
         // Console wide output
         else
@@ -452,49 +458,43 @@ public:
             {
                 handler->SendSysMessage("-------------------------------------------------------------------------------");
                 Field* fields = result->Fetch();
-                uint32 accountId = fields[0].GetUInt32();
+                uint32 accountId = fields[0].Get<uint32>();
 
                 std::string accountName;
 
                 // "account" case, name can be get in same query
                 if (result->GetFieldCount() > 1)
-                    accountName = fields[1].GetString();
+                    accountName = fields[1].Get<std::string>();
                 // "character" case, name need extract from another DB
                 else
                     AccountMgr::GetName(accountId, accountName);
 
                 // No SQL injection. id is uint32.
-                QueryResult banInfo = LoginDatabase.PQuery("SELECT bandate, unbandate, bannedby, banreason FROM account_banned WHERE id = %u ORDER BY unbandate", accountId);
+                QueryResult banInfo = LoginDatabase.Query("SELECT bandate, unbandate, bannedby, banreason FROM account_banned WHERE id = {} ORDER BY unbandate", accountId);
                 if (banInfo)
                 {
                     Field* fields2 = banInfo->Fetch();
                     do
                     {
-                        time_t timeBan = time_t(fields2[0].GetUInt32());
-                        tm tmBan;
-                        localtime_r(&timeBan, &tmBan);
+                        tm tmBan = Firelands::Time::TimeBreakdown(fields2[0].Get<uint32>());
 
-                        if (fields2[0].GetUInt32() == fields2[1].GetUInt32())
+                        if (fields2[0].Get<uint32>() == fields2[1].Get<uint32>())
                         {
-                            handler->PSendSysMessage("|%-15.15s|%02d-%02d-%02d %02d:%02d|   permanent  |%-15.15s|%-15.15s|",
-                                accountName.c_str(), tmBan.tm_year%100, tmBan.tm_mon+1, tmBan.tm_mday, tmBan.tm_hour, tmBan.tm_min,
-                                fields2[2].GetCString(), fields2[3].GetCString());
+                            handler->PSendSysMessage("|{:<15.15}|{:02}-{:02}-{:02} {:02}:{:02}|   permanent  |{:<15.15}|{:<15.15}|",
+                                                     accountName, tmBan.tm_year % 100, tmBan.tm_mon + 1, tmBan.tm_mday, tmBan.tm_hour, tmBan.tm_min,
+                                                     fields2[2].Get<std::string>(), fields2[3].Get<std::string>());
                         }
                         else
                         {
-                            time_t timeUnban = time_t(fields2[1].GetUInt32());
-                            tm tmUnban;
-                            localtime_r(&timeUnban, &tmUnban);
-                            handler->PSendSysMessage("|%-15.15s|%02d-%02d-%02d %02d:%02d|%02d-%02d-%02d %02d:%02d|%-15.15s|%-15.15s|",
-                                accountName.c_str(), tmBan.tm_year%100, tmBan.tm_mon+1, tmBan.tm_mday, tmBan.tm_hour, tmBan.tm_min,
-                                tmUnban.tm_year%100, tmUnban.tm_mon+1, tmUnban.tm_mday, tmUnban.tm_hour, tmUnban.tm_min,
-                                fields2[2].GetCString(), fields2[3].GetCString());
+                            tm tmUnban = Firelands::Time::TimeBreakdown(fields2[1].Get<uint32>());
+                            handler->PSendSysMessage("|{:<15.15}|{:02}-{:02}-{:02} {:02}:{:02}|{:02}-{:02}-{:02} {:02}:{:02}|{:<15.15}|{:<15.15}|",
+                                                     accountName, tmBan.tm_year % 100, tmBan.tm_mon + 1, tmBan.tm_mday, tmBan.tm_hour, tmBan.tm_min,
+                                                     tmUnban.tm_year % 100, tmUnban.tm_mon + 1, tmUnban.tm_mday, tmUnban.tm_hour, tmUnban.tm_min,
+                                                     fields2[2].Get<std::string>(), fields2[3].Get<std::string>());
                         }
-                    }
-                    while (banInfo->NextRow());
+                    } while (banInfo->NextRow());
                 }
-            }
-            while (result->NextRow());
+            } while (result->NextRow());
 
             handler->SendSysMessage(" ===============================================================================");
         }
@@ -513,7 +513,7 @@ public:
 
         std::string filter(filterStr);
         CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_GUID_BY_NAME_FILTER);
-        stmt->setString(0, filter);
+        stmt->SetData(0, filter);
         PreparedQueryResult result = CharacterDatabase.Query(stmt);
         if (!result)
         {
@@ -530,12 +530,12 @@ public:
             {
                 Field* fields = result->Fetch();
                 CharacterDatabasePreparedStatement* stmt2 = CharacterDatabase.GetPreparedStatement(CHAR_SEL_BANNED_NAME);
-                stmt2->setUInt32(0, fields[0].GetUInt32());
+                stmt2->SetData(0, fields[0].Get<uint32>());
+
                 PreparedQueryResult banResult = CharacterDatabase.Query(stmt2);
                 if (banResult)
-                    handler->PSendSysMessage("%s", (*banResult)[0].GetCString());
-            }
-            while (result->NextRow());
+                    handler->PSendSysMessage("{}", (*banResult)[0].Get<std::string>());
+            } while (result->NextRow());
         }
         // Console wide output
         else
@@ -549,41 +549,36 @@ public:
 
                 Field* fields = result->Fetch();
 
-                std::string char_name = fields[1].GetString();
+                std::string char_name = fields[1].Get<std::string>();
 
                 CharacterDatabasePreparedStatement* stmt2 = CharacterDatabase.GetPreparedStatement(CHAR_SEL_BANINFO_LIST);
-                stmt2->setUInt32(0, fields[0].GetUInt32());
+                stmt2->SetData(0, fields[0].Get<uint32>());
+
                 PreparedQueryResult banInfo = CharacterDatabase.Query(stmt2);
                 if (banInfo)
                 {
                     Field* banFields = banInfo->Fetch();
                     do
                     {
-                        time_t timeBan = time_t(banFields[0].GetUInt32());
-                        tm tmBan;
-                        localtime_r(&timeBan, &tmBan);
+                        tm tmBan = Firelands::Time::TimeBreakdown(banFields[0].Get<uint32>());
 
-                        if (banFields[0].GetUInt32() == banFields[1].GetUInt32())
+                        if (banFields[0].Get<uint32>() == banFields[1].Get<uint32>())
                         {
-                            handler->PSendSysMessage("|%-15.15s|%02d-%02d-%02d %02d:%02d|   permanent  |%-15.15s|%-15.15s|",
-                                char_name.c_str(), tmBan.tm_year%100, tmBan.tm_mon+1, tmBan.tm_mday, tmBan.tm_hour, tmBan.tm_min,
-                                banFields[2].GetCString(), banFields[3].GetCString());
+                            handler->PSendSysMessage("|{:<15.15}|{:02}-{:02}-{:02} {:02}:{:02}|   permanent  |{:<15.15}|{:<15.15}|",
+                                                     char_name, tmBan.tm_year % 100, tmBan.tm_mon + 1, tmBan.tm_mday, tmBan.tm_hour, tmBan.tm_min,
+                                                     banFields[2].Get<std::string>(), banFields[3].Get<std::string>());
                         }
                         else
                         {
-                            time_t timeUnban = time_t(banFields[1].GetUInt32());
-                            tm tmUnban;
-                            localtime_r(&timeUnban, &tmUnban);
-                            handler->PSendSysMessage("|%-15.15s|%02d-%02d-%02d %02d:%02d|%02d-%02d-%02d %02d:%02d|%-15.15s|%-15.15s|",
-                                char_name.c_str(), tmBan.tm_year%100, tmBan.tm_mon+1, tmBan.tm_mday, tmBan.tm_hour, tmBan.tm_min,
-                                tmUnban.tm_year%100, tmUnban.tm_mon+1, tmUnban.tm_mday, tmUnban.tm_hour, tmUnban.tm_min,
-                                banFields[2].GetCString(), banFields[3].GetCString());
+                            tm tmUnban = Firelands::Time::TimeBreakdown(banFields[1].Get<uint32>());
+                            handler->PSendSysMessage("|{:<15.15}|{:02}-{:02}-{:02} {:02}:{:02}|{:02}-{:02}-{:02} {:02}:{:02}|{:<15.15}|{:<15.15}|",
+                                                     char_name, tmBan.tm_year % 100, tmBan.tm_mon + 1, tmBan.tm_mday, tmBan.tm_hour, tmBan.tm_min,
+                                                     tmUnban.tm_year % 100, tmUnban.tm_mon + 1, tmUnban.tm_mday, tmUnban.tm_hour, tmUnban.tm_min,
+                                                     banFields[2].Get<std::string>(), banFields[3].Get<std::string>());
                         }
-                    }
-                    while (banInfo->NextRow());
+                    } while (banInfo->NextRow());
                 }
-            }
-            while (result->NextRow());
+            } while (result->NextRow());
             handler->SendSysMessage(" =============================================================================== ");
         }
 
@@ -603,14 +598,14 @@ public:
 
         if (filter.empty())
         {
-            stmt = LoginDatabase.GetPreparedStatement(LOGIN_SEL_IP_BANNED_ALL);
-            result = LoginDatabase.Query(stmt);
+            LoginDatabasePreparedStatement* stmt2 = LoginDatabase.GetPreparedStatement(LOGIN_SEL_IP_BANNED_ALL);
+            result = LoginDatabase.Query(stmt2);
         }
         else
         {
-            stmt = LoginDatabase.GetPreparedStatement(LOGIN_SEL_IP_BANNED_BY_IP);
-            stmt->setString(0, filter);
-            result = LoginDatabase.Query(stmt);
+            LoginDatabasePreparedStatement* stmt2 = LoginDatabase.GetPreparedStatement(LOGIN_SEL_IP_BANNED_BY_IP);
+            stmt2->SetData(0, filter);
+            result = LoginDatabase.Query(stmt2);
         }
 
         if (!result)
@@ -626,9 +621,8 @@ public:
             do
             {
                 Field* fields = result->Fetch();
-                handler->PSendSysMessage("%s", fields[0].GetCString());
-            }
-            while (result->NextRow());
+                handler->PSendSysMessage("{}", fields[0].Get<std::string>());
+            } while (result->NextRow());
         }
         // Console wide output
         else
@@ -640,27 +634,22 @@ public:
             {
                 handler->SendSysMessage("-------------------------------------------------------------------------------");
                 Field* fields = result->Fetch();
-                time_t timeBan = time_t(fields[1].GetUInt32());
-                tm tmBan;
-                localtime_r(&timeBan, &tmBan);
-                if (fields[1].GetUInt32() == fields[2].GetUInt32())
+                tm tmBan = Firelands::Time::TimeBreakdown(fields[1].Get<uint32>());
+                if (fields[1].Get<uint32>() == fields[2].Get<uint32>())
                 {
-                    handler->PSendSysMessage("|%-15.15s|%02d-%02d-%02d %02d:%02d|   permanent  |%-15.15s|%-15.15s|",
-                        fields[0].GetCString(), tmBan.tm_year%100, tmBan.tm_mon+1, tmBan.tm_mday, tmBan.tm_hour, tmBan.tm_min,
-                        fields[3].GetCString(), fields[4].GetCString());
+                    handler->PSendSysMessage("{:<15.15}|{:02}-{:02}-{:02} {:02}:{:02}|   permanent  |{:<15.15}|{:<15.15}|",
+                                             fields[0].Get<std::string>(), tmBan.tm_year % 100, tmBan.tm_mon + 1, tmBan.tm_mday, tmBan.tm_hour, tmBan.tm_min,
+                                             fields[3].Get<std::string>(), fields[4].Get<std::string>());
                 }
                 else
                 {
-                    time_t timeUnban = time_t(fields[2].GetUInt32());
-                    tm tmUnban;
-                    localtime_r(&timeUnban, &tmUnban);
-                    handler->PSendSysMessage("|%-15.15s|%02d-%02d-%02d %02d:%02d|%02d-%02d-%02d %02d:%02d|%-15.15s|%-15.15s|",
-                        fields[0].GetCString(), tmBan.tm_year%100, tmBan.tm_mon+1, tmBan.tm_mday, tmBan.tm_hour, tmBan.tm_min,
-                        tmUnban.tm_year%100, tmUnban.tm_mon+1, tmUnban.tm_mday, tmUnban.tm_hour, tmUnban.tm_min,
-                        fields[3].GetCString(), fields[4].GetCString());
+                    tm tmUnban = Firelands::Time::TimeBreakdown(fields[2].Get<uint32>());
+                    handler->PSendSysMessage("|{:<15.15}|{:02}-{:02}-{:02} {:02}:{:02}|{:02}-{:02}-{:02} {:02}:{:02}|{:<15.15}|{:<15.15}|",
+                                             fields[0].Get<std::string>(), tmBan.tm_year % 100, tmBan.tm_mon + 1, tmBan.tm_mday, tmBan.tm_hour, tmBan.tm_min,
+                                             tmUnban.tm_year % 100, tmUnban.tm_mon + 1, tmUnban.tm_mday, tmUnban.tm_hour, tmUnban.tm_min,
+                                             fields[3].Get<std::string>(), fields[4].Get<std::string>());
                 }
-            }
-            while (result->NextRow());
+            } while (result->NextRow());
 
             handler->SendSysMessage(" ===============================================================================");
         }
@@ -682,19 +671,17 @@ public:
         if (!nameStr)
             return false;
 
-        std::string name = nameStr;
+        std::string CharacterName = nameStr;
 
-        if (!normalizePlayerName(name))
+        if (!normalizePlayerName(CharacterName))
         {
-            handler->SendSysMessage(LANG_PLAYER_NOT_FOUND);
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage(LANG_PLAYER_NOT_FOUND);
             return false;
         }
 
-        if (!sWorld->RemoveBanCharacter(name))
+        if (!sBan->RemoveBanCharacter(CharacterName))
         {
-            handler->SendSysMessage(LANG_PLAYER_NOT_FOUND);
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage(LANG_PLAYER_NOT_FOUND);
             return false;
         }
 
@@ -727,16 +714,14 @@ public:
             case BAN_ACCOUNT:
                 if (!Utf8ToUpperOnlyLatin(nameOrIP))
                 {
-                    handler->PSendSysMessage(LANG_ACCOUNT_NOT_EXIST, nameOrIP.c_str());
-                    handler->SetSentErrorMessage(true);
+                    handler->SendErrorMessage(LANG_ACCOUNT_NOT_EXIST, nameOrIP);
                     return false;
                 }
                 break;
             case BAN_CHARACTER:
                 if (!normalizePlayerName(nameOrIP))
                 {
-                    handler->SendSysMessage(LANG_PLAYER_NOT_FOUND);
-                    handler->SetSentErrorMessage(true);
+                    handler->SendErrorMessage(LANG_PLAYER_NOT_FOUND);
                     return false;
                 }
                 break;
@@ -746,10 +731,29 @@ public:
                 break;
         }
 
-        if (sWorld->RemoveBanAccount(mode, nameOrIP))
-            handler->PSendSysMessage(LANG_UNBAN_UNBANNED, nameOrIP.c_str());
-        else
-            handler->PSendSysMessage(LANG_UNBAN_ERROR, nameOrIP.c_str());
+        switch (mode)
+        {
+            case BAN_ACCOUNT:
+                if (sBan->RemoveBanAccount(nameOrIP))
+                    handler->PSendSysMessage(LANG_UNBAN_UNBANNED, nameOrIP);
+                else
+                    handler->PSendSysMessage(LANG_UNBAN_ERROR, nameOrIP);
+                break;
+            case BAN_CHARACTER:
+                if (sBan->RemoveBanAccountByPlayerName(nameOrIP))
+                    handler->PSendSysMessage(LANG_UNBAN_UNBANNED, nameOrIP);
+                else
+                    handler->PSendSysMessage(LANG_UNBAN_ERROR, nameOrIP);
+                break;
+            case BAN_IP:
+                if (sBan->RemoveBanIP(nameOrIP))
+                    handler->PSendSysMessage(LANG_UNBAN_UNBANNED, nameOrIP);
+                else
+                    handler->PSendSysMessage(LANG_UNBAN_ERROR, nameOrIP);
+                break;
+            default:
+                break;
+        }
 
         return true;
     }

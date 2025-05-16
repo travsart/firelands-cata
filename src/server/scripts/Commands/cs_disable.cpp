@@ -1,9 +1,9 @@
 /*
- * This file is part of the FirelandsCore Project. See AUTHORS file for Copyright information
+ * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 2 of the License, or (at your
+ * Free Software Foundation; either version 3 of the License, or (at your
  * option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
@@ -11,7 +11,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
  * more details.
  *
- * You should have received a copy of the GNU Affero General Public License along
+ * You should have received a copy of the GNU General Public License along
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
@@ -22,17 +22,16 @@ Comment: All disable related commands
 Category: commandscripts
 EndScriptData */
 
-#include "ScriptMgr.h"
-#include "AchievementMgr.h"
 #include "Chat.h"
-#include "DatabaseEnv.h"
+#include "CommandScript.h"
 #include "DisableMgr.h"
 #include "Language.h"
 #include "ObjectMgr.h"
 #include "OutdoorPvP.h"
 #include "Player.h"
-#include "RBAC.h"
 #include "SpellMgr.h"
+
+using namespace Firelands::ChatCommands;
 
 class disable_commandscript : public CommandScript
 {
@@ -41,268 +40,166 @@ public:
 
     ChatCommandTable GetCommands() const override
     {
-        static std::vector<ChatCommand> removeDisableCommandTable =
+        static ChatCommandTable removeDisableCommandTable =
         {
-            { "spell",                rbac::RBAC_PERM_COMMAND_DISABLE_REMOVE_SPELL,                true, &HandleRemoveDisableSpellCommand,               "" },
-            { "quest",                rbac::RBAC_PERM_COMMAND_DISABLE_REMOVE_QUEST,                true, &HandleRemoveDisableQuestCommand,               "" },
-            { "map",                  rbac::RBAC_PERM_COMMAND_DISABLE_REMOVE_MAP,                  true, &HandleRemoveDisableMapCommand,                 "" },
-            { "battleground",         rbac::RBAC_PERM_COMMAND_DISABLE_REMOVE_BATTLEGROUND,         true, &HandleRemoveDisableBattlegroundCommand,        "" },
-            { "achievement_criteria", rbac::RBAC_PERM_COMMAND_DISABLE_REMOVE_ACHIEVEMENT_CRITERIA, true, &HandleRemoveDisableAchievementCriteriaCommand, "" },
-            { "outdoorpvp",           rbac::RBAC_PERM_COMMAND_DISABLE_REMOVE_OUTDOORPVP,           true, &HandleRemoveDisableOutdoorPvPCommand,          "" },
-            { "vmap",                 rbac::RBAC_PERM_COMMAND_DISABLE_REMOVE_VMAP,                 true, &HandleRemoveDisableVmapCommand,                "" },
-            { "mmap",                 rbac::RBAC_PERM_COMMAND_DISABLE_REMOVE_MMAP,                 true, &HandleRemoveDisableMMapCommand,                "" },
-            { "item",                 rbac::RBAC_PERM_COMMAND_DISABLE_REMOVE_ITEM,                 true, &HandleRemoveDisableItemCommand,                "" },
+            { "spell",        HandleRemoveDisableSpellCommand,        SEC_ADMINISTRATOR, Console::Yes },
+            { "quest",        HandleRemoveDisableQuestCommand,        SEC_ADMINISTRATOR, Console::Yes },
+            { "map",          HandleRemoveDisableMapCommand,          SEC_ADMINISTRATOR, Console::Yes },
+            { "battleground", HandleRemoveDisableBattlegroundCommand, SEC_ADMINISTRATOR, Console::Yes },
+            { "outdoorpvp",   HandleRemoveDisableOutdoorPvPCommand,   SEC_ADMINISTRATOR, Console::Yes },
+            { "vmap",         HandleRemoveDisableVmapCommand,         SEC_ADMINISTRATOR, Console::Yes }
         };
-        static std::vector<ChatCommand> addDisableCommandTable =
+        static ChatCommandTable addDisableCommandTable =
         {
-            { "spell",                rbac::RBAC_PERM_COMMAND_DISABLE_ADD_SPELL,                true, &HandleAddDisableSpellCommand,                  "" },
-            { "quest",                rbac::RBAC_PERM_COMMAND_DISABLE_ADD_QUEST,                true, &HandleAddDisableQuestCommand,                  "" },
-            { "map",                  rbac::RBAC_PERM_COMMAND_DISABLE_ADD_MAP,                  true, &HandleAddDisableMapCommand,                    "" },
-            { "battleground",         rbac::RBAC_PERM_COMMAND_DISABLE_ADD_BATTLEGROUND,         true, &HandleAddDisableBattlegroundCommand,           "" },
-            { "achievement_criteria", rbac::RBAC_PERM_COMMAND_DISABLE_ADD_ACHIEVEMENT_CRITERIA, true, &HandleAddDisableAchievementCriteriaCommand,    "" },
-            { "outdoorpvp",           rbac::RBAC_PERM_COMMAND_DISABLE_ADD_OUTDOORPVP,           true, &HandleAddDisableOutdoorPvPCommand,             "" },
-            { "vmap",                 rbac::RBAC_PERM_COMMAND_DISABLE_ADD_VMAP,                 true, &HandleAddDisableVmapCommand,                   "" },
-            { "mmap",                 rbac::RBAC_PERM_COMMAND_DISABLE_ADD_MMAP,                 true, &HandleAddDisableMMapCommand,                   "" },
-            { "item",                 rbac::RBAC_PERM_COMMAND_DISABLE_ADD_ITEM,                 true, &HandleAddDisableItemCommand,                   "" },
+            { "spell",        HandleAddDisableSpellCommand,           SEC_ADMINISTRATOR, Console::Yes },
+            { "quest",        HandleAddDisableQuestCommand,           SEC_ADMINISTRATOR, Console::Yes },
+            { "map",          HandleAddDisableMapCommand,             SEC_ADMINISTRATOR, Console::Yes },
+            { "battleground", HandleAddDisableBattlegroundCommand,    SEC_ADMINISTRATOR, Console::Yes },
+            { "outdoorpvp",   HandleAddDisableOutdoorPvPCommand,      SEC_ADMINISTRATOR, Console::Yes },
+            { "vmap",         HandleAddDisableVmapCommand,            SEC_ADMINISTRATOR, Console::Yes }
         };
-        static std::vector<ChatCommand> disableCommandTable =
+        static ChatCommandTable disableCommandTable =
         {
-            { "add",    rbac::RBAC_PERM_COMMAND_DISABLE_ADD,    true, nullptr, "", addDisableCommandTable },
-            { "remove", rbac::RBAC_PERM_COMMAND_DISABLE_REMOVE, true, nullptr, "", removeDisableCommandTable },
+            { "add",    addDisableCommandTable },
+            { "remove", removeDisableCommandTable }
         };
-        static std::vector<ChatCommand> commandTable =
+        static ChatCommandTable commandTable =
         {
-            { "disable", rbac::RBAC_PERM_COMMAND_DISABLE, false, nullptr, "", disableCommandTable },
+            { "disable", disableCommandTable }
         };
         return commandTable;
     }
 
-    static bool HandleAddDisables(ChatHandler* handler, char const* args, uint8 disableType)
+    static bool HandleAddDisables(ChatHandler* handler, uint32 entry, uint8 flags, std::string disableComment, uint8 disableType)
     {
-        char* entryStr = strtok((char*)args, " ");
-        if (!entryStr || !atoi(entryStr))
-            return false;
-
-        char* flagsStr = strtok(nullptr, " ");
-        uint8 flags = flagsStr ? uint8(atoi(flagsStr)) : 0;
-
-        char* commentStr = strtok(nullptr, "");
-        if (!commentStr)
-            return false;
-
-        std::string disableComment = commentStr;
-        uint32 entry = uint32(atoi(entryStr));
-
         std::string disableTypeStr = "";
 
         switch (disableType)
         {
             case DISABLE_TYPE_SPELL:
-            {
-                if (!sSpellMgr->GetSpellInfo(entry))
                 {
-                    handler->PSendSysMessage(LANG_COMMAND_NOSPELLFOUND);
-                    handler->SetSentErrorMessage(true);
-                    return false;
+                    if (!sSpellMgr->GetSpellInfo(entry))
+                    {
+                        handler->SendErrorMessage(LANG_COMMAND_NOSPELLFOUND);
+                        return false;
+                    }
+                    disableTypeStr = "spell";
+                    break;
                 }
-                disableTypeStr = "spell";
-                break;
-            }
             case DISABLE_TYPE_QUEST:
-            {
-                if (!sObjectMgr->GetQuestTemplate(entry))
                 {
-                    handler->PSendSysMessage(LANG_COMMAND_QUEST_NOTFOUND, entry);
-                    handler->SetSentErrorMessage(true);
-                    return false;
+                    if (!sObjectMgr->GetQuestTemplate(entry))
+                    {
+                        handler->SendErrorMessage(LANG_COMMAND_QUEST_NOTFOUND, entry);
+                        return false;
+                    }
+                    disableTypeStr = "quest";
+                    break;
                 }
-                disableTypeStr = "quest";
-                break;
-            }
             case DISABLE_TYPE_MAP:
-            {
-                if (!sMapStore.LookupEntry(entry))
                 {
-                    handler->PSendSysMessage(LANG_COMMAND_NOMAPFOUND);
-                    handler->SetSentErrorMessage(true);
-                    return false;
+                    if (!sMapStore.LookupEntry(entry))
+                    {
+                        handler->SendErrorMessage(LANG_COMMAND_NOMAPFOUND);
+                        return false;
+                    }
+                    disableTypeStr = "map";
+                    break;
                 }
-                disableTypeStr = "map";
-                break;
-            }
             case DISABLE_TYPE_BATTLEGROUND:
-            {
-                if (!sBattlemasterListStore.LookupEntry(entry))
                 {
-                    handler->PSendSysMessage(LANG_COMMAND_NO_BATTLEGROUND_FOUND);
-                    handler->SetSentErrorMessage(true);
-                    return false;
+                    if (!sBattlemasterListStore.LookupEntry(entry))
+                    {
+                        handler->SendErrorMessage(LANG_COMMAND_NO_BATTLEGROUND_FOUND);
+                        return false;
+                    }
+                    disableTypeStr = "battleground";
+                    break;
                 }
-                disableTypeStr = "battleground";
-                break;
-            }
-            case DISABLE_TYPE_ACHIEVEMENT_CRITERIA:
-            {
-                if (!sAchievementMgr->GetAchievementCriteria(entry))
-                {
-                    handler->PSendSysMessage(LANG_COMMAND_NO_ACHIEVEMENT_CRITERIA_FOUND);
-                    handler->SetSentErrorMessage(true);
-                    return false;
-                }
-                disableTypeStr = "achievement criteria";
-                break;
-            }
             case DISABLE_TYPE_OUTDOORPVP:
-            {
-                if (entry > MAX_OUTDOORPVP_TYPES)
                 {
-                    handler->PSendSysMessage(LANG_COMMAND_NO_OUTDOOR_PVP_FORUND);
-                    handler->SetSentErrorMessage(true);
-                    return false;
+                    if (entry > MAX_OUTDOORPVP_TYPES)
+                    {
+                        handler->SendErrorMessage(LANG_COMMAND_NO_OUTDOOR_PVP_FORUND);
+                        return false;
+                    }
+                    disableTypeStr = "outdoorpvp";
+                    break;
                 }
-                disableTypeStr = "outdoorpvp";
-                break;
-            }
             case DISABLE_TYPE_VMAP:
-            {
-                if (!sMapStore.LookupEntry(entry))
                 {
-                    handler->PSendSysMessage(LANG_COMMAND_NOMAPFOUND);
-                    handler->SetSentErrorMessage(true);
-                    return false;
+                    if (!sMapStore.LookupEntry(entry))
+                    {
+                        handler->SendErrorMessage(LANG_COMMAND_NOMAPFOUND);
+                        return false;
+                    }
+                    disableTypeStr = "vmap";
+                    break;
                 }
-                disableTypeStr = "vmap";
-                break;
-            }
-            case DISABLE_TYPE_MMAP:
-            {
-                if (!sMapStore.LookupEntry(entry))
-                {
-                    handler->PSendSysMessage(LANG_COMMAND_NOMAPFOUND);
-                    handler->SetSentErrorMessage(true);
-                    return false;
-                }
-                disableTypeStr = "mmap";
-                break;
-            }
-            case DISABLE_TYPE_ITEM:
-            {
-                if (!sItemStore.LookupEntry(entry))
-                {
-                    handler->PSendSysMessage(LANG_COMMAND_NOITEMFOUND);
-                    handler->SetSentErrorMessage(true);
-                    return false;
-                }
-                disableTypeStr = "item";
-                break;
-            }
             default:
                 break;
         }
 
-        WorldDatabasePreparedStatement* stmt = WorldDatabase.GetPreparedStatement(WORLD_SEL_DISABLES);
-        stmt->setUInt32(0, entry);
-        stmt->setUInt8(1, disableType);
+        WorldDatabasePreparedStatement* stmt = nullptr;
+        stmt = WorldDatabase.GetPreparedStatement(WORLD_SEL_DISABLES);
+        stmt->SetData(0, entry);
+        stmt->SetData(1, disableType);
         PreparedQueryResult result = WorldDatabase.Query(stmt);
         if (result)
         {
-            handler->PSendSysMessage("This %s (Id: %u) is already disabled.", disableTypeStr.c_str(), entry);
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage("This {} (Id: {}) is already disabled.", disableTypeStr, entry);
             return false;
         }
 
         stmt = WorldDatabase.GetPreparedStatement(WORLD_INS_DISABLES);
-        stmt->setUInt32(0, entry);
-        stmt->setUInt8(1, disableType);
-        stmt->setUInt16(2, flags);
-        stmt->setString(3, disableComment);
+        stmt->SetData(0, entry);
+        stmt->SetData(1, disableType);
+        stmt->SetData(2, flags);
+        stmt->SetData(3, disableComment);
         WorldDatabase.Execute(stmt);
 
-        handler->PSendSysMessage("Add Disabled %s (Id: %u) for reason %s", disableTypeStr.c_str(), entry, disableComment.c_str());
+        handler->PSendSysMessage("Add Disabled {} (Id: {}) for reason {}", disableTypeStr, entry, disableComment);
         return true;
     }
 
-    static bool HandleAddDisableSpellCommand(ChatHandler* handler, char const* args)
+    static bool HandleAddDisableSpellCommand(ChatHandler* handler, uint32 entry, uint8 flags, std::string disableComment)
     {
-        if (!*args)
-            return false;
-
-        return HandleAddDisables(handler, args, DISABLE_TYPE_SPELL);
+        return HandleAddDisables(handler, entry, flags, disableComment, DISABLE_TYPE_SPELL);
     }
 
-    static bool HandleAddDisableQuestCommand(ChatHandler* handler, char const* args)
+    static bool HandleAddDisableQuestCommand(ChatHandler* handler, uint32 entry, uint8 flags, std::string disableComment)
     {
-        if (!*args)
-            return false;
-
-        return HandleAddDisables(handler, args, DISABLE_TYPE_QUEST);
+        return HandleAddDisables(handler, entry, flags, disableComment, DISABLE_TYPE_QUEST);
     }
 
-    static bool HandleAddDisableMapCommand(ChatHandler* handler, char const* args)
+    static bool HandleAddDisableMapCommand(ChatHandler* handler, uint32 entry, uint8 flags, std::string disableComment)
     {
-        if (!*args)
-            return false;
-
-        return HandleAddDisables(handler, args, DISABLE_TYPE_MAP);
+        return HandleAddDisables(handler, entry, flags, disableComment, DISABLE_TYPE_MAP);
     }
 
-    static bool HandleAddDisableBattlegroundCommand(ChatHandler* handler, char const* args)
+    static bool HandleAddDisableBattlegroundCommand(ChatHandler* handler, uint32 entry, uint8 flags, std::string disableComment)
     {
-        if (!*args)
-            return false;
-
-        return HandleAddDisables(handler, args, DISABLE_TYPE_BATTLEGROUND);
+        return HandleAddDisables(handler, entry, flags, disableComment, DISABLE_TYPE_BATTLEGROUND);
     }
 
-    static bool HandleAddDisableAchievementCriteriaCommand(ChatHandler* handler, char const* args)
+    static bool HandleAddDisableAchievementCriteriaCommand(ChatHandler* handler,  uint32 entry, uint8 flags, std::string disableComment)
     {
-        if (!*args)
-            return false;
-
-        return HandleAddDisables(handler, args, DISABLE_TYPE_ACHIEVEMENT_CRITERIA);
+        return HandleAddDisables(handler, entry, flags, disableComment, DISABLE_TYPE_ACHIEVEMENT_CRITERIA);
     }
 
-    static bool HandleAddDisableOutdoorPvPCommand(ChatHandler* handler, char const* args)
+    static bool HandleAddDisableOutdoorPvPCommand(ChatHandler* handler,  uint32 entry, uint8 flags, std::string disableComment)
     {
-        if (!*args)
-            return false;
-
-        HandleAddDisables(handler, args, DISABLE_TYPE_OUTDOORPVP);
+        HandleAddDisables(handler, entry, flags, disableComment, DISABLE_TYPE_OUTDOORPVP);
         return true;
     }
 
-    static bool HandleAddDisableVmapCommand(ChatHandler* handler, char const* args)
+    static bool HandleAddDisableVmapCommand(ChatHandler* handler,  uint32 entry, uint8 flags, std::string disableComment)
     {
-        if (!*args)
-            return false;
-
-        return HandleAddDisables(handler, args, DISABLE_TYPE_VMAP);
+        return HandleAddDisables(handler, entry, flags, disableComment, DISABLE_TYPE_VMAP);
     }
 
-    static bool HandleAddDisableMMapCommand(ChatHandler* handler, char const* args)
+    static bool HandleRemoveDisables(ChatHandler* handler, uint32 entry, uint8 disableType)
     {
-        if (!*args)
-            return false;
-
-        return HandleAddDisables(handler, args, DISABLE_TYPE_MMAP);
-    }
-
-    static bool HandleAddDisableItemCommand(ChatHandler* handler, char const* args)
-    {
-        if (!*args)
-            return false;
-
-        return HandleAddDisables(handler, args, DISABLE_TYPE_ITEM);
-    }
-
-    static bool HandleRemoveDisables(ChatHandler* handler, char const* args, uint8 disableType)
-    {
-        char* entryStr = strtok((char*)args, " ");
-        if (!entryStr || !atoi(entryStr))
-            return false;
-
-        uint32 entry = uint32(atoi(entryStr));
-
         std::string disableTypeStr = "";
 
         switch (disableType)
@@ -328,104 +225,61 @@ public:
             case DISABLE_TYPE_VMAP:
                 disableTypeStr = "vmap";
                 break;
-            case DISABLE_TYPE_MMAP:
-                disableTypeStr = "mmap";
-                break;
-            case DISABLE_TYPE_ITEM:
-                disableTypeStr = "item";
-                break;
         }
 
-        WorldDatabasePreparedStatement* stmt = WorldDatabase.GetPreparedStatement(WORLD_SEL_DISABLES);
-        stmt->setUInt32(0, entry);
-        stmt->setUInt8(1, disableType);
+        WorldDatabasePreparedStatement* stmt = nullptr;
+        stmt = WorldDatabase.GetPreparedStatement(WORLD_SEL_DISABLES);
+        stmt->SetData(0, entry);
+        stmt->SetData(1, disableType);
         PreparedQueryResult result = WorldDatabase.Query(stmt);
         if (!result)
         {
-            handler->PSendSysMessage("This %s (Id: %u) is not disabled.", disableTypeStr.c_str(), entry);
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage("This {} (Id: {}) is not disabled.", disableTypeStr, entry);
             return false;
         }
 
         stmt = WorldDatabase.GetPreparedStatement(WORLD_DEL_DISABLES);
-        stmt->setUInt32(0, entry);
-        stmt->setUInt8(1, disableType);
+        stmt->SetData(0, entry);
+        stmt->SetData(1, disableType);
         WorldDatabase.Execute(stmt);
 
-        handler->PSendSysMessage("Remove Disabled %s (Id: %u)", disableTypeStr.c_str(), entry);
+        handler->PSendSysMessage("Remove Disabled {} (Id: {})", disableTypeStr, entry);
         return true;
     }
 
-    static bool HandleRemoveDisableSpellCommand(ChatHandler* handler, char const* args)
+    static bool HandleRemoveDisableSpellCommand(ChatHandler* handler, uint32 entry)
     {
-        if (!*args)
-            return false;
-
-        return HandleRemoveDisables(handler, args, DISABLE_TYPE_SPELL);
+        return HandleRemoveDisables(handler, entry, DISABLE_TYPE_SPELL);
     }
 
-    static bool HandleRemoveDisableQuestCommand(ChatHandler* handler, char const* args)
+    static bool HandleRemoveDisableQuestCommand(ChatHandler* handler, uint32 entry)
     {
-        if (!*args)
-            return false;
-
-        return HandleRemoveDisables(handler, args, DISABLE_TYPE_QUEST);
+        return HandleRemoveDisables(handler, entry, DISABLE_TYPE_QUEST);
     }
 
-    static bool HandleRemoveDisableMapCommand(ChatHandler* handler, char const* args)
+    static bool HandleRemoveDisableMapCommand(ChatHandler* handler, uint32 entry)
     {
-        if (!*args)
-            return false;
-
-        return HandleRemoveDisables(handler, args, DISABLE_TYPE_MAP);
+        return HandleRemoveDisables(handler, entry, DISABLE_TYPE_MAP);
     }
 
-    static bool HandleRemoveDisableBattlegroundCommand(ChatHandler* handler, char const* args)
+    static bool HandleRemoveDisableBattlegroundCommand(ChatHandler* handler, uint32 entry)
     {
-        if (!*args)
-            return false;
-
-        return HandleRemoveDisables(handler, args, DISABLE_TYPE_BATTLEGROUND);
+        return HandleRemoveDisables(handler, entry, DISABLE_TYPE_BATTLEGROUND);
     }
 
-    static bool HandleRemoveDisableAchievementCriteriaCommand(ChatHandler* handler, char const* args)
+    static bool HandleRemoveDisableAchievementCriteriaCommand(ChatHandler* handler, uint32 entry)
     {
-        if (!*args)
-            return false;
-
-        return HandleRemoveDisables(handler, args, DISABLE_TYPE_ACHIEVEMENT_CRITERIA);
+        return HandleRemoveDisables(handler, entry, DISABLE_TYPE_ACHIEVEMENT_CRITERIA);
     }
 
-    static bool HandleRemoveDisableOutdoorPvPCommand(ChatHandler* handler, char const* args)
+    static bool HandleRemoveDisableOutdoorPvPCommand(ChatHandler* handler, uint32 entry)
     {
-        if (!*args)
-            return false;
-
-        return HandleRemoveDisables(handler, args, DISABLE_TYPE_OUTDOORPVP);
+        return HandleRemoveDisables(handler, entry, DISABLE_TYPE_OUTDOORPVP);
     }
 
-    static bool HandleRemoveDisableVmapCommand(ChatHandler* handler, char const* args)
+    static bool HandleRemoveDisableVmapCommand(ChatHandler* handler, uint32 entry)
     {
-        if (!*args)
-            return false;
-
-        return HandleRemoveDisables(handler, args, DISABLE_TYPE_VMAP);
-    }
-
-    static bool HandleRemoveDisableMMapCommand(ChatHandler* handler, char const* args)
-    {
-        if (!*args)
-            return false;
-
-        return HandleRemoveDisables(handler, args, DISABLE_TYPE_MMAP);
-    }
-
-    static bool HandleRemoveDisableItemCommand(ChatHandler* handler, char const* args)
-    {
-        if (!*args)
-            return false;
-
-        return HandleRemoveDisables(handler, args, DISABLE_TYPE_ITEM);
+        return HandleRemoveDisables(handler, entry, DISABLE_TYPE_VMAP);
     }
 };
 

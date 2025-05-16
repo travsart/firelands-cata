@@ -1,9 +1,9 @@
 /*
- * This file is part of the FirelandsCore Project. See AUTHORS file for Copyright information
+ * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 2 of the License, or (at your
+ * Free Software Foundation; either version 3 of the License, or (at your
  * option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
@@ -11,45 +11,38 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
  * more details.
  *
- * You should have received a copy of the GNU Affero General Public License along
+ * You should have received a copy of the GNU General Public License along
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* ScriptData
-Name: debug_commandscript
-%Complete: 100
-Comment: All debug related commands
-Category: commandscripts
-EndScriptData */
+ /* ScriptData
+ Name: debug_commandscript
+ %Complete: 100
+ Comment: All debug related commands
+ Category: commandscripts
+ EndScriptData */
 
-#include "ScriptMgr.h"
 #include "Bag.h"
-#include "BattlefieldMgr.h"
 #include "BattlegroundMgr.h"
 #include "CellImpl.h"
+#include "Channel.h"
 #include "Chat.h"
-#include "DBCStores.h"
-#include "GossipDef.h"
+#include "CommandScript.h"
 #include "GridNotifiersImpl.h"
-#include "InstanceScript.h"
+#include "LFGMgr.h"
 #include "Language.h"
 #include "Log.h"
-#include "MapManager.h"
 #include "M2Stores.h"
-#include "ObjectAccessor.h"
+#include "MapMgr.h"
 #include "ObjectMgr.h"
-#include "PhasingHandler.h"
 #include "PoolMgr.h"
-#include "QuestPools.h"
-#include "RBAC.h"
-#include "SpellMgr.h"
+#include "ScriptMgr.h"
 #include "Transport.h"
-#include "WorldSession.h"
+#include "Warden.h"
 #include <fstream>
-#include <limits>
-#include <map>
 #include <set>
-#include <LFGMgr.h>
+
+using namespace Firelands::ChatCommands;
 
 class debug_commandscript : public CommandScript
 {
@@ -58,158 +51,125 @@ public:
 
     ChatCommandTable GetCommands() const override
     {
-        static std::vector<ChatCommand> debugPlayCommandTable =
+        static ChatCommandTable debugPlayCommandTable =
         {
-            { "cinematic",     rbac::RBAC_PERM_COMMAND_DEBUG_PLAY_CINEMATIC, false, &HandleDebugPlayCinematicCommand,   "" },
-            { "movie",         rbac::RBAC_PERM_COMMAND_DEBUG_PLAY_MOVIE,     false, &HandleDebugPlayMovieCommand,       "" },
-            { "sound",         rbac::RBAC_PERM_COMMAND_DEBUG_PLAY_SOUND,     false, &HandleDebugPlaySoundCommand,       "" },
-            { "music",         rbac::RBAC_PERM_COMMAND_DEBUG_PLAY_MUSIC,     false, &HandleDebugPlayMusicCommand,       "" },
+            { "cinematic",      HandleDebugPlayCinematicCommand,       SEC_ADMINISTRATOR, Console::No },
+            { "movie",          HandleDebugPlayMovieCommand,           SEC_ADMINISTRATOR, Console::No },
+            { "sound",          HandleDebugPlaySoundCommand,           SEC_ADMINISTRATOR, Console::No },
+            { "music",          HandleDebugPlayMusicCommand,           SEC_ADMINISTRATOR, Console::No },
+            { "visual",         HandleDebugVisualCommand,              SEC_ADMINISTRATOR, Console::No }
         };
-        static std::vector<ChatCommand> debugSendCommandTable =
+        static ChatCommandTable debugSendCommandTable =
         {
-            { "buyerror",      rbac::RBAC_PERM_COMMAND_DEBUG_SEND_BUYERROR,      false, &HandleDebugSendBuyErrorCommand,        "" },
-            { "channelnotify", rbac::RBAC_PERM_COMMAND_DEBUG_SEND_CHANNELNOTIFY, false, &HandleDebugSendChannelNotifyCommand,   "" },
-            { "chatmessage",   rbac::RBAC_PERM_COMMAND_DEBUG_SEND_CHATMESSAGE,   false, &HandleDebugSendChatMsgCommand,         "" },
-            { "equiperror",    rbac::RBAC_PERM_COMMAND_DEBUG_SEND_EQUIPERROR,    false, &HandleDebugSendEquipErrorCommand,      "" },
-            { "largepacket",   rbac::RBAC_PERM_COMMAND_DEBUG_SEND_LARGEPACKET,   false, &HandleDebugSendLargePacketCommand,     "" },
-            { "opcode",        rbac::RBAC_PERM_COMMAND_DEBUG_SEND_OPCODE,        false, &HandleDebugSendOpcodeCommand,          "" },
-            { "qpartymsg",     rbac::RBAC_PERM_COMMAND_DEBUG_SEND_QPARTYMSG,     false, &HandleDebugSendQuestPartyMsgCommand,   "" },
-            { "qinvalidmsg",   rbac::RBAC_PERM_COMMAND_DEBUG_SEND_QINVALIDMSG,   false, &HandleDebugSendQuestInvalidMsgCommand, "" },
-            { "sellerror",     rbac::RBAC_PERM_COMMAND_DEBUG_SEND_SELLERROR,     false, &HandleDebugSendSellErrorCommand,       "" },
-            { "setphaseshift", rbac::RBAC_PERM_COMMAND_DEBUG_SEND_SETPHASESHIFT, false, &HandleDebugSendSetPhaseShiftCommand,   "" },
-            { "spellfail",     rbac::RBAC_PERM_COMMAND_DEBUG_SEND_SPELLFAIL,     false, &HandleDebugSendSpellFailCommand,       "" },
+            { "buyerror",       HandleDebugSendBuyErrorCommand,        SEC_ADMINISTRATOR, Console::No },
+            { "channelnotify",  HandleDebugSendChannelNotifyCommand,   SEC_ADMINISTRATOR, Console::No },
+            { "chatmessage",    HandleDebugSendChatMsgCommand,         SEC_ADMINISTRATOR, Console::No },
+            { "equiperror",     HandleDebugSendEquipErrorCommand,      SEC_ADMINISTRATOR, Console::No },
+            { "largepacket",    HandleDebugSendLargePacketCommand,     SEC_ADMINISTRATOR, Console::No },
+            { "opcode",         HandleDebugSendOpcodeCommand,          SEC_ADMINISTRATOR, Console::No },
+            { "qpartymsg",      HandleDebugSendQuestPartyMsgCommand,   SEC_ADMINISTRATOR, Console::No },
+            { "qinvalidmsg",    HandleDebugSendQuestInvalidMsgCommand, SEC_ADMINISTRATOR, Console::No },
+            { "sellerror",      HandleDebugSendSellErrorCommand,       SEC_ADMINISTRATOR, Console::No },
+            { "setphaseshift",  HandleDebugSendSetPhaseShiftCommand,   SEC_ADMINISTRATOR, Console::No },
+            { "spellfail",      HandleDebugSendSpellFailCommand,       SEC_ADMINISTRATOR, Console::No }
         };
-        static std::vector<ChatCommand> debugCommandTable =
+        static ChatCommandTable debugCommandTable =
         {
-            { "setbit",        rbac::RBAC_PERM_COMMAND_DEBUG_SETBIT,        false, &HandleDebugSet32BitCommand,         "" },
-            { "threat",        rbac::RBAC_PERM_COMMAND_DEBUG_THREAT,        false, &HandleDebugThreatListCommand,       "" },
-            { "threatinfo",    rbac::RBAC_PERM_COMMAND_DEBUG_THREATINFO,    false, &HandleDebugThreatInfoCommand,       "" },
-            { "combat",        rbac::RBAC_PERM_COMMAND_DEBUG_COMBAT,        false, &HandleDebugCombatListCommand,       "" },
-            { "anim",          rbac::RBAC_PERM_COMMAND_DEBUG_ANIM,          false, &HandleDebugAnimCommand,             "" },
-            { "arena",         rbac::RBAC_PERM_COMMAND_DEBUG_ARENA,         true,  &HandleDebugArenaCommand,            "" },
-            { "bg",            rbac::RBAC_PERM_COMMAND_DEBUG_BG,            true,  &HandleDebugBattlegroundCommand,     "" },
-            { "getitemstate",  rbac::RBAC_PERM_COMMAND_DEBUG_GETITEMSTATE,  false, &HandleDebugGetItemStateCommand,     "" },
-            { "lootrecipient", rbac::RBAC_PERM_COMMAND_DEBUG_LOOTRECIPIENT, false, &HandleDebugGetLootRecipientCommand, "" },
-            { "getvalue",      rbac::RBAC_PERM_COMMAND_DEBUG_GETVALUE,      false, &HandleDebugGetValueCommand,         "" },
-            { "getitemvalue",  rbac::RBAC_PERM_COMMAND_DEBUG_GETITEMVALUE,  false, &HandleDebugGetItemValueCommand,     "" },
-            { "Mod32Value",    rbac::RBAC_PERM_COMMAND_DEBUG_MOD32VALUE,    false, &HandleDebugMod32ValueCommand,       "" },
-            { "play",          rbac::RBAC_PERM_COMMAND_DEBUG_PLAY,          false, nullptr,                             "", debugPlayCommandTable },
-            { "send",          rbac::RBAC_PERM_COMMAND_DEBUG_SEND,          false, nullptr,                             "", debugSendCommandTable },
-            { "setaurastate",  rbac::RBAC_PERM_COMMAND_DEBUG_SETAURASTATE,  false, &HandleDebugSetAuraStateCommand,     "" },
-            { "setitemvalue",  rbac::RBAC_PERM_COMMAND_DEBUG_SETITEMVALUE,  false, &HandleDebugSetItemValueCommand,     "" },
-            { "setvalue",      rbac::RBAC_PERM_COMMAND_DEBUG_SETVALUE,      false, &HandleDebugSetValueCommand,         "" },
-            { "spawnvehicle",  rbac::RBAC_PERM_COMMAND_DEBUG_SPAWNVEHICLE,  false, &HandleDebugSpawnVehicleCommand,     "" },
-            { "setvid",        rbac::RBAC_PERM_COMMAND_DEBUG_SETVID,        false, &HandleDebugSetVehicleIdCommand,     "" },
-            { "entervehicle",  rbac::RBAC_PERM_COMMAND_DEBUG_ENTERVEHICLE,  false, &HandleDebugEnterVehicleCommand,     "" },
-            { "worldstate",    rbac::RBAC_PERM_COMMAND_DEBUG_WORLDSTATE,    false, &HandleDebugUpdateWorldStateCommand, "" },
-            { "update",        rbac::RBAC_PERM_COMMAND_DEBUG_UPDATE,        false, &HandleDebugUpdateCommand,           "" },
-            { "itemexpire",    rbac::RBAC_PERM_COMMAND_DEBUG_ITEMEXPIRE,    false, &HandleDebugItemExpireCommand,       "" },
-            { "lfg",            rbac::RBCA_PERM_COMMAND_LFG_DEBUG,           false, &HandleDebugDungeonFinderCommand,    "" },
-            { "areatriggers",  rbac::RBAC_PERM_COMMAND_DEBUG_AREATRIGGERS,  false, &HandleDebugAreaTriggersCommand,     "" },
-            { "los",           rbac::RBAC_PERM_COMMAND_DEBUG_LOS,           false, &HandleDebugLoSCommand,              "" },
-            { "moveflags",     rbac::RBAC_PERM_COMMAND_DEBUG_MOVEFLAGS,     false, &HandleDebugMoveflagsCommand,        "" },
-            { "transport",     rbac::RBAC_PERM_COMMAND_DEBUG_TRANSPORT,     false, &HandleDebugTransportCommand,        "" },
-            { "phase",         rbac::RBAC_PERM_COMMAND_DEBUG_PHASE,         false, &HandleDebugPhaseCommand,            "" },
-            { "loadcells",     rbac::RBAC_PERM_COMMAND_DEBUG_LOADCELLS,     false, &HandleDebugLoadCellsCommand,        "" },
-            { "boundary",      rbac::RBAC_PERM_COMMAND_DEBUG_BOUNDARY,      false, &HandleDebugBoundaryCommand,         "" },
-            { "raidreset",     rbac::RBAC_PERM_COMMAND_INSTANCE_UNBIND,     false, &HandleDebugRaidResetCommand,        "" },
-            { "neargraveyard", rbac::RBAC_PERM_COMMAND_NEARGRAVEYARD,       false, &HandleDebugNearGraveyard,           "" },
+            { "setbit",         HandleDebugSet32BitCommand,            SEC_ADMINISTRATOR, Console::No },
+            { "threat",         HandleDebugThreatListCommand,          SEC_ADMINISTRATOR, Console::No },
+            { "hostile",        HandleDebugHostileRefListCommand,      SEC_ADMINISTRATOR, Console::No },
+            { "anim",           HandleDebugAnimCommand,                SEC_ADMINISTRATOR, Console::No },
+            { "arena",          HandleDebugArenaCommand,               SEC_ADMINISTRATOR, Console::No },
+            { "bg",             HandleDebugBattlegroundCommand,        SEC_ADMINISTRATOR, Console::No },
+            { "cooldown",       HandleDebugCooldownCommand,            SEC_ADMINISTRATOR, Console::No },
+            { "getitemstate",   HandleDebugGetItemStateCommand,        SEC_ADMINISTRATOR, Console::No },
+            { "lootrecipient",  HandleDebugGetLootRecipientCommand,    SEC_ADMINISTRATOR, Console::No },
+            { "getvalue",       HandleDebugGetValueCommand,            SEC_ADMINISTRATOR, Console::No },
+            { "getitemvalue",   HandleDebugGetItemValueCommand,        SEC_ADMINISTRATOR, Console::No },
+            { "Mod32Value",     HandleDebugMod32ValueCommand,          SEC_ADMINISTRATOR, Console::No },
+            { "play",           debugPlayCommandTable },
+            { "send",           debugSendCommandTable },
+            { "setaurastate",   HandleDebugSetAuraStateCommand,        SEC_ADMINISTRATOR, Console::No },
+            { "setitemvalue",   HandleDebugSetItemValueCommand,        SEC_ADMINISTRATOR, Console::No },
+            { "setvalue",       HandleDebugSetValueCommand,            SEC_ADMINISTRATOR, Console::No },
+            { "spawnvehicle",   HandleDebugSpawnVehicleCommand,        SEC_ADMINISTRATOR, Console::No },
+            { "setvid",         HandleDebugSetVehicleIdCommand,        SEC_ADMINISTRATOR, Console::No },
+            { "entervehicle",   HandleDebugEnterVehicleCommand,        SEC_ADMINISTRATOR, Console::No },
+            { "uws",            HandleDebugUpdateWorldStateCommand,    SEC_ADMINISTRATOR, Console::No },
+            { "update",         HandleDebugUpdateCommand,              SEC_ADMINISTRATOR, Console::No },
+            { "itemexpire",     HandleDebugItemExpireCommand,          SEC_ADMINISTRATOR, Console::No },
+            { "areatriggers",   HandleDebugAreaTriggersCommand,        SEC_ADMINISTRATOR, Console::No },
+            { "lfg",            HandleDebugDungeonFinderCommand,       SEC_ADMINISTRATOR, Console::No },
+            { "los",            HandleDebugLoSCommand,                 SEC_ADMINISTRATOR, Console::No },
+            { "moveflags",      HandleDebugMoveflagsCommand,           SEC_ADMINISTRATOR, Console::No },
+            { "unitstate",      HandleDebugUnitStateCommand,           SEC_ADMINISTRATOR, Console::No },
+            { "objectcount",    HandleDebugObjectCountCommand,         SEC_ADMINISTRATOR, Console::Yes},
+            { "dummy",          HandleDebugDummyCommand,               SEC_ADMINISTRATOR, Console::No },
+            { "mapdata",        HandleDebugMapDataCommand,             SEC_ADMINISTRATOR, Console::No }
         };
-        static std::vector<ChatCommand> commandTable =
+        static ChatCommandTable commandTable =
         {
-            { "debug",         rbac::RBAC_PERM_COMMAND_DEBUG,               true,  nullptr,                             "", debugCommandTable },
-            { "wpgps",         rbac::RBAC_PERM_COMMAND_WPGPS,               false, &HandleWPGPSCommand,                 "" },
+            { "debug", debugCommandTable },
+            { "wpgps", HandleWPGPSCommand, SEC_ADMINISTRATOR, Console::No }
         };
         return commandTable;
     }
 
-    static bool HandleDebugPlayCinematicCommand(ChatHandler* handler, char const* args)
+    // cinematicId - ID from CinematicSequences.dbc
+    static bool HandleDebugPlayCinematicCommand(ChatHandler* handler, uint32 cinematicId)
     {
-        // USAGE: .debug play cinematic #cinematicId
-        // #cinematicId - ID decimal number from CinemaicSequences.dbc (1st column)
-        if (!*args)
-        {
-            handler->SendSysMessage(LANG_BAD_VALUE);
-            handler->SetSentErrorMessage(true);
-            return false;
-        }
-
-        uint32 cinematicId = atoul(args);
-
         CinematicSequencesEntry const* cineSeq = sCinematicSequencesStore.LookupEntry(cinematicId);
         if (!cineSeq)
         {
-            handler->PSendSysMessage(LANG_CINEMATIC_NOT_EXIST, cinematicId);
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage(LANG_CINEMATIC_NOT_EXIST, cinematicId);
             return false;
         }
 
         // Dump camera locations
-        if (std::vector<FlyByCamera> const* flyByCameras = GetFlyByCameras(cineSeq->Camera[0]))
+        if (std::vector<FlyByCamera> const* flyByCameras = GetFlyByCameras(cineSeq->cinematicCamera))
         {
-            handler->PSendSysMessage("Waypoints for sequence %u, camera %u", cinematicId, cineSeq->Camera[0]);
+            handler->PSendSysMessage("Waypoints for sequence {}, camera {}", cinematicId, cineSeq->cinematicCamera);
             uint32 count = 1;
             for (FlyByCamera const& cam : *flyByCameras)
             {
-                handler->PSendSysMessage("%02u - %7ums [%s (%f degrees)]", count, cam.timeStamp, cam.locations.ToString().c_str(), cam.locations.GetOrientation() * (180 / M_PI));
+                handler->PSendSysMessage("{} - {}ms [{} ({} degrees)]", count, cam.timeStamp, cam.locations.ToString(), cam.locations.GetOrientation() * (180 / M_PI));
                 ++count;
             }
-            handler->PSendSysMessage("%u waypoints dumped", flyByCameras->size());
+            handler->PSendSysMessage("{} waypoints dumped", flyByCameras->size());
         }
 
-        handler->GetSession()->GetPlayer()->SendCinematicStart(cinematicId);
+        handler->GetPlayer()->SendCinematicStart(cinematicId);
         return true;
     }
 
-    static bool HandleDebugPlayMovieCommand(ChatHandler* handler, char const* args)
+    // movieId - ID from Movie.dbc
+    static bool HandleDebugPlayMovieCommand(ChatHandler* handler, uint32 movieId)
     {
-        // USAGE: .debug play movie #movieId
-        // #movieId - ID decimal number from Movie.dbc (1st column)
-        if (!*args)
-        {
-            handler->SendSysMessage(LANG_BAD_VALUE);
-            handler->SetSentErrorMessage(true);
-            return false;
-        }
-
-        uint32 movieId = atoul(args);
         if (!sMovieStore.LookupEntry(movieId))
         {
-            handler->PSendSysMessage(LANG_MOVIE_NOT_EXIST, movieId);
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage(LANG_MOVIE_NOT_EXIST, movieId);
             return false;
         }
 
-        handler->GetSession()->GetPlayer()->SendMovieStart(movieId);
+        handler->GetPlayer()->SendMovieStart(movieId);
         return true;
     }
 
-    static bool HandleDebugPlaySoundCommand(ChatHandler* handler, char const* args)
+    // soundId - ID from SoundEntries.dbc
+    static bool HandleDebugPlaySoundCommand(ChatHandler* handler, uint32 soundId)
     {
-        // USAGE: .debug playsound #soundId
-        // #soundId - ID decimal number from SoundEntries.dbc (1st column)
-        if (!*args)
-        {
-            handler->SendSysMessage(LANG_BAD_VALUE);
-            handler->SetSentErrorMessage(true);
-            return false;
-        }
-
-        uint32 soundId = atoul(args);
         if (!sSoundEntriesStore.LookupEntry(soundId))
         {
-            handler->PSendSysMessage(LANG_SOUND_NOT_EXIST, soundId);
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage(LANG_SOUND_NOT_EXIST, soundId);
             return false;
         }
 
-        Player* player = handler->GetSession()->GetPlayer();
+        Player* player = handler->GetPlayer();
 
         Unit* unit = handler->getSelectedUnit();
         if (!unit)
         {
-            handler->SendSysMessage(LANG_SELECT_CHAR_OR_CREATURE);
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage(LANG_SELECT_CHAR_OR_CREATURE);
             return false;
         }
 
@@ -222,26 +182,16 @@ public:
         return true;
     }
 
-    static bool HandleDebugPlayMusicCommand(ChatHandler* handler, char const* args)
+    // musicId - ID from SoundEntries.dbc
+    static bool HandleDebugPlayMusicCommand(ChatHandler* handler, uint32 musicId)
     {
-        // USAGE: .debug play music #musicId
-        // #musicId - ID decimal number from SoundEntries.dbc (1st column)
-        if (!*args)
-        {
-            handler->SendSysMessage(LANG_BAD_VALUE);
-            handler->SetSentErrorMessage(true);
-            return false;
-        }
-
-        uint32 musicId = atoul(args);
         if (!sSoundEntriesStore.LookupEntry(musicId))
         {
-            handler->PSendSysMessage(LANG_SOUND_NOT_EXIST, musicId);
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage(LANG_SOUND_NOT_EXIST, musicId);
             return false;
         }
 
-        Player* player = handler->GetSession()->GetPlayer();
+        Player* player = handler->GetPlayer();
 
         player->PlayDirectMusic(musicId, player);
 
@@ -249,83 +199,91 @@ public:
         return true;
     }
 
-    static bool HandleDebugSendSpellFailCommand(ChatHandler* handler, char const* args)
+    static bool HandleDebugVisualCommand(ChatHandler* handler, uint32 visualId)
     {
-        if (!*args)
+        if (!visualId)
+        {
+            handler->SendErrorMessage(LANG_BAD_VALUE);
             return false;
+        }
 
-        char* result = strtok((char*)args, " ");
-        if (!result)
-            return false;
+        Player* player = handler->GetPlayer();
+        Unit* target = handler->getSelectedUnit();
 
-        uint8 failNum = (uint8)atoi(result);
-        if (failNum == 0 && *result != '0')
-            return false;
+        if (!target)
+        {
+            player->SendPlaySpellVisual(visualId);
+            return true;
+        }
 
-        char* fail1 = strtok(nullptr, " ");
-        uint8 failArg1 = fail1 ? (uint8)atoi(fail1) : 0;
+        player->SendPlaySpellImpact(target->GetGUID(), visualId);
+        return true;
+    }
 
-        char* fail2 = strtok(nullptr, " ");
-        uint8 failArg2 = fail2 ? (uint8)atoi(fail2) : 0;
-
+    static bool HandleDebugSendSpellFailCommand(ChatHandler* handler, SpellCastResult result, Optional<uint32> failArg1, Optional<uint32> failArg2)
+    {
         WorldPacket data(SMSG_CAST_FAILED, 5);
         data << uint8(0);
-        data << uint32(133);
-        data << uint8(failNum);
-        if (fail1 || fail2)
-            data << uint32(failArg1);
-        if (fail2)
-            data << uint32(failArg2);
+        data << uint32(133); // Spell "Fireball"
+        data << uint8(result);
+
+        if (failArg1 || failArg2)
+        {
+            data << uint32(failArg1.value_or(0));
+        }
+
+        if (failArg2)
+        {
+            data << uint32(*failArg2);
+        }
 
         handler->GetSession()->SendPacket(&data);
         return true;
     }
 
-    static bool HandleDebugSendEquipErrorCommand(ChatHandler* handler, char const* args)
+    static bool HandleDebugSendEquipErrorCommand(ChatHandler* handler, InventoryResult error)
     {
-        if (!*args)
-            return false;
-
-        InventoryResult msg = InventoryResult(atoi(args));
-        handler->GetSession()->GetPlayer()->SendEquipError(msg, nullptr, nullptr);
+        handler->GetPlayer()->SendEquipError(InventoryResult(error), nullptr, nullptr);
         return true;
     }
 
-    static bool HandleDebugSendSellErrorCommand(ChatHandler* handler, char const* args)
+    static bool HandleDebugSendSellErrorCommand(ChatHandler* handler, SellResult error)
     {
-        if (!*args)
-            return false;
-
-        SellResult msg = SellResult(atoi(args));
-        handler->GetSession()->GetPlayer()->SendSellError(msg, nullptr, ObjectGuid::Empty);
+        handler->GetPlayer()->SendSellError(SellResult(error), nullptr, ObjectGuid::Empty, 0);
         return true;
     }
 
-    static bool HandleDebugSendBuyErrorCommand(ChatHandler* handler, char const* args)
+    static bool HandleDebugSendBuyErrorCommand(ChatHandler* handler, BuyResult error)
     {
-        if (!*args)
-            return false;
-
-        BuyResult msg = BuyResult(atoi(args));
-        handler->GetSession()->GetPlayer()->SendBuyError(msg, nullptr, 0, 0);
+        handler->GetPlayer()->SendBuyError(BuyResult(error), nullptr, 0, 0);
         return true;
     }
 
-    static bool HandleDebugSendOpcodeCommand(ChatHandler* handler, char const* /*args*/)
+    static bool HandleDebugSendOpcodeCommand(ChatHandler* handler)
     {
         Unit* unit = handler->getSelectedUnit();
         Player* player = nullptr;
-        if (!unit || (unit->GetTypeId() != TYPEID_PLAYER))
+
+        if (!unit || (!unit->IsPlayer()))
+        {
             player = handler->GetSession()->GetPlayer();
+        }
         else
+        {
             player = unit->ToPlayer();
+        }
 
         if (!unit)
+        {
             unit = player;
+        }
 
         std::ifstream ifs("opcode.txt");
-        if (ifs.fail())
+        if (!ifs.is_open())
+        {
+            handler->SendErrorMessage(LANG_DEBUG_OPCODE_FILE_MISSING);
             return false;
+        }
 
         // remove comments from file
         std::stringstream parsedStream;
@@ -357,15 +315,19 @@ public:
                 else if (commentToken[1] == '/')
                 {
                     std::string str;
-                    std::getline(ifs, str);
+                    getline(ifs, str);
                     continue;
                 }
                 // regular data
                 else
+                {
                     ifs.putback(commentToken[1]);
+                }
             }
+
             parsedStream.put(commentToken[0]);
         }
+
         ifs.close();
 
         uint32 opcode;
@@ -430,8 +392,7 @@ public:
                 GameObject* obj = handler->GetNearbyGameObject();
                 if (!obj)
                 {
-                    handler->PSendSysMessage(LANG_COMMAND_OBJNOTFOUND, 0);
-                    handler->SetSentErrorMessage(true);
+                    handler->SendErrorMessage(LANG_COMMAND_OBJNOTFOUND, 0);
                     ifs.close();
                     return false;
                 }
@@ -442,20 +403,19 @@ public:
                 GameObject* obj = handler->GetNearbyGameObject();
                 if (!obj)
                 {
-                    handler->PSendSysMessage(LANG_COMMAND_OBJNOTFOUND, 0);
-                    handler->SetSentErrorMessage(true);
+                    handler->SendErrorMessage(LANG_COMMAND_OBJNOTFOUND, 0);
                     ifs.close();
                     return false;
                 }
-                data << uint64(obj->GetGUID());
+                data << obj->GetGUID();
             }
             else if (type == "myguid")
             {
-                data << uint64(player->GetGUID());
+                data << player->GetGUID();
             }
             else if (type == "itsguid")
             {
-                data << uint64(unit->GetGUID());
+                data << unit->GetGUID();
             }
             else if (type == "itspos")
             {
@@ -471,32 +431,24 @@ public:
             }
             else
             {
-                LOG_ERROR("misc", "Sending opcode that has unknown type '%s'", type.c_str());
+                LOG_ERROR("network.opcode", "Sending opcode that has unknown type '{}'", type);
                 break;
             }
         }
-        LOG_DEBUG("network", "Sending opcode %u", data.GetOpcode());
+
         data.hexlike();
-        player->GetSession()->SendPacket(&data, true);
-        handler->PSendSysMessage(LANG_COMMAND_OPCODESENT, data.GetOpcode(), unit->GetName().c_str());
+        player->GetSession()->SendPacket(&data);
+        handler->PSendSysMessage(LANG_COMMAND_OPCODESENT, data.GetOpcode(), unit->GetName());
         return true;
     }
 
-    static bool HandleDebugUpdateWorldStateCommand(ChatHandler* handler, char const* args)
+    static bool HandleDebugUpdateWorldStateCommand(ChatHandler* handler, uint32 variable, uint32 value)
     {
-        char* w = strtok((char*)args, " ");
-        char* s = strtok(nullptr, " ");
-
-        if (!w || !s)
-            return false;
-
-        uint32 world = (uint32)atoi(w);
-        uint32 state = (uint32)atoi(s);
-        handler->GetSession()->GetPlayer()->SendUpdateWorldState(world, state);
+        handler->GetPlayer()->SendUpdateWorldState(variable, value);
         return true;
     }
 
-    static bool HandleDebugAreaTriggersCommand(ChatHandler* handler, char const* /*args*/)
+    static bool HandleDebugAreaTriggersCommand(ChatHandler* handler)
     {
         Player* player = handler->GetSession()->GetPlayer();
         if (!player->isDebugAreaTriggers)
@@ -509,74 +461,55 @@ public:
             handler->PSendSysMessage(LANG_DEBUG_AREATRIGGER_OFF);
             player->isDebugAreaTriggers = false;
         }
+
         return true;
     }
 
-    //Send notification in channel
-    static bool HandleDebugSendChannelNotifyCommand(ChatHandler* handler, char const* args)
+    static bool HandleDebugSendChannelNotifyCommand(ChatHandler* handler, ChatNotify type)
     {
-        if (!*args)
-            return false;
-
-        char const* name = "test";
-        uint8 code = atoi(args);
-
-        WorldPacket data(SMSG_CHANNEL_NOTIFY, (1+10));
-        data << code;                                           // notify type
-        data << name;                                           // channel name
+        WorldPacket data(SMSG_CHANNEL_NOTIFY, (1 + 10));
+        data << type;
+        data << "test";
         data << uint32(0);
         data << uint32(0);
         handler->GetSession()->SendPacket(&data);
         return true;
     }
 
-    //Send notification in chat
-    static bool HandleDebugSendChatMsgCommand(ChatHandler* handler, char const* args)
+    static bool HandleDebugSendChatMsgCommand(ChatHandler* handler, ChatMsg type)
     {
-        if (!*args)
-            return false;
-
-        char const* msg = "testtest";
-        uint8 type = atoi(args);
         WorldPacket data;
-        ChatHandler::BuildChatPacket(data, ChatMsg(type), LANG_UNIVERSAL, handler->GetSession()->GetPlayer(), handler->GetSession()->GetPlayer(), msg, 0, "chan");
+        ChatHandler::BuildChatPacket(data, type, LANG_UNIVERSAL, handler->GetPlayer(), handler->GetPlayer(), "testtest", 0, "chan");
         handler->GetSession()->SendPacket(&data);
         return true;
     }
 
-    static bool HandleDebugSendQuestPartyMsgCommand(ChatHandler* handler, char const* args)
+    static bool HandleDebugSendQuestPartyMsgCommand(ChatHandler* handler, QuestShareMessages msg)
     {
-        uint32 msg = atoul(args);
-        handler->GetSession()->GetPlayer()->SendPushToPartyResponse(handler->GetSession()->GetPlayer(), msg);
+        handler->GetPlayer()->SendPushToPartyResponse(handler->GetPlayer(), msg);
         return true;
     }
 
-    static bool HandleDebugGetLootRecipientCommand(ChatHandler* handler, char const* /*args*/)
+    static bool HandleDebugGetLootRecipientCommand(ChatHandler* handler)
     {
         Creature* target = handler->getSelectedCreature();
         if (!target)
             return false;
 
-        handler->PSendSysMessage("Loot recipient for creature %s (GUID %u, SpawnID %u) is %s",
-            target->GetName().c_str(), target->GetGUID().GetCounter(), target->GetSpawnId(),
-            target->hasLootRecipient() ? (target->GetLootRecipient() ? target->GetLootRecipient()->GetName().c_str() : "offline") : "no loot recipient");
+        handler->PSendSysMessage("Loot recipient for creature {} (GUID {}, SpawnID {}) is {}",
+            target->GetName(), target->GetGUID().ToString(), target->GetSpawnId(),
+            target->hasLootRecipient() ? (target->GetLootRecipient() ? target->GetLootRecipient()->GetName() : "offline") : "no loot recipient");
         return true;
     }
 
-    static bool HandleDebugSendQuestInvalidMsgCommand(ChatHandler* handler, char const* args)
+    static bool HandleDebugSendQuestInvalidMsgCommand(ChatHandler* handler, QuestFailedReason msg)
     {
-        QuestFailedReason msg = static_cast<QuestFailedReason>(atoul(args));
-        handler->GetSession()->GetPlayer()->SendCanTakeQuestResponse(msg);
+        handler->GetPlayer()->SendCanTakeQuestResponse(msg);
         return true;
     }
 
-    static bool HandleDebugGetItemStateCommand(ChatHandler* handler, char const* args)
+    static bool HandleDebugGetItemStateCommand(ChatHandler* handler, std::string itemState)
     {
-        if (!*args)
-            return false;
-
-        std::string itemState = args;
-
         ItemUpdateState state = ITEM_UNCHANGED;
         bool listQueue = false;
         bool checkAll = false;
@@ -598,7 +531,7 @@ public:
 
         Player* player = handler->getSelectedPlayer();
         if (!player)
-            player = handler->GetSession()->GetPlayer();
+            player = handler->GetPlayer();
 
         if (!listQueue && !checkAll)
         {
@@ -616,45 +549,43 @@ public:
                         for (uint8 j = 0; j < bag->GetBagSize(); ++j)
                             if (Item* item2 = bag->GetItemByPos(j))
                                 if (item2->GetState() == state)
-                                    handler->PSendSysMessage("bag: 255 slot: %d %s owner: %s", item2->GetSlot(), item2->GetGUID().ToString().c_str(), item2->GetOwnerGUID().ToString().c_str());
+                                    handler->PSendSysMessage("bag: 255 slot: {} {} owner: {}", item2->GetSlot(), item2->GetGUID().ToString(), item2->GetOwnerGUID().ToString());
                     }
                     else if (item->GetState() == state)
-                        handler->PSendSysMessage("bag: 255 slot: %d %s owner: %s", item->GetSlot(), item->GetGUID().ToString().c_str(), item->GetOwnerGUID().ToString().c_str());
+                        handler->PSendSysMessage("bag: 255 slot: {} {} owner: {}", item->GetSlot(), item->GetGUID().ToString(), item->GetOwnerGUID().ToString());
                 }
             }
         }
 
         if (listQueue)
         {
-            std::vector<Item*>& updateQueue = player->GetItemUpdateQueue();
-            for (size_t i = 0; i < updateQueue.size(); ++i)
-            {
-                Item* item = updateQueue[i];
-                if (!item)
-                    continue;
+            auto const& updateQueue = player->GetItemUpdateQueue();
 
+            for (auto const& item : updateQueue)
+            {
                 Bag* container = item->GetContainer();
                 uint8 bagSlot = container ? container->GetSlot() : uint8(INVENTORY_SLOT_BAG_0);
 
                 std::string st;
                 switch (item->GetState())
                 {
-                    case ITEM_UNCHANGED:
-                        st = "unchanged";
-                        break;
-                    case ITEM_CHANGED:
-                        st = "changed";
-                        break;
-                    case ITEM_NEW:
-                        st = "new";
-                        break;
-                    case ITEM_REMOVED:
-                        st = "removed";
-                        break;
+                case ITEM_UNCHANGED:
+                    st = "unchanged";
+                    break;
+                case ITEM_CHANGED:
+                    st = "changed";
+                    break;
+                case ITEM_NEW:
+                    st = "new";
+                    break;
+                case ITEM_REMOVED:
+                    st = "removed";
+                    break;
                 }
 
-                handler->PSendSysMessage("bag: %d slot: %d guid: %d - state: %s", bagSlot, item->GetSlot(), item->GetGUID().GetCounter(), st.c_str());
+                handler->PSendSysMessage("bag: {} slot: {} guid: {} - state: {}", bagSlot, item->GetSlot(), item->GetGUID().ToString(), st);
             }
+
             if (updateQueue.empty())
                 handler->PSendSysMessage("The player's updatequeue is empty");
         }
@@ -662,7 +593,7 @@ public:
         if (checkAll)
         {
             bool error = false;
-            std::vector<Item*>& updateQueue = player->GetItemUpdateQueue();
+            auto const& updateQueue = player->GetItemUpdateQueue();
             for (uint8 i = PLAYER_SLOT_START; i < PLAYER_SLOT_END; ++i)
             {
                 if (i >= BUYBACK_SLOT_START && i < BUYBACK_SLOT_END)
@@ -674,21 +605,21 @@ public:
 
                 if (item->GetSlot() != i)
                 {
-                    handler->PSendSysMessage("Item with slot %d and guid %d has an incorrect slot value: %d", i, item->GetGUID().GetCounter(), item->GetSlot());
+                    handler->PSendSysMessage("Item with slot {} and guid {} has an incorrect slot value: {}", i, item->GetGUID().ToString(), item->GetSlot());
                     error = true;
                     continue;
                 }
 
                 if (item->GetOwnerGUID() != player->GetGUID())
                 {
-                    handler->PSendSysMessage("The item with slot %d %s does have non-matching owner guid %s and %s!", item->GetSlot(), item->GetGUID().ToString().c_str(), item->GetOwnerGUID().ToString().c_str(), player->GetGUID().ToString().c_str());
+                    handler->PSendSysMessage("The item with slot {} {} does have non-matching owner guid {} and {}!", item->GetSlot(), item->GetGUID().ToString(), item->GetOwnerGUID().ToString(), player->GetGUID().ToString());
                     error = true;
                     continue;
                 }
 
                 if (Bag* container = item->GetContainer())
                 {
-                    handler->PSendSysMessage("The item with slot %d %s has a container (slot: %d, %s) but shouldn't!", item->GetSlot(), item->GetGUID().ToString().c_str(), container->GetSlot(), container->GetGUID().ToString().c_str());
+                    handler->PSendSysMessage("The item with slot {} {} has a container (slot: {}, {}) but shouldn't!", item->GetSlot(), item->GetGUID().ToString(), container->GetSlot(), container->GetGUID().ToString());
                     error = true;
                     continue;
                 }
@@ -698,28 +629,28 @@ public:
                     uint16 qp = item->GetQueuePos();
                     if (qp > updateQueue.size())
                     {
-                        handler->PSendSysMessage("The item with slot %d and guid %d has its queuepos (%d) larger than the update queue size! ", item->GetSlot(), item->GetGUID().GetCounter(), qp);
+                        handler->PSendSysMessage("The item with slot {} and guid {} has its queuepos ({}) larger than the update queue size! ", item->GetSlot(), item->GetGUID().ToString(), qp);
                         error = true;
                         continue;
                     }
 
-                    if (updateQueue[qp] == nullptr)
+                    if (!updateQueue[qp])
                     {
-                        handler->PSendSysMessage("The item with slot %d and guid %d has its queuepos (%d) pointing to nullptr in the queue!", item->GetSlot(), item->GetGUID().GetCounter(), qp);
+                        handler->PSendSysMessage("The item with slot {} and guid {} has its queuepos ({}) pointing to NULL in the queue!", item->GetSlot(), item->GetGUID().ToString(), qp);
                         error = true;
                         continue;
                     }
 
                     if (updateQueue[qp] != item)
                     {
-                        handler->PSendSysMessage("The item with slot %d and guid %d has a queuepos (%d) that points to another item in the queue (bag: %d, slot: %d, guid: %d)", item->GetSlot(), item->GetGUID().GetCounter(), qp, updateQueue[qp]->GetBagSlot(), updateQueue[qp]->GetSlot(), updateQueue[qp]->GetGUID().GetCounter());
+                        handler->PSendSysMessage("The item with slot {} and guid {} has a queuepos ({}) that points to another item in the queue (bag: {}, slot: {}, guid: {})", item->GetSlot(), item->GetGUID().ToString(), qp, updateQueue[qp]->GetBagSlot(), updateQueue[qp]->GetSlot(), updateQueue[qp]->GetGUID().ToString());
                         error = true;
                         continue;
                     }
                 }
                 else if (item->GetState() != ITEM_UNCHANGED)
                 {
-                    handler->PSendSysMessage("The item with slot %d and guid %d is not in queue but should be (state: %d)!", item->GetSlot(), item->GetGUID().GetCounter(), item->GetState());
+                    handler->PSendSysMessage("The item with slot {} and guid {} is not in queue but should be (state: {})!", item->GetSlot(), item->GetGUID().ToString(), item->GetState());
                     error = true;
                     continue;
                 }
@@ -734,14 +665,14 @@ public:
 
                         if (item2->GetSlot() != j)
                         {
-                            handler->PSendSysMessage("The item in bag %d and slot %d (guid: %d) has an incorrect slot value: %d", bag->GetSlot(), j, item2->GetGUID().GetCounter(), item2->GetSlot());
+                            handler->PSendSysMessage("The item in bag {} and slot {} (guid: {}) has an incorrect slot value: {}", bag->GetSlot(), j, item2->GetGUID().ToString(), item2->GetSlot());
                             error = true;
                             continue;
                         }
 
                         if (item2->GetOwnerGUID() != player->GetGUID())
                         {
-                            handler->PSendSysMessage("The item in bag %d at slot %d and %s, the owner (%s) and the player (%s) don't match!", bag->GetSlot(), item2->GetSlot(), item2->GetGUID().ToString().c_str(), item2->GetOwnerGUID().ToString().c_str(), player->GetGUID().ToString().c_str());
+                            handler->PSendSysMessage("The item in bag {} at slot {} and {}, the owner ({}) and the player ({}) don't match!", bag->GetSlot(), item2->GetSlot(), item2->GetGUID().ToString(), item2->GetOwnerGUID().ToString(), player->GetGUID().ToString());
                             error = true;
                             continue;
                         }
@@ -749,14 +680,14 @@ public:
                         Bag* container = item2->GetContainer();
                         if (!container)
                         {
-                            handler->PSendSysMessage("The item in bag %d at slot %d %s has no container!", bag->GetSlot(), item2->GetSlot(), item2->GetGUID().ToString().c_str());
+                            handler->PSendSysMessage("The item in bag {} at slot {} {} has no container!", bag->GetSlot(), item2->GetSlot(), item2->GetGUID().ToString());
                             error = true;
                             continue;
                         }
 
                         if (container != bag)
                         {
-                            handler->PSendSysMessage("The item in bag %d at slot %d %s has a different container(slot %d %s)!", bag->GetSlot(), item2->GetSlot(), item2->GetGUID().ToString().c_str(), container->GetSlot(), container->GetGUID().ToString().c_str());
+                            handler->PSendSysMessage("The item in bag {} at slot {} {} has a different container(slot {} {})!", bag->GetSlot(), item2->GetSlot(), item2->GetGUID().ToString(), container->GetSlot(), container->GetGUID().ToString());
                             error = true;
                             continue;
                         }
@@ -766,28 +697,28 @@ public:
                             uint16 qp = item2->GetQueuePos();
                             if (qp > updateQueue.size())
                             {
-                                handler->PSendSysMessage("The item in bag %d at slot %d having guid %d has a queuepos (%d) larger than the update queue size! ", bag->GetSlot(), item2->GetSlot(), item2->GetGUID().GetCounter(), qp);
+                                handler->PSendSysMessage("The item in bag {} at slot {} having guid {} has a queuepos ({}) larger than the update queue size! ", bag->GetSlot(), item2->GetSlot(), item2->GetGUID().ToString(), qp);
                                 error = true;
                                 continue;
                             }
 
-                            if (updateQueue[qp] == nullptr)
+                            if (!updateQueue[qp])
                             {
-                                handler->PSendSysMessage("The item in bag %d at slot %d having guid %d has a queuepos (%d) that points to nullptr in the queue!", bag->GetSlot(), item2->GetSlot(), item2->GetGUID().GetCounter(), qp);
+                                handler->PSendSysMessage("The item in bag {} at slot {} having guid {} has a queuepos ({}) that points to NULL in the queue!", bag->GetSlot(), item2->GetSlot(), item2->GetGUID().ToString(), qp);
                                 error = true;
                                 continue;
                             }
 
                             if (updateQueue[qp] != item2)
                             {
-                                handler->PSendSysMessage("The item in bag %d at slot %d having guid %d has a queuepos (%d) that points to another item in the queue (bag: %d, slot: %d, guid: %d)", bag->GetSlot(), item2->GetSlot(), item2->GetGUID().GetCounter(), qp, updateQueue[qp]->GetBagSlot(), updateQueue[qp]->GetSlot(), updateQueue[qp]->GetGUID().GetCounter());
+                                handler->PSendSysMessage("The item in bag {} at slot {} having guid {} has a queuepos ({}) that points to another item in the queue (bag: {}, slot: {}, guid: {})", bag->GetSlot(), item2->GetSlot(), item2->GetGUID().ToString(), qp, updateQueue[qp]->GetBagSlot(), updateQueue[qp]->GetSlot(), updateQueue[qp]->GetGUID().ToString());
                                 error = true;
                                 continue;
                             }
                         }
                         else if (item2->GetState() != ITEM_UNCHANGED)
                         {
-                            handler->PSendSysMessage("The item in bag %d at slot %d having guid %d is not in queue but should be (state: %d)!", bag->GetSlot(), item2->GetSlot(), item2->GetGUID().GetCounter(), item2->GetState());
+                            handler->PSendSysMessage("The item in bag {} at slot {} having guid {} is not in queue but should be (state: {})!", bag->GetSlot(), item2->GetSlot(), item2->GetGUID().ToString(), item2->GetState());
                             error = true;
                             continue;
                         }
@@ -795,22 +726,22 @@ public:
                 }
             }
 
-            for (size_t i = 0; i < updateQueue.size(); ++i)
+            uint32 index = 0;
+
+            for (auto const& item : updateQueue)
             {
-                Item* item = updateQueue[i];
-                if (!item)
-                    continue;
+                index++;
 
                 if (item->GetOwnerGUID() != player->GetGUID())
                 {
-                    handler->PSendSysMessage("queue(%zu): For the item %s, the owner (%s) and the player (%s) don't match!", i, item->GetGUID().ToString().c_str(), item->GetOwnerGUID().ToString().c_str(), player->GetGUID().ToString().c_str());
+                    handler->SendSysMessage(Firelands::StringFormat("queue({}): For the item {}, the owner ({}) and the player ({}) don't match!", index, item->GetGUID().ToString(), item->GetOwnerGUID().ToString(), player->GetGUID().ToString()));
                     error = true;
                     continue;
                 }
 
-                if (item->GetQueuePos() != i)
+                if (item->GetQueuePos() != index)
                 {
-                    handler->PSendSysMessage("queue(%zu): For the item %s, the queuepos doesn't match it's position in the queue!", i, item->GetGUID().ToString().c_str());
+                    handler->SendSysMessage(Firelands::StringFormat("queue({}): For the item {}, the queuepos doesn't match it's position in the queue!", index, item->GetGUID().ToString()));
                     error = true;
                     continue;
                 }
@@ -820,20 +751,21 @@ public:
 
                 Item* test = player->GetItemByPos(item->GetBagSlot(), item->GetSlot());
 
-                if (test == nullptr)
+                if (!test)
                 {
-                    handler->PSendSysMessage("queue(%zu): The bag(%d) and slot(%d) values for %s are incorrect, the player doesn't have any item at that position!", i, item->GetBagSlot(), item->GetSlot(), item->GetGUID().ToString().c_str());
+                    handler->SendSysMessage(Firelands::StringFormat("queue({}): The bag({}) and slot({}) values for {} are incorrect, the player doesn't have any item at that position!", index, item->GetBagSlot(), item->GetSlot(), item->GetGUID().ToString()));
                     error = true;
                     continue;
                 }
 
                 if (test != item)
                 {
-                    handler->PSendSysMessage("queue(%zu): The bag(%d) and slot(%d) values for the %s are incorrect, %s is there instead!", i, item->GetBagSlot(), item->GetSlot(), item->GetGUID().ToString().c_str(), test->GetGUID().ToString().c_str());
+                    handler->SendSysMessage(Firelands::StringFormat("queue({}): The bag({}) and slot({}) values for the {} are incorrect, {} is there instead!", index, item->GetBagSlot(), item->GetSlot(), item->GetGUID().ToString(), test->GetGUID().ToString()));
                     error = true;
                     continue;
                 }
             }
+
             if (!error)
                 handler->SendSysMessage("All OK!");
         }
@@ -841,353 +773,215 @@ public:
         return true;
     }
 
-    static bool HandleDebugBattlegroundCommand(ChatHandler* /*handler*/, char const* /*args*/)
+    static bool HandleDebugDungeonFinderCommand(ChatHandler* /*handler*/)
+    {
+        sLFGMgr->ToggleTesting();
+        return true;
+    }
+
+    static bool HandleDebugBattlegroundCommand(ChatHandler* /*handler*/)
     {
         sBattlegroundMgr->ToggleTesting();
         return true;
     }
 
-    static bool HandleDebugArenaCommand(ChatHandler* /*handler*/, char const* /*args*/)
+    static bool HandleDebugCooldownCommand(ChatHandler* handler, uint32 spell_id, uint32 end_time, Optional<uint32> item_id)
+    {
+        Player* player = handler->GetPlayer();
+
+        if (!player || !spell_id || !end_time)
+            return false;
+
+        if (!sSpellMgr->GetSpellInfo(spell_id))
+            return false;
+
+        if (!item_id)
+            item_id = 0;
+        else if (!sItemStore.LookupEntry(*item_id))
+            return false;
+
+        if (end_time < player->GetSpellCooldownDelay(spell_id))
+            player->RemoveSpellCooldown(spell_id, true);
+
+        player->AddSpellCooldown(spell_id, *item_id, end_time, true, false);
+
+        WorldPacket data;
+        player->BuildCooldownPacket(data, SPELL_COOLDOWN_FLAG_NONE, spell_id, end_time);
+        player->SendDirectMessage(&data);
+
+        return true;
+    }
+
+    static bool HandleDebugArenaCommand(ChatHandler* /*handler*/)
     {
         sBattlegroundMgr->ToggleArenaTesting();
         return true;
     }
 
-    static bool HandleDebugThreatListCommand(ChatHandler* handler, char const* /*args*/)
+    static bool HandleDebugThreatListCommand(ChatHandler* handler)
     {
-        Unit* target = handler->getSelectedUnit();
-        if (!target)
-            target = handler->GetSession()->GetPlayer();
-
-        ThreatManager& mgr = target->GetThreatManager();
-        if (!target->IsAlive())
-        {
-            handler->PSendSysMessage("%s (GUID %u) is not alive.%s", target->GetName().c_str(), target->GetGUID().GetCounter(), target->IsEngaged() ? " (It is, however, engaged. Huh?)" : "");
-            return true;
-        }
-
-        uint32 count = 0;
-        auto const& threatenedByMe = target->GetThreatManager().GetThreatenedByMeList();
-        if (threatenedByMe.empty())
-            handler->PSendSysMessage("%s (GUID %u) does not threaten any units.", target->GetName().c_str(), target->GetGUID().GetCounter());
-        else
-        {
-            handler->PSendSysMessage("List of units threatened by %s (GUID %u)", target->GetName().c_str(), target->GetGUID().GetCounter());
-            for (auto const& pair : threatenedByMe)
-            {
-                Unit* unit = pair.second->GetOwner();
-                handler->PSendSysMessage("   %u.   %s   (GUID %u, SpawnID %u)  - threat %f", ++count, unit->GetName().c_str(), unit->GetGUID().GetCounter(), unit->GetTypeId() == TYPEID_UNIT ? unit->ToCreature()->GetSpawnId() : 0, pair.second->GetThreat());
-            }
-            handler->SendSysMessage("End of threatened-by-me list.");
-        }
-
-        if (mgr.CanHaveThreatList())
-        {
-            if (!mgr.IsThreatListEmpty(true))
-            {
-                if (target->IsEngaged())
-                    handler->PSendSysMessage("Threat list of %s (GUID %u, SpawnID %u):", target->GetName().c_str(), target->GetGUID().GetCounter(), target->GetTypeId() == TYPEID_UNIT ? target->ToCreature()->GetSpawnId() : 0);
-                else
-                    handler->PSendSysMessage("%s (GUID %u, SpawnID %u) is not engaged, but still has a threat list? Well, here it is:", target->GetName().c_str(), target->GetGUID().GetCounter(), target->GetTypeId() == TYPEID_UNIT ? target->ToCreature()->GetSpawnId() : 0);
-
-                count = 0;
-                Unit* fixateVictim = mgr.GetFixateTarget();
-                for (ThreatReference const* ref : mgr.GetSortedThreatList())
-                {
-                    Unit* unit = ref->GetVictim();
-                    char const* onlineStr;
-                    switch (ref->GetOnlineState())
-                    {
-                        case ThreatReference::ONLINE_STATE_SUPPRESSED:
-                            onlineStr = " [SUPPRESSED]";
-                            break;
-                        case ThreatReference::ONLINE_STATE_OFFLINE:
-                            onlineStr = " [OFFLINE]";
-                            break;
-                        default:
-                            onlineStr = "";
-                    }
-                    char const* tauntStr;
-                    if (unit == fixateVictim)
-                        tauntStr = " [FIXATE]";
-                    else
-                        switch (ref->GetTauntState())
-                        {
-                            case ThreatReference::TAUNT_STATE_TAUNT:
-                                tauntStr = " [TAUNT]";
-                                break;
-                            case ThreatReference::TAUNT_STATE_DETAUNT:
-                                tauntStr = " [DETAUNT]";
-                                break;
-                            default:
-                                tauntStr = "";
-                        }
-                    handler->PSendSysMessage("   %u.   %s   (GUID %u)  - threat %f%s%s", ++count, unit->GetName().c_str(), unit->GetGUID().GetCounter(), ref->GetThreat(), tauntStr, onlineStr);
-                }
-                handler->SendSysMessage("End of threat list.");
-            }
-            else if (!target->IsEngaged())
-                handler->PSendSysMessage("%s (GUID %u, SpawnID %u) is not currently engaged.", target->GetName().c_str(), target->GetGUID().GetCounter(), target->GetTypeId() == TYPEID_UNIT ? target->ToCreature()->GetSpawnId() : 0);
-            else
-                handler->PSendSysMessage("%s (GUID %u, SpawnID %u) seems to be engaged, but does not have a threat list??", target->GetName().c_str(), target->GetGUID().GetCounter(), target->GetTypeId() == TYPEID_UNIT ? target->ToCreature()->GetSpawnId() : 0);
-        }
-        else if (target->IsEngaged())
-            handler->PSendSysMessage("%s (GUID %u) is currently engaged. (This unit cannot have a threat list.)", target->GetName().c_str(), target->GetGUID().GetCounter());
-        else
-            handler->PSendSysMessage("%s (GUID %u) is not currently engaged. (This unit cannot have a threat list.)", target->GetName().c_str(), target->GetGUID().GetCounter());
-        return true;
-    }
-
-    static bool HandleDebugThreatInfoCommand(ChatHandler* handler, char const* /*args*/)
-    {
-        Unit* target = handler->getSelectedUnit();
-        if (!target)
-        {
-            handler->SendSysMessage(LANG_SELECT_CHAR_OR_CREATURE);
-            handler->SetSentErrorMessage(true);
+        Creature* target = handler->getSelectedCreature();
+        if (!target || target->IsTotem() || target->IsPet())
             return false;
-        }
 
-        handler->PSendSysMessage("Threat info for %s (%s):", target->GetName(), target->GetGUID().ToString().c_str());
+        auto const& threatList = target->GetThreatMgr().GetThreatList();
+        ThreatContainer::StorageType::const_iterator itr;
+        uint32 count = 0;
 
-        ThreatManager const& mgr = target->GetThreatManager();
+        handler->PSendSysMessage("Threat list of {} ({})", target->GetName(), target->GetGUID().ToString());
 
-        // _singleSchoolModifiers
+        for (itr = threatList.begin(); itr != threatList.end(); ++itr)
         {
-            auto& mods = mgr._singleSchoolModifiers;
-            handler->SendSysMessage(" - Single-school threat modifiers:");
-            handler->PSendSysMessage(" |-- Physical: %.2f%%", mods[SPELL_SCHOOL_NORMAL]*100.0f);
-            handler->PSendSysMessage(" |-- Holy    : %.2f%%", mods[SPELL_SCHOOL_HOLY]*100.0f);
-            handler->PSendSysMessage(" |-- Fire    : %.2f%%", mods[SPELL_SCHOOL_FIRE]*100.0f);
-            handler->PSendSysMessage(" |-- Nature  : %.2f%%", mods[SPELL_SCHOOL_NATURE]*100.0f);
-            handler->PSendSysMessage(" |-- Frost   : %.2f%%", mods[SPELL_SCHOOL_FROST]*100.0f);
-            handler->PSendSysMessage(" |-- Shadow  : %.2f%%", mods[SPELL_SCHOOL_SHADOW]*100.0f);
-            handler->PSendSysMessage(" |-- Arcane  : %.2f%%", mods[SPELL_SCHOOL_ARCANE]*100.0f);
-        }
-
-        // _multiSchoolModifiers
-        {
-            auto& mods = mgr._multiSchoolModifiers;
-            handler->PSendSysMessage("- Multi-school threat modifiers (%zu entries):", mods.size());
-            for (auto const& pair : mods)
-                handler->PSendSysMessage(" |-- Mask 0x%x: %.2f%%", uint32(pair.first), pair.second);
-        }
-
-        // _redirectInfo
-        {
-            auto const& redirectInfo = mgr._redirectInfo;
-            if (redirectInfo.empty())
-                handler->SendSysMessage(" - No redirects being applied");
-            else
+            Unit* unit = (*itr)->getTarget();
+            if (!unit)
             {
-                handler->PSendSysMessage(" - %02zu redirects being applied:", redirectInfo.size());
-                for (auto const& pair : redirectInfo)
-                {
-                    Unit* unit = ObjectAccessor::GetUnit(*target, pair.first);
-                    handler->PSendSysMessage(" |-- %02u%% to %s", pair.second, unit ? unit->GetName().c_str() : pair.first.ToString().c_str());
-                }
+                handler->PSendSysMessage("   {}.   No Unit  - threat {}", ++count, (*itr)->GetThreat());
+                continue;
             }
+
+            handler->PSendSysMessage("   {}.   {}   ({})  - threat {}", ++count, unit->GetName(), unit->GetGUID().ToString(), (*itr)->GetThreat());
         }
 
-        // _redirectRegistry
+        auto const& threatList2 = target->GetThreatMgr().GetOfflineThreatList();
+        for (itr = threatList2.begin(); itr != threatList2.end(); ++itr)
         {
-            auto const& redirectRegistry = mgr._redirectRegistry;
-            if (redirectRegistry.empty())
-                handler->SendSysMessage(" - No redirects are registered");
-            else
+            Unit* unit = (*itr)->getTarget();
+            if (!unit)
             {
-                handler->PSendSysMessage(" - %02zu spells may have redirects registered", redirectRegistry.size());
-                for (auto const& outerPair : redirectRegistry) // (spellId, (guid, pct))
-                {
-                    SpellInfo const* const spell = sSpellMgr->GetSpellInfo(outerPair.first);
-                    handler->PSendSysMessage(" |-- #%06u %s (%zu entries):", outerPair.first, spell ? spell->SpellName : "<unknown>", outerPair.second.size());
-                    for (auto const& innerPair : outerPair.second) // (guid, pct)
-                    {
-                        Unit* unit = ObjectAccessor::GetUnit(*target, innerPair.first);
-                        handler->PSendSysMessage("   |-- %02u%% to %s", innerPair.second, unit ? unit->GetName().c_str() : innerPair.first.ToString().c_str());
-                    }
-                }
+                handler->PSendSysMessage("   {}.   [offline] No Unit  - threat {}", ++count, (*itr)->GetThreat());
+                continue;
             }
+
+            handler->PSendSysMessage("   {}.   [offline] {}   ({})  - threat {}", ++count, unit->GetName(), unit->GetGUID().ToString(), (*itr)->GetThreat());
         }
+
+        handler->SendSysMessage("End of threat list.");
 
         return true;
     }
 
-    static bool HandleDebugCombatListCommand(ChatHandler* handler, char const* /*args*/)
+    static bool HandleDebugHostileRefListCommand(ChatHandler* handler)
     {
         Unit* target = handler->getSelectedUnit();
         if (!target)
             target = handler->GetSession()->GetPlayer();
 
-        handler->PSendSysMessage("Combat refs: (Combat state: %d | Manager state: %d)", target->IsInCombat(), target->GetCombatManager().HasCombat());
-        for (auto const& ref : target->GetCombatManager().GetPvPCombatRefs())
+        HostileReference* ref = target->getHostileRefMgr().getFirst();
+        uint32 count = 0;
+
+        handler->PSendSysMessage("Hostile reference list of {} ({})", target->GetName(), target->GetGUID().ToString());
+
+        while (ref)
         {
-            Unit* unit = ref.second->GetOther(target);
-            handler->PSendSysMessage("[PvP] %s (SpawnID %u)", unit->GetName().c_str(), unit->GetTypeId() == TYPEID_UNIT ? unit->ToCreature()->GetSpawnId() : 0);
+            if (Unit* unit = ref->GetSource()->GetOwner())
+            {
+                handler->PSendSysMessage("   {}.   {} {}   ({})  - threat {}", ++count, (ref->IsOnline() ? "" : "[offline]"),
+                    unit->GetName(), unit->GetGUID().ToString(), ref->GetThreat());
+            }
+            else
+            {
+                handler->PSendSysMessage("   {}.   No Owner  - threat {}", ++count, ref->GetThreat());
+            }
+
+            ref = ref->next();
         }
-        for (auto const& ref : target->GetCombatManager().GetPvECombatRefs())
-        {
-            Unit* unit = ref.second->GetOther(target);
-            handler->PSendSysMessage("[PvE] %s (SpawnID %u)", unit->GetName().c_str(), unit->GetTypeId() == TYPEID_UNIT ? unit->ToCreature()->GetSpawnId() : 0);
-        }
+
+        handler->SendSysMessage("End of hostile reference list.");
         return true;
     }
 
-    static bool HandleDebugSetVehicleIdCommand(ChatHandler* handler, char const* args)
+    static bool HandleDebugSetVehicleIdCommand(ChatHandler* handler, uint32 id)
     {
         Unit* target = handler->getSelectedUnit();
         if (!target || target->IsVehicle())
             return false;
 
-        if (!args)
-            return false;
-
-        char* i = strtok((char*)args, " ");
-        if (!i)
-            return false;
-
-        uint32 id = (uint32)atoi(i);
         //target->SetVehicleId(id);
-        handler->PSendSysMessage("Vehicle id set to %u", id);
+        handler->PSendSysMessage("Vehicle id set to {}", id);
         return true;
     }
 
-    static bool HandleDebugEnterVehicleCommand(ChatHandler* handler, char const* args)
+    static bool HandleDebugEnterVehicleCommand(ChatHandler* handler, uint32 entry, Optional<int8> seatId)
     {
         Unit* target = handler->getSelectedUnit();
         if (!target || !target->IsVehicle())
             return false;
 
-        if (!args)
-            return false;
-
-        char* i = strtok((char*)args, " ");
-        if (!i)
-            return false;
-
-        char* j = strtok(nullptr, " ");
-
-        uint32 entry = (uint32)atoi(i);
-        int8 seatId = j ? (int8)atoi(j) : -1;
+        if (!seatId)
+            seatId = -1;
 
         if (!entry)
-            handler->GetSession()->GetPlayer()->EnterVehicle(target, seatId);
+            handler->GetPlayer()->EnterVehicle(target, *seatId);
         else
         {
             Creature* passenger = nullptr;
-            Firelands::AllCreaturesOfEntryInRange check(handler->GetSession()->GetPlayer(), entry, 20.0f);
-            Firelands::CreatureSearcher<Firelands::AllCreaturesOfEntryInRange> searcher(handler->GetSession()->GetPlayer(), passenger, check);
-            Cell::VisitAllObjects(handler->GetSession()->GetPlayer(), searcher, 30.0f);
+            Firelands::AllCreaturesOfEntryInRange check(handler->GetPlayer(), entry, 20.0f);
+            Firelands::CreatureSearcher<Firelands::AllCreaturesOfEntryInRange> searcher(handler->GetPlayer(), passenger, check);
+            Cell::VisitAllObjects(handler->GetPlayer(), searcher, 30.0f);
+
             if (!passenger || passenger == target)
                 return false;
-            passenger->EnterVehicle(target, seatId);
+
+            passenger->EnterVehicle(target, *seatId);
         }
 
-        handler->PSendSysMessage("Unit %u entered vehicle %d", entry, (int32)seatId);
+        handler->PSendSysMessage("Unit {} entered vehicle {:d}", entry, *seatId);
         return true;
     }
 
-    static bool HandleDebugSpawnVehicleCommand(ChatHandler* handler, char const* args)
+    static bool HandleDebugSpawnVehicleCommand(ChatHandler* handler, uint32 entry, Optional<uint32> id)
     {
-        if (!*args)
-            return false;
+        float x, y, z, o = handler->GetPlayer()->GetOrientation();
+        handler->GetPlayer()->GetClosePoint(x, y, z, handler->GetPlayer()->GetCombatReach());
 
-        char* e = strtok((char*)args, " ");
-        char* i = strtok(nullptr, " ");
-
-        if (!e)
-            return false;
-
-        uint32 entry = (uint32)atoi(e);
-
-        float x, y, z, o = handler->GetSession()->GetPlayer()->GetOrientation();
-        handler->GetSession()->GetPlayer()->GetClosePoint(x, y, z, handler->GetSession()->GetPlayer()->GetCombatReach());
-
-        if (!i)
-            return handler->GetSession()->GetPlayer()->SummonCreature(entry, x, y, z, o) != nullptr;
-
-        uint32 id = (uint32)atoi(i);
+        if (!id)
+            return handler->GetPlayer()->SummonCreature(entry, x, y, z, o) != nullptr;
 
         CreatureTemplate const* ci = sObjectMgr->GetCreatureTemplate(entry);
 
         if (!ci)
             return false;
 
-        VehicleEntry const* ve = sVehicleStore.LookupEntry(id);
+        VehicleEntry const* ve = sVehicleStore.LookupEntry(*id);
 
         if (!ve)
             return false;
 
         Creature* v = new Creature();
 
-        Map* map = handler->GetSession()->GetPlayer()->GetMap();
-        if (!v->Create(map->GenerateLowGuid<HighGuid::Vehicle>(), map, entry, { x, y, z, o }, nullptr, id))
+        Map* map = handler->GetPlayer()->GetMap();
+
+        if (!v->Create(map->GenerateLowGuid<HighGuid::Vehicle>(), map, handler->GetSession()->GetPlayer()->GetPhaseMask(), entry, *id, x, y, z, o))
         {
             delete v;
             return false;
         }
-
-        PhasingHandler::InheritPhaseShift(v, handler->GetSession()->GetPlayer());
 
         map->AddToMap(v->ToCreature());
 
         return true;
     }
 
-    static bool HandleDebugSendLargePacketCommand(ChatHandler* handler, char const* /*args*/)
+    static bool HandleDebugSendLargePacketCommand(ChatHandler* handler)
     {
-        char const* stuffingString = "This is a dummy string to push the packet's size beyond 128000 bytes. ";
         std::ostringstream ss;
+
         while (ss.str().size() < 128000)
-            ss << stuffingString;
+            ss << "This is a dummy string to push the packet's size beyond 128000 bytes. ";
+
         handler->SendSysMessage(ss.str().c_str());
         return true;
     }
 
-    static bool HandleDebugSendSetPhaseShiftCommand(ChatHandler* handler, char const* args)
+    static bool HandleDebugSendSetPhaseShiftCommand(ChatHandler* handler, uint32 phaseShift)
     {
-        if (!*args)
-            return false;
-
-        char* t = strtok((char*)args, " ");
-        char* p = strtok(nullptr, " ");
-        char* m = strtok(nullptr, " ");
-
-        if (!t)
-            return false;
-
-        PhaseShift phaseShift;
-
-        if (uint32 ut = (uint32)atoi(t))
-            phaseShift.AddVisibleMapId(ut, nullptr);
-
-        if (p)
-            if (uint32 up = (uint32)atoi(p))
-                phaseShift.AddPhase(up, PhaseFlags::None, nullptr);
-
-        if (m)
-            if (uint32 um = (uint32)atoi(m))
-                phaseShift.AddUiMapPhaseId(um);
-
-        PhasingHandler::SendToPlayer(handler->GetSession()->GetPlayer(), phaseShift);
+        handler->GetSession()->SendSetPhaseShift(phaseShift);
         return true;
     }
 
-    static bool HandleDebugGetItemValueCommand(ChatHandler* handler, char const* args)
+    static bool HandleDebugGetItemValueCommand(ChatHandler* handler, ObjectGuid::LowType guid, uint32 index)
     {
-        if (!*args)
-            return false;
-
-        char* e = strtok((char*)args, " ");
-        char* f = strtok(nullptr, " ");
-
-        if (!e || !f)
-            return false;
-
-        ObjectGuid::LowType guid = (uint32)atoi(e);
-        uint32 index = (uint32)atoi(f);
-
-        Item* i = handler->GetSession()->GetPlayer()->GetItemByGuid(ObjectGuid(HighGuid::Item, 0, guid));
+        Item* i = handler->GetPlayer()->GetItemByGuid(ObjectGuid(HighGuid::Item, 0, guid));
 
         if (!i)
             return false;
@@ -1197,28 +991,14 @@ public:
 
         uint32 value = i->GetUInt32Value(index);
 
-        handler->PSendSysMessage("Item %u: value at %u is %u", guid, index, value);
+        handler->PSendSysMessage("Item {}: value at {} is {}", guid, index, value);
 
         return true;
     }
 
-    static bool HandleDebugSetItemValueCommand(ChatHandler* handler, char const* args)
+    static bool HandleDebugSetItemValueCommand(ChatHandler* handler, ObjectGuid::LowType guid, uint32 index, uint32 value)
     {
-        if (!*args)
-            return false;
-
-        char* e = strtok((char*)args, " ");
-        char* f = strtok(nullptr, " ");
-        char* g = strtok(nullptr, " ");
-
-        if (!e || !f || !g)
-            return false;
-
-        ObjectGuid::LowType guid = (uint32)atoi(e);
-        uint32 index = (uint32)atoi(f);
-        uint32 value = (uint32)atoi(g);
-
-        Item* i = handler->GetSession()->GetPlayer()->GetItemByGuid(ObjectGuid(HighGuid::Item, 0, guid));
+        Item* i = handler->GetPlayer()->GetItemByGuid(ObjectGuid(HighGuid::Item, 0, guid));
 
         if (!i)
             return false;
@@ -1231,327 +1011,247 @@ public:
         return true;
     }
 
-    static bool HandleDebugItemExpireCommand(ChatHandler* handler, char const* args)
+    static bool HandleDebugItemExpireCommand(ChatHandler* handler, ObjectGuid::LowType guid)
     {
-        if (!*args)
-            return false;
-
-        char* e = strtok((char*)args, " ");
-        if (!e)
-            return false;
-
-        ObjectGuid::LowType guid = (uint32)atoi(e);
-
-        Item* i = handler->GetSession()->GetPlayer()->GetItemByGuid(ObjectGuid(HighGuid::Item, guid));
+        Item* i = handler->GetPlayer()->GetItemByGuid(ObjectGuid(HighGuid::Item, guid));
 
         if (!i)
             return false;
 
-        handler->GetSession()->GetPlayer()->DestroyItem(i->GetBagSlot(), i->GetSlot(), true);
-        sScriptMgr->OnItemExpire(handler->GetSession()->GetPlayer(), i->GetTemplate());
+        handler->GetPlayer()->DestroyItem(i->GetBagSlot(), i->GetSlot(), true);
+        sScriptMgr->OnItemExpire(handler->GetPlayer(), i->GetTemplate());
 
         return true;
     }
 
-    //show animation
-    static bool HandleDebugAnimCommand(ChatHandler* handler, char const* args)
+    // Play emote animation
+    static bool HandleDebugAnimCommand(ChatHandler* handler, Emote emote)
     {
-        if (!*args)
-            return false;
-
-        uint32 animId = atoi((char*)args);
         if (Unit* unit = handler->getSelectedUnit())
-            unit->HandleEmoteCommand(animId);
+            unit->HandleEmoteCommand(emote);
+
+        handler->PSendSysMessage("Playing emote {}", EnumUtils::ToConstant(emote));
+
         return true;
     }
 
-    static bool HandleDebugLoSCommand(ChatHandler* handler, char const* /*args*/)
+    static bool HandleDebugLoSCommand(ChatHandler* handler)
     {
         if (Unit* unit = handler->getSelectedUnit())
         {
             Player* player = handler->GetSession()->GetPlayer();
-            handler->PSendSysMessage("Checking LoS %s -> %s:", player->GetName().c_str(), unit->GetName().c_str());
-            handler->PSendSysMessage("    VMAP LoS: %s", player->IsWithinLOSInMap(unit, LINEOFSIGHT_CHECK_VMAP) ? "clear" : "obstructed");
-            handler->PSendSysMessage("    GObj LoS: %s", player->IsWithinLOSInMap(unit, LINEOFSIGHT_CHECK_GOBJECT) ? "clear" : "obstructed");
-            handler->PSendSysMessage("%s is %sin line of sight of %s.", unit->GetName().c_str(), (player->IsWithinLOSInMap(unit) ? "" : "not "), player->GetName().c_str());
+            handler->PSendSysMessage("Checking LoS {} -> {}:", player->GetName(), unit->GetName());
+            handler->PSendSysMessage("    VMAP LoS: {}", player->IsWithinLOSInMap(unit, VMAP::ModelIgnoreFlags::Nothing, LINEOFSIGHT_CHECK_VMAP) ? "clear" : "obstructed");
+            handler->PSendSysMessage("    GObj LoS: {}", player->IsWithinLOSInMap(unit, VMAP::ModelIgnoreFlags::Nothing, LINEOFSIGHT_CHECK_GOBJECT_ALL) ? "clear" : "obstructed");
+            handler->PSendSysMessage("{} is {}in line of sight of {}.", unit->GetName(), (player->IsWithinLOSInMap(unit) ? "" : "not "), player->GetName());
             return true;
         }
+
         return false;
     }
 
-    static bool HandleDebugSetAuraStateCommand(ChatHandler* handler, char const* args)
+    static bool HandleDebugSetAuraStateCommand(ChatHandler* handler, Optional<AuraStateType> state, bool apply)
     {
-        if (!*args)
-        {
-            handler->SendSysMessage(LANG_BAD_VALUE);
-            handler->SetSentErrorMessage(true);
-            return false;
-        }
-
         Unit* unit = handler->getSelectedUnit();
         if (!unit)
         {
-            handler->SendSysMessage(LANG_SELECT_CHAR_OR_CREATURE);
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage(LANG_SELECT_CHAR_OR_CREATURE);
             return false;
         }
 
-        int32 state = atoi((char*)args);
         if (!state)
         {
             // reset all states
-            for (int i = 1; i <= 32; ++i)
-                unit->ModifyAuraState(AuraStateType(i), false);
+            for (AuraStateType s : EnumUtils::Iterate<AuraStateType>())
+                unit->ModifyAuraState(s, false);
             return true;
         }
 
-        unit->ModifyAuraState(AuraStateType(abs(state)), state > 0);
+        unit->ModifyAuraState(*state, apply);
         return true;
     }
 
-    static bool HandleDebugSetValueCommand(ChatHandler* handler, char const* args)
+    static bool HandleDebugSetValueCommand(ChatHandler* handler, uint32 index, Variant<uint32, float> value)
     {
-        if (!*args)
-            return false;
-
-        char* x = strtok((char*)args, " ");
-        char* y = strtok(nullptr, " ");
-        char* z = strtok(nullptr, " ");
-
-        if (!x || !y)
-            return false;
-
         WorldObject* target = handler->getSelectedObject();
         if (!target)
         {
-            handler->SendSysMessage(LANG_SELECT_CHAR_OR_CREATURE);
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage(LANG_SELECT_CHAR_OR_CREATURE);
             return false;
         }
 
-        ObjectGuid guid = target->GetGUID();
-
-        uint32 field = (uint32)atoi(x);
-        if (field >= target->GetValuesCount())
+        if (index >= target->GetValuesCount())
         {
-            handler->PSendSysMessage(LANG_TOO_BIG_INDEX, field, guid.GetCounter(), target->GetValuesCount());
+            handler->PSendSysMessage(LANG_TOO_BIG_INDEX, index, target->GetGUID().ToString(), target->GetValuesCount());
             return false;
         }
 
-        bool isInt32 = true;
-        if (z)
-            isInt32 = atoi(z) != 0;
-
-        if (isInt32)
+        if (value.holds_alternative<uint32>())
         {
-            uint32 value = (uint32)atoi(y);
-            target->SetUInt32Value(field, value);
-            handler->PSendSysMessage(LANG_SET_UINT_FIELD, guid.GetCounter(), field, value);
+            target->SetUInt32Value(index, value.get<uint32>());
+            handler->PSendSysMessage(LANG_SET_UINT_FIELD, target->GetGUID().ToString(), uint32(index), uint32(value));
         }
-        else
+        else if (value.holds_alternative<float>())
         {
-            float value = (float)atof(y);
-            target->SetFloatValue(field, value);
-            handler->PSendSysMessage(LANG_SET_FLOAT_FIELD, guid.GetCounter(), field, value);
+            target->SetFloatValue(index, value.get<float>());
+            handler->PSendSysMessage(LANG_SET_FLOAT_FIELD, target->GetGUID().ToString(), static_cast<float>(index), uint32(value));
         }
 
         return true;
     }
 
-    static bool HandleDebugGetValueCommand(ChatHandler* handler, char const* args)
+    static bool HandleDebugGetValueCommand(ChatHandler* handler, uint32 index, bool isInt)
     {
-        if (!*args)
-            return false;
-
-        char* x = strtok((char*)args, " ");
-        char* z = strtok(nullptr, " ");
-
-        if (!x)
-            return false;
-
         Unit* target = handler->getSelectedUnit();
         if (!target)
         {
-            handler->SendSysMessage(LANG_SELECT_CHAR_OR_CREATURE);
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage(LANG_SELECT_CHAR_OR_CREATURE);
             return false;
         }
 
         ObjectGuid guid = target->GetGUID();
 
-        uint32 opcode = (uint32)atoi(x);
-        if (opcode >= target->GetValuesCount())
+        if (index >= target->GetValuesCount())
         {
-            handler->PSendSysMessage(LANG_TOO_BIG_INDEX, opcode, guid.GetCounter(), target->GetValuesCount());
+            handler->PSendSysMessage(LANG_TOO_BIG_INDEX, index, guid.ToString(), target->GetValuesCount());
             return false;
         }
 
-        bool isInt32 = true;
-        if (z)
-            isInt32 = atoi(z) != 0;
-
-        if (isInt32)
+        if (isInt)
         {
-            uint32 value = target->GetUInt32Value(opcode);
-            handler->PSendSysMessage(LANG_GET_UINT_FIELD, guid.GetCounter(), opcode, value);
+            uint32 value = target->GetUInt32Value(index);
+            handler->PSendSysMessage(LANG_GET_UINT_FIELD, guid.ToString(), index, value);
         }
         else
         {
-            float value = target->GetFloatValue(opcode);
-            handler->PSendSysMessage(LANG_GET_FLOAT_FIELD, guid.GetCounter(), opcode, value);
+            float value = target->GetFloatValue(index);
+            handler->PSendSysMessage(LANG_GET_FLOAT_FIELD, guid.ToString(), index, value);
         }
 
         return true;
     }
 
-    static bool HandleDebugMod32ValueCommand(ChatHandler* handler, char const* args)
+    static bool HandleDebugMod32ValueCommand(ChatHandler* handler, uint32 index, uint32 value)
     {
-        if (!*args)
-            return false;
-
-        char* x = strtok((char*)args, " ");
-        char* y = strtok(nullptr, " ");
-
-        if (!x || !y)
-            return false;
-
-        uint32 opcode = (uint32)atoi(x);
-        int value = atoi(y);
-
-        if (opcode >= handler->GetSession()->GetPlayer()->GetValuesCount())
+        if (index >= handler->GetPlayer()->GetValuesCount())
         {
-            handler->PSendSysMessage(LANG_TOO_BIG_INDEX, opcode, handler->GetSession()->GetPlayer()->GetGUID().GetCounter(), handler->GetSession()->GetPlayer()->GetValuesCount());
+            handler->PSendSysMessage(LANG_TOO_BIG_INDEX, index, handler->GetPlayer()->GetGUID().ToString(), handler->GetPlayer()->GetValuesCount());
             return false;
         }
 
-        int currentValue = (int)handler->GetSession()->GetPlayer()->GetUInt32Value(opcode);
+        uint32 currentValue = handler->GetPlayer()->GetUInt32Value(index);
 
         currentValue += value;
-        handler->GetSession()->GetPlayer()->SetUInt32Value(opcode, (uint32)currentValue);
+        handler->GetPlayer()->SetUInt32Value(index, currentValue);
 
-        handler->PSendSysMessage(LANG_CHANGE_32BIT_FIELD, opcode, currentValue);
+        handler->PSendSysMessage(LANG_CHANGE_32BIT_FIELD, index, currentValue);
 
         return true;
     }
 
-    static bool HandleDebugUpdateCommand(ChatHandler* handler, char const* args)
+    static bool HandleDebugUpdateCommand(ChatHandler* handler, uint32 index, Optional<uint32> value)
     {
-        if (!*args)
-            return false;
-
-        uint32 updateIndex;
-        uint32 value;
-
-        char* index = strtok((char*)args, " ");
-
         Unit* unit = handler->getSelectedUnit();
         if (!unit)
         {
-            handler->SendSysMessage(LANG_SELECT_CHAR_OR_CREATURE);
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage(LANG_SELECT_CHAR_OR_CREATURE);
             return false;
         }
 
         if (!index)
             return true;
 
-        updateIndex = atoi(index);
-        //check updateIndex
-        if (unit->GetTypeId() == TYPEID_PLAYER)
+        // check index
+        if (unit->IsPlayer())
         {
-            if (updateIndex >= PLAYER_END)
+            if (index >= PLAYER_END)
                 return true;
         }
-        else if (updateIndex >= UNIT_END)
+        else if (index >= UNIT_END)
             return true;
 
-        char* val = strtok(nullptr, " ");
-        if (!val)
+        if (!value)
         {
-            value = unit->GetUInt32Value(updateIndex);
+            value = unit->GetUInt32Value(index);
 
-            handler->PSendSysMessage(LANG_UPDATE, unit->GetGUID().GetCounter(), updateIndex, value);
+            handler->PSendSysMessage(LANG_UPDATE, unit->GetGUID().ToString(), index, *value);
             return true;
         }
 
-        value = atoi(val);
+        unit->SetUInt32Value(index, *value);
 
-        handler->PSendSysMessage(LANG_UPDATE_CHANGE, unit->GetGUID().GetCounter(), updateIndex, value);
-
-        unit->SetUInt32Value(updateIndex, value);
-
+        handler->PSendSysMessage(LANG_UPDATE_CHANGE, unit->GetGUID().ToString(), index, *value);
         return true;
     }
 
-    static bool HandleDebugSet32BitCommand(ChatHandler* handler, char const* args)
+    static bool HandleDebugSet32BitCommand(ChatHandler* handler, uint32 index, uint8 bit)
     {
-        if (!*args)
-            return false;
-
         WorldObject* target = handler->getSelectedObject();
         if (!target)
         {
-            handler->SendSysMessage(LANG_SELECT_CHAR_OR_CREATURE);
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage(LANG_SELECT_CHAR_OR_CREATURE);
             return false;
         }
 
-        char* x = strtok((char*)args, " ");
-        char* y = strtok(nullptr, " ");
-
-        if (!x || !y)
+        if (bit > 32) // uint32 = 32 bits
             return false;
 
-        uint32 opcode = (uint32)atoi(x);
-        uint32 val = (uint32)atoi(y);
-        if (val > 32)                                         //uint32 = 32 bits
-            return false;
+        uint32 value = bit ? 1 << (bit - 1) : 0;
+        target->SetUInt32Value(index, value);
 
-        uint32 value = val ? 1 << (val - 1) : 0;
-        target->SetUInt32Value(opcode,  value);
-
-        handler->PSendSysMessage(LANG_SET_32BIT_FIELD, opcode, value);
+        handler->PSendSysMessage(LANG_SET_32BIT_FIELD, index, value);
         return true;
     }
 
-    static bool HandleDebugMoveflagsCommand(ChatHandler* handler, char const* args)
+    static bool HandleDebugMoveflagsCommand(ChatHandler* handler, Optional<uint32> moveFlags, Optional<uint32> moveFlagsExtra)
     {
         Unit* target = handler->getSelectedUnit();
         if (!target)
-            target = handler->GetSession()->GetPlayer();
+            target = handler->GetPlayer();
 
-        if (!*args)
+        if (!moveFlags)
         {
             //! Display case
             handler->PSendSysMessage(LANG_MOVEFLAGS_GET, target->GetUnitMovementFlags(), target->GetExtraUnitMovementFlags());
         }
         else
         {
-            char* mask1 = strtok((char*)args, " ");
-            if (!mask1)
-                return false;
+            static uint32 const FlagsWithHandlers = MOVEMENTFLAG_MASK_HAS_PLAYER_STATUS_OPCODE |
+                MOVEMENTFLAG_WALKING | MOVEMENTFLAG_SWIMMING |
+                MOVEMENTFLAG_SPLINE_ENABLED;
 
-            char* mask2 = strtok(nullptr, " \n");
+            bool unhandledFlag = ((*moveFlags ^ target->GetUnitMovementFlags()) & ~FlagsWithHandlers) != 0;
 
-            uint32 moveFlags = (uint32)atoi(mask1);
-            target->SetUnitMovementFlags(moveFlags);
+            target->SetWalk((*moveFlags & MOVEMENTFLAG_WALKING) != 0);
+            target->SetDisableGravity((*moveFlags & MOVEMENTFLAG_DISABLE_GRAVITY) != 0);
+            target->SetSwim((*moveFlags & MOVEMENTFLAG_SWIMMING) != 0);
+            target->SetCanFly((*moveFlags & MOVEMENTFLAG_CAN_FLY) != 0);
+            target->SetWaterWalking((*moveFlags & MOVEMENTFLAG_WATERWALKING) != 0);
+            target->SetFeatherFall((*moveFlags & MOVEMENTFLAG_FALLING_SLOW) != 0);
+            target->SetHover((*moveFlags & MOVEMENTFLAG_HOVER) != 0);
 
-            /// @fixme: port master's HandleDebugMoveflagsCommand; flags need different handling
+            if (*moveFlags & (MOVEMENTFLAG_DISABLE_GRAVITY | MOVEMENTFLAG_CAN_FLY))
+                *moveFlags &= ~MOVEMENTFLAG_FALLING;
 
-            if (mask2)
+            if (*moveFlags & MOVEMENTFLAG_ROOT)
             {
-                uint32 moveFlagsExtra = uint32(atoi(mask2));
-                target->SetExtraUnitMovementFlags(moveFlagsExtra);
+                target->SetControlled(true, UNIT_STATE_ROOT);
+                *moveFlags &= ~MOVEMENTFLAG_MASK_MOVING;
             }
 
-            if (target->GetTypeId() != TYPEID_PLAYER)
-                target->DestroyForNearbyPlayers();  // Force new SMSG_UPDATE_OBJECT:CreateObject
-            else
+            if (target->HasUnitMovementFlag(MOVEMENTFLAG_SPLINE_ENABLED) && !(*moveFlags & MOVEMENTFLAG_SPLINE_ENABLED))
+                target->StopMoving();
+
+            if (unhandledFlag)
+                target->SetUnitMovementFlags(*moveFlags);
+
+            if (moveFlagsExtra)
             {
-                WorldPacket data(SMSG_MOVE_UPDATE);
-                target->WriteMovementInfo(data);
-                target->SendMessageToSet(&data, true);
+                target->SetExtraUnitMovementFlags(*moveFlagsExtra);
             }
+
+            if (moveFlagsExtra || unhandledFlag)
+                target->SendMovementFlagUpdate();
 
             handler->PSendSysMessage(LANG_MOVEFLAGS_SET, target->GetUnitMovementFlags(), target->GetExtraUnitMovementFlags());
         }
@@ -1559,213 +1259,135 @@ public:
         return true;
     }
 
-    static bool HandleWPGPSCommand(ChatHandler* handler, char const* /*args*/)
+    static bool HandleDebugUnitStateCommand(ChatHandler* handler, uint32 unitState)
+    {
+        Unit* target = handler->getSelectedUnit();
+        if (!target)
+            target = handler->GetSession()->GetPlayer();
+
+        target->ClearUnitState(target->GetUnitState());
+        target->AddUnitState(unitState);
+
+        return true;
+    }
+
+    static bool HandleWPGPSCommand(ChatHandler* handler, Optional<std::string> type)
     {
         Player* player = handler->GetSession()->GetPlayer();
 
-        LOG_INFO("sql.dev", "(@PATH, XX, %.3f, %.3f, %.5f, 0, 0, 0, 100, 0),", player->GetPositionX(), player->GetPositionY(), player->GetPositionZ());
+        if (!type)
+        {
+            // waypoint_data - id, point, X, Y, Z, O, delay, move_type, action, action_chance, wpguid
+            LOG_INFO("sql.dev", "(@PATH, XX, {:.3f}, {:.3f}, {:.5f}, {:.5f}, 0, 0, 0, 100, 0),", player->GetPositionX(), player->GetPositionY(), player->GetPositionZ(), player->GetOrientation());
+        }
+
+        if (type == "sai")
+        {
+            // waypoint (SAI) - entry, pointid, X, Y, Z, O, delay
+            LOG_INFO("sql.dev", "(@PATH, XX, {:.3f}, {:.3f}, {:.5f}, {:.5f}, 0),", player->GetPositionX(), player->GetPositionY(), player->GetPositionZ(), player->GetOrientation());
+        }
 
         handler->PSendSysMessage("Waypoint SQL written to SQL Developer log");
         return true;
     }
 
-    static bool HandleDebugTransportCommand(ChatHandler* handler, char const* args)
+    static bool HandleDebugObjectCountCommand(ChatHandler* handler, Optional<uint32> mapId)
     {
-        Transport* transport = dynamic_cast<Transport*>(handler->GetSession()->GetPlayer()->GetTransport());
-        if (!transport)
-            return false;
-
-        bool start = false;
-        if (!stricmp(args, "stop"))
-            transport->EnableMovement(false);
-        else if (!stricmp(args, "start"))
+        if (mapId)
         {
-            transport->EnableMovement(true);
-            start = true;
-        }
-        else
-        {
-            Position pos = transport->GetPosition();
-            handler->PSendSysMessage("Transport %s is %s", transport->GetName().c_str(), transport->GetGoState() == GO_STATE_READY ? "stopped" : "moving");
-            handler->PSendSysMessage("Transport position: %s", pos.ToString().c_str());
-            return true;
-        }
-
-        handler->PSendSysMessage("Transport %s %s", transport->GetName().c_str(), start ? "started" : "stopped");
-        return true;
-    }
-
-    static bool HandleDebugPhaseCommand(ChatHandler* handler, char const* /*args*/)
-    {
-        Unit* target = handler->getSelectedUnit();
-
-        if (!target)
-        {
-            handler->SendSysMessage(LANG_SELECT_CREATURE);
-            handler->SetSentErrorMessage(true);
-            return false;
-        }
-
-        std::stringstream phases;
-
-        PhasingHandler::PrintToChat(handler, target->GetPhaseShift());
-
-        return true;
-    }
-
-    static bool HandleDebugLoadCellsCommand(ChatHandler* handler, char const* args)
-    {
-        Player* player = handler->GetSession()->GetPlayer();
-        if (!player)
-            return false;
-
-        Map* map = nullptr;
-
-        if (*args)
-        {
-            int32 mapId = atoi(args);
-            map = sMapMgr->FindBaseNonInstanceMap(mapId);
-        }
-        if (!map)
-            map = player->GetMap();
-
-        handler->PSendSysMessage("Loading all cells (mapId: %u). Current next GameObject %u, Creature %u", map->GetId(), map->GetMaxLowGuid<HighGuid::GameObject>(), map->GetMaxLowGuid<HighGuid::Unit>());
-        map->LoadAllCells();
-        handler->PSendSysMessage("Cells loaded (mapId: %u) After load - Next GameObject %u, Creature %u", map->GetId(), map->GetMaxLowGuid<HighGuid::GameObject>(), map->GetMaxLowGuid<HighGuid::Unit>());
-        return true;
-    }
-
-    static bool HandleDebugBoundaryCommand(ChatHandler* handler, char const* args)
-    {
-        Player* player = handler->GetSession()->GetPlayer();
-        if (!player)
-            return false;
-        Creature* target = handler->getSelectedCreature();
-        if (!target || !target->IsAIEnabled())
-            return false;
-
-        char* fill_str = args ? strtok((char*)args, " ") : nullptr;
-        char* duration_str = args ? strtok(nullptr, " ") : nullptr;
-
-        int duration = duration_str ? atoi(duration_str) : -1;
-        if (duration <= 0 || duration >= 30 * MINUTE) // arbitary upper limit
-            duration = 3 * MINUTE;
-
-        bool doFill = fill_str ? (stricmp(fill_str, "FILL") == 0) : false;
-
-        int32 errMsg = target->AI()->VisualizeBoundary(duration, player, doFill);
-        if (errMsg > 0)
-            handler->PSendSysMessage(errMsg);
-
-        return true;
-    }
-
-    static bool HandleDebugRaidResetCommand(ChatHandler* handler, char const* args)
-    {
-        char* map_str = args ? strtok((char*)args, " ") : nullptr;
-        char* difficulty_str = args ? strtok(nullptr, " ") : nullptr;
-
-        int32 map = map_str ? atoi(map_str) : -1;
-        MapEntry const* mEntry = (map >= 0) ? sMapStore.LookupEntry(map) : nullptr;
-        if (!mEntry)
-        {
-            handler->PSendSysMessage("Invalid map specified.");
-            return false;
-        }
-        if (!mEntry->IsDungeon())
-        {
-            handler->PSendSysMessage("'%s' is not a dungeon map.", mEntry->MapName[LOCALE_enUS]);
-            return true;
-        }
-        int32 difficulty = difficulty_str ? atoi(difficulty_str) : -1;
-        if (difficulty >= MAX_RAID_DIFFICULTY || difficulty < -1)
-        {
-            handler->PSendSysMessage("Invalid difficulty %d - specify in range [0,%d).", difficulty, MAX_RAID_DIFFICULTY);
-            return false;
-        }
-        if (difficulty >= 0 && !sDBCManager.GetMapDifficultyData(mEntry->ID, Difficulty(difficulty)))
-        {
-            handler->PSendSysMessage("Difficulty %d is not valid for '%s'.", difficulty, mEntry->MapName[LOCALE_enUS]);
-            return true;
-        }
-
-        if (difficulty == -1)
-        {
-            handler->PSendSysMessage("Resetting all difficulties for '%s'.", mEntry->MapName[LOCALE_enUS]);
-            for (uint8 diff = (mEntry->IsRaid() ? 0 : 1); diff < (mEntry->IsRaid() ? MAX_RAID_DIFFICULTY : MAX_DUNGEON_DIFFICULTY); ++diff)
-            {
-                if (sDBCManager.GetMapDifficultyData(mEntry->ID, Difficulty(diff)))
+            sMapMgr->DoForAllMapsWithMapId(mapId.value(),
+               [handler](Map* map) -> void
                 {
-                    handler->PSendSysMessage("Resetting difficulty %d for '%s'.", diff, mEntry->MapName[LOCALE_enUS]);
-                    sInstanceSaveMgr->ForceGlobalReset(mEntry->ID, Difficulty(diff));
+                   HandleDebugObjectCountMap(handler, map);
                 }
-            }
-        }
-        else if (mEntry->IsNonRaidDungeon() && difficulty == DUNGEON_DIFFICULTY_NORMAL)
-        {
-            handler->PSendSysMessage("'%s' does not have any permanent saves for difficulty %d.", mEntry->MapName[LOCALE_enUS], difficulty);
+            );
         }
         else
         {
-            handler->PSendSysMessage("Resetting difficulty %d for '%s'.", difficulty, mEntry->MapName[LOCALE_enUS]);
-            sInstanceSaveMgr->ForceGlobalReset(mEntry->ID, Difficulty(difficulty));
-        }
-        return true;
-    }
-
-    static bool HandleDebugNearGraveyard(ChatHandler* handler, char const* args)
-    {
-        Player* player = handler->GetSession()->GetPlayer();
-        WorldSafeLocsEntry const* nearestLoc = nullptr;
-
-        if (stricmp(args, "linked"))
-        {
-            if (Battleground* bg = player->GetBattleground())
-                nearestLoc = bg->GetClosestGraveyard(player);
-            else
-            {
-                if (Battlefield* bf = sBattlefieldMgr->GetBattlefieldToZoneId(player->GetZoneId()))
-                    nearestLoc = bf->GetClosestGraveyard(player);
-                else
-                    nearestLoc = sObjectMgr->GetClosestGraveyard(*player, player->GetTeam(), player);
-            }
-        }
-        else
-        {
-            float x = player->GetPositionX();
-            float y = player->GetPositionY();
-            float z = player->GetPositionZ();
-            float distNearest = std::numeric_limits<float>::max();
-
-            for (uint32 i = 0; i < sWorldSafeLocsStore.GetNumRows(); ++i)
-            {
-                WorldSafeLocsEntry const* loc = sWorldSafeLocsStore.LookupEntry(i);
-                if (loc && loc->Continent == player->GetMapId())
+            sMapMgr->DoForAllMaps(
+                [handler](Map* map) -> void
                 {
-                    float dist = (loc->Loc.X - x) * (loc->Loc.X - x) + (loc->Loc.Y - y) * (loc->Loc.Y - y) + (loc->Loc.Z - z) * (loc->Loc.Z - z);
-                    if (dist < distNearest)
-                    {
-                        distNearest = dist;
-                        nearestLoc = loc;
-                    }
+                    HandleDebugObjectCountMap(handler, map);
                 }
+            );
+        }
+
+        return true;
+    }
+
+    class CreatureCountWorker
+    {
+    public:
+        CreatureCountWorker() { }
+
+        void Visit(std::unordered_map<ObjectGuid, Creature*>& creatureMap)
+        {
+            for (auto const& p : creatureMap)
+            {
+                uint32& count = creatureIds[p.second->GetEntry()];
+                ++count;
             }
         }
 
-        if (nearestLoc)
-            handler->PSendSysMessage(LANG_COMMAND_NEARGRAVEYARD, nearestLoc->ID, nearestLoc->Loc.X, nearestLoc->Loc.Y, nearestLoc->Loc.Z);
-        else
-            handler->PSendSysMessage(LANG_COMMAND_NEARGRAVEYARD_NOTFOUND);
+        template<class T>
+        void Visit(std::unordered_map<ObjectGuid, T*>&) { }
 
-        return true;
-    }
+        std::vector<std::pair<uint32, uint32>> GetTopCreatureCount(uint32 count)
+        {
+            auto comp = [](std::pair<uint32, uint32> const& a, std::pair<uint32, uint32> const& b)
+            {
+                return a.second > b.second;
+            };
+            std::set<std::pair<uint32, uint32>, decltype(comp)> set(creatureIds.begin(), creatureIds.end(), comp);
 
-    static bool HandleDebugDungeonFinderCommand(ChatHandler* /*handler*/, char const* /*args*/)
+            count = std::min(count, uint32(set.size()));
+            std::vector<std::pair<uint32, uint32>> result(count);
+            std::copy_n(set.begin(), count, result.begin());
+
+            return result;
+        }
+
+    private:
+        std::unordered_map<uint32, uint32> creatureIds;
+    };
+
+    static void HandleDebugObjectCountMap(ChatHandler* handler, Map* map)
     {
-        sLFGMgr->ToggleTesting();
+        handler->PSendSysMessage("Map Id: {} Name: '{}' Instance Id: {} Creatures: {} GameObjects: {} SetActive Objects: {}",
+                map->GetId(), map->GetMapName(), map->GetInstanceId(),
+                uint64(map->GetObjectsStore().Size<Creature>()),
+                uint64(map->GetObjectsStore().Size<GameObject>()),
+                uint64(map->GetActiveNonPlayersCount()));
+
+        CreatureCountWorker worker;
+        TypeContainerVisitor<CreatureCountWorker, MapStoredObjectTypesContainer> visitor(worker);
+        visitor.Visit(map->GetObjectsStore());
+
+        handler->PSendSysMessage("Top Creatures count:");
+
+        for (auto&& p : worker.GetTopCreatureCount(5))
+            handler->PSendSysMessage("Entry: {} Count: {}", p.first, p.second);
+    }
+
+    static bool HandleDebugDummyCommand(ChatHandler* handler)
+    {
+        handler->SendSysMessage("This command does nothing right now. Edit your local core (cs_debug.cpp) to make it do whatever you need for testing.");
         return true;
     }
 
+    static bool HandleDebugMapDataCommand(ChatHandler* handler)
+    {
+        Cell cell(handler->GetPlayer()->GetPositionX(), handler->GetPlayer()->GetPositionY());
+        Map* map = handler->GetPlayer()->GetMap();
+
+        handler->PSendSysMessage("GridX {} GridY {}", cell.GridX(), cell.GridY());
+        handler->PSendSysMessage("CellX {} CellY {}", cell.CellX(), cell.CellY());
+        handler->PSendSysMessage("Created Grids: {} / {}", map->GetCreatedGridsCount(), MAX_NUMBER_OF_GRIDS * MAX_NUMBER_OF_GRIDS);
+        handler->PSendSysMessage("Loaded Grids: {} / {}", map->GetLoadedGridsCount(), MAX_NUMBER_OF_GRIDS * MAX_NUMBER_OF_GRIDS);
+        handler->PSendSysMessage("Created Cells In Grid: {} / {}", map->GetCreatedCellsInGridCount(cell.GridX(), cell.GridY()), MAX_NUMBER_OF_CELLS * MAX_NUMBER_OF_CELLS);
+        handler->PSendSysMessage("Created Cells In Map: {} / {}", map->GetCreatedCellsInMapCount(), TOTAL_NUMBER_OF_CELLS_PER_MAP * TOTAL_NUMBER_OF_CELLS_PER_MAP);
+        return true;
+    }
 };
 
 void AddSC_debug_commandscript()

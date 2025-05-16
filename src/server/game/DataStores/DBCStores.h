@@ -209,6 +209,8 @@ FC_GAME_API extern DBCStorage <WMOAreaTableEntry>            sWMOAreaTableStore;
 FC_GAME_API extern DBCStorage <WorldMapAreaEntry>            sWorldMapAreaStore;
 FC_GAME_API extern DBCStorage <WorldMapOverlayEntry>         sWorldMapOverlayStore;
 FC_GAME_API extern DBCStorage <WorldSafeLocsEntry>           sWorldSafeLocsStore;
+FC_GAME_API extern DBCStorage <TeamContributionPointsEntry>  sTeamContributionPointsStore;
+
 
 class FC_GAME_API DBCManager
 {

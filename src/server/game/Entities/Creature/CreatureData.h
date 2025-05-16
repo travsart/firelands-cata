@@ -33,6 +33,19 @@ class WorldPacket;
 struct ItemTemplate;
 enum class VisibilityDistanceType : uint8;
 
+#define MAX_AGGRO_RESET_TIME 10 // in seconds
+
+#define MAX_KILL_CREDIT 2
+#define CREATURE_REGEN_INTERVAL 2 * IN_MILLISECONDS
+
+#define MAX_CREATURE_QUEST_ITEMS 6
+
+#define MAX_EQUIPMENT_ITEMS 3
+
+constexpr Milliseconds PET_FOCUS_REGEN_INTERVAL = 4s;
+
+enum class VisibilityDistanceType : uint8;
+
 enum CreatureFlagsExtra : uint32
 {
     CREATURE_FLAG_EXTRA_INSTANCE_BIND        = 0x00000001,       // creature kill bind instance with killer and killer's group
@@ -61,17 +74,15 @@ enum CreatureFlagsExtra : uint32
     CREATURE_FLAG_EXTRA_NO_DODGE             = 0x00800000,       // target cannot dodge
     CREATURE_FLAG_EXTRA_MODULE               = 0x01000000,
     CREATURE_FLAG_EXTRA_DONT_CALL_ASSISTANCE = 0x02000000,       // Prevent creatures from calling for assistance on initial aggro
-    CREATURE_FLAG_DONT_OVERRIDE_ENTRY_SAI    = 0x04000000,       // Load both ENTRY and GUID specific SAI
-    CREATURE_FLAG_EXTRA_UNUSED_28            = 0x08000000,
+    CREATURE_FLAG_EXTRA_IGNORE_ALLASSISTANCE = 0x04000000,       // Prevents creature from responding to assistance calls
+    CREATURE_FLAG_DONT_OVERRIDE_ENTRY_SAI    = 0x08000000,       // Load both ENTRY and GUID specific SAI
     CREATURE_FLAG_EXTRA_DUNGEON_BOSS         = 0x10000000,       // creature is a dungeon boss (SET DYNAMICALLY, DO NOT ADD IN DB)
     CREATURE_FLAG_EXTRA_IGNORE_PATHFINDING   = 0x20000000,       // creature ignore pathfinding
     CREATURE_FLAG_EXTRA_IMMUNITY_KNOCKBACK   = 0x40000000,       // creature is immune to knockback effects
     CREATURE_FLAG_EXTRA_HARD_RESET           = 0x80000000,
 
     // Masks
-    CREATURE_FLAG_EXTRA_UNUSED = (CREATURE_FLAG_EXTRA_UNUSED_28), // SKIP
-
-    CREATURE_FLAG_EXTRA_DB_ALLOWED           = (0xFFFFFFFF & ~(CREATURE_FLAG_EXTRA_UNUSED | CREATURE_FLAG_EXTRA_DUNGEON_BOSS))
+    CREATURE_FLAG_EXTRA_DB_ALLOWED                      = (0xFFFFFFFF & ~CREATURE_FLAG_EXTRA_DUNGEON_BOSS) // SKIP
 };
 
 enum class CreatureGroundMovementType : uint8

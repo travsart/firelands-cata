@@ -61,26 +61,37 @@ VendorItemCount::VendorItemCount(uint32 _item, uint32 _count)
     : itemId(_item), count(_count), lastIncrementTime(GameTime::GetGameTime()) { }
 
 CreatureMovementData::CreatureMovementData() : Ground(CreatureGroundMovementType::Run), Flight(CreatureFlightMovementType::None),
-Swim(true), Rooted(false), Random(CreatureRandomMovementType::Walk), InteractionPauseTimer(sWorld->getIntConfig(CONFIG_CREATURE_STOP_FOR_PLAYER)) { }
-
+                                               Swim(true), Rooted(false), Chase(CreatureChaseMovementType::Run),
+                                               Random(CreatureRandomMovementType::Walk), InteractionPauseTimer(sWorld->getIntConfig(CONFIG_CREATURE_STOP_FOR_PLAYER)) {}
 
 std::string CreatureMovementData::ToString() const
 {
-    char const* const GroundStates[] = { "None", "Run", "Hover" };
-    char const* const FlightStates[] = { "None", "DisableGravity", "CanFly" };
-    char const* const RandomStates[] = { "Walk", "CanRun", "AlwaysRun" };
+    constexpr std::array<char const*, 3> GroundStates = {"None", "Run", "Hover"};
+    constexpr std::array<char const*, 3> FlightStates = {"None", "DisableGravity", "CanFly"};
+    constexpr std::array<char const*, 3> ChaseStates  = {"Run", "CanWalk", "AlwaysWalk"};
+    constexpr std::array<char const*, 3> RandomStates = {"Walk", "CanRun", "AlwaysRun"};
 
     std::ostringstream str;
     str << std::boolalpha
         << "Ground: " << GroundStates[AsUnderlyingType(Ground)]
         << ", Swim: " << Swim
         << ", Flight: " << FlightStates[AsUnderlyingType(Flight)]
+        << ", Chase: " << ChaseStates[AsUnderlyingType(Chase)]
         << ", Random: " << RandomStates[AsUnderlyingType(Random)];
     if (Rooted)
         str << ", Rooted";
     str << ", InteractionPauseTimer: " << InteractionPauseTimer;
 
     return str.str();
+}
+
+TrainerSpell const* TrainerSpellData::Find(uint32 spell_id) const
+{
+    TrainerSpellMap::const_iterator itr = spellList.find(spell_id);
+    if (itr != spellList.end())
+        return &itr->second;
+
+    return nullptr;
 }
 
 bool VendorItem::IsGoldRequired(ItemTemplate const* pProto) const

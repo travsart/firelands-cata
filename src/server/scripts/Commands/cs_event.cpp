@@ -1,9 +1,9 @@
 /*
- * This file is part of the FirelandsCore Project. See AUTHORS file for Copyright information
+ * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 2 of the License, or (at your
+ * Free Software Foundation; either version 3 of the License, or (at your
  * option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
@@ -11,24 +11,27 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
  * more details.
  *
- * You should have received a copy of the GNU Affero General Public License along
+ * You should have received a copy of the GNU General Public License along
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* ScriptData
-Name: event_commandscript
-%Complete: 100
-Comment: All event related commands
-Category: commandscripts
-EndScriptData */
+ /* ScriptData
+ Name: event_commandscript
+ %Complete: 100
+ Comment: All event related commands
+ Category: commandscripts
+ EndScriptData */
 
-#include "ScriptMgr.h"
 #include "Chat.h"
+#include "CommandScript.h"
 #include "GameEventMgr.h"
 #include "GameTime.h"
 #include "Language.h"
-#include "Player.h"
-#include "RBAC.h"
+#include "Timer.h"
+
+using namespace Firelands::ChatCommands;
+
+using EventEntry = Variant<Hyperlink<gameevent>, uint16>;
 
 class event_commandscript : public CommandScript
 {
@@ -37,165 +40,130 @@ public:
 
     ChatCommandTable GetCommands() const override
     {
-        static std::vector<ChatCommand> eventCommandTable =
+        static ChatCommandTable eventCommandTable =
         {
-            { "activelist", rbac::RBAC_PERM_COMMAND_EVENT_ACTIVELIST, true, &HandleEventActiveListCommand, "" },
-            { "start",      rbac::RBAC_PERM_COMMAND_EVENT_START,      true, &HandleEventStartCommand,      "" },
-            { "stop",       rbac::RBAC_PERM_COMMAND_EVENT_STOP,       true, &HandleEventStopCommand,       "" },
-            { "info",       rbac::RBAC_PERM_COMMAND_EVENT,            true, &HandleEventInfoCommand,       "" },
+            { "activelist", HandleEventActiveListCommand, SEC_GAMEMASTER, Console::Yes },
+            { "start",      HandleEventStartCommand,      SEC_GAMEMASTER, Console::Yes },
+            { "stop",       HandleEventStopCommand,       SEC_GAMEMASTER, Console::Yes },
+            { "info",       HandleEventInfoCommand,       SEC_GAMEMASTER, Console::Yes }
         };
-        static std::vector<ChatCommand> commandTable =
+        static ChatCommandTable commandTable =
         {
-            { "event", rbac::RBAC_PERM_COMMAND_EVENT, false, nullptr, "", eventCommandTable },
+            { "event", eventCommandTable }
         };
         return commandTable;
     }
 
-    static bool HandleEventActiveListCommand(ChatHandler* handler, char const* /*args*/)
+    static bool HandleEventActiveListCommand(ChatHandler* handler)
     {
         uint32 counter = 0;
 
         GameEventMgr::GameEventDataMap const& events = sGameEventMgr->GetEventMap();
         GameEventMgr::ActiveEvents const& activeEvents = sGameEventMgr->GetActiveEventList();
 
-        char const* active = handler->GetFirelandsString(LANG_ACTIVE);
+        std::string active = handler->GetAcoreString(LANG_ACTIVE);
 
-        for (GameEventMgr::ActiveEvents::const_iterator itr = activeEvents.begin(); itr != activeEvents.end(); ++itr)
+        for (uint16 eventId : activeEvents)
         {
-            uint32 eventId = *itr;
             GameEventData const& eventData = events[eventId];
 
             if (handler->GetSession())
-                handler->PSendSysMessage(LANG_EVENT_ENTRY_LIST_CHAT, eventId, eventId, eventData.description.c_str(), active);
+                handler->PSendSysMessage(LANG_EVENT_ENTRY_LIST_CHAT, eventId, eventId, eventData.Description, active);
             else
-                handler->PSendSysMessage(LANG_EVENT_ENTRY_LIST_CONSOLE, eventId, eventData.description.c_str(), active);
+                handler->PSendSysMessage(LANG_EVENT_ENTRY_LIST_CONSOLE, eventId, eventData.Description, active);
 
             ++counter;
         }
 
         if (counter == 0)
             handler->SendSysMessage(LANG_NOEVENTFOUND);
+
         handler->SetSentErrorMessage(true);
 
         return true;
     }
 
-    static bool HandleEventInfoCommand(ChatHandler* handler, char const* args)
+    static bool HandleEventInfoCommand(ChatHandler* handler, EventEntry const eventId)
     {
-        if (!*args)
-            return false;
-
-        // id or [name] Shift-click form |color|Hgameevent:id|h[name]|h|r
-        char* id =  handler->extractKeyFromLink((char*)args, "Hgameevent");
-        if (!id)
-            return false;
-
-        uint32 eventId = atoul(id);
-
         GameEventMgr::GameEventDataMap const& events = sGameEventMgr->GetEventMap();
 
-        if (eventId >= events.size())
+        if (std::size_t(eventId) >= events.size())
         {
-            handler->SendSysMessage(LANG_EVENT_NOT_EXIST);
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage(LANG_EVENT_NOT_EXIST);
             return false;
         }
 
         GameEventData const& eventData = events[eventId];
         if (!eventData.isValid())
         {
-            handler->SendSysMessage(LANG_EVENT_NOT_EXIST);
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage(LANG_EVENT_NOT_EXIST);
             return false;
         }
 
         GameEventMgr::ActiveEvents const& activeEvents = sGameEventMgr->GetActiveEventList();
         bool active = activeEvents.find(eventId) != activeEvents.end();
-        char const* activeStr = active ? handler->GetFirelandsString(LANG_ACTIVE) : "";
+        std::string activeStr = active ? handler->GetAcoreString(LANG_ACTIVE) : "";
 
-        std::string startTimeStr = TimeToTimestampStr(eventData.start);
-        std::string endTimeStr = TimeToTimestampStr(eventData.end);
+        std::string startTimeStr = Firelands::Time::TimeToTimestampStr(Seconds(eventData.Start));
+        std::string endTimeStr = Firelands::Time::TimeToTimestampStr(Seconds(eventData.End));
 
         uint32 delay = sGameEventMgr->NextCheck(eventId);
-        time_t nextTime = GameTime::GetGameTime() + delay;
-        std::string nextStr = nextTime >= eventData.start && nextTime < eventData.end ? TimeToTimestampStr(GameTime::GetGameTime() + delay) : "-";
+        time_t nextTime = GameTime::GetGameTime().count() + delay;
+        std::string nextStr = nextTime >= eventData.Start && nextTime < eventData.End ? Firelands::Time::TimeToTimestampStr(Seconds(nextTime)) : "-";
 
-        std::string occurenceStr = secsToTimeString(eventData.occurence * MINUTE);
-        std::string lengthStr = secsToTimeString(eventData.length * MINUTE);
+        std::string occurenceStr = secsToTimeString(eventData.Occurence * MINUTE, true);
+        std::string lengthStr = secsToTimeString(eventData.Length * MINUTE, true);
 
-        handler->PSendSysMessage(LANG_EVENT_INFO, eventId, eventData.description.c_str(), activeStr,
-            startTimeStr.c_str(), endTimeStr.c_str(), occurenceStr.c_str(), lengthStr.c_str(),
-            nextStr.c_str());
+        handler->PSendSysMessage(LANG_EVENT_INFO, uint16(eventId), eventData.Description, activeStr,
+            startTimeStr, endTimeStr, occurenceStr, lengthStr,
+            nextStr);
+
         return true;
     }
 
-    static bool HandleEventStartCommand(ChatHandler* handler, char const* args)
+    static bool HandleEventStartCommand(ChatHandler* handler, EventEntry const eventId)
     {
-        if (!*args)
-            return false;
-
-        // id or [name] Shift-click form |color|Hgameevent:id|h[name]|h|r
-        char* id =  handler->extractKeyFromLink((char*)args, "Hgameevent");
-        if (!id)
-            return false;
-
-        int32 eventId = atoul(id);
-
         GameEventMgr::GameEventDataMap const& events = sGameEventMgr->GetEventMap();
 
-        if (eventId < 1 || uint32(eventId) >= events.size())
+        if (*eventId < 1 || *eventId >= events.size())
         {
-            handler->SendSysMessage(LANG_EVENT_NOT_EXIST);
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage(LANG_EVENT_NOT_EXIST);
             return false;
         }
 
         GameEventData const& eventData = events[eventId];
         if (!eventData.isValid())
         {
-            handler->SendSysMessage(LANG_EVENT_NOT_EXIST);
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage(LANG_EVENT_NOT_EXIST);
             return false;
         }
 
         GameEventMgr::ActiveEvents const& activeEvents = sGameEventMgr->GetActiveEventList();
         if (activeEvents.find(eventId) != activeEvents.end())
         {
-            handler->PSendSysMessage(LANG_EVENT_ALREADY_ACTIVE, eventId);
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage(LANG_EVENT_ALREADY_ACTIVE, uint16(eventId), eventData.Description);
             return false;
         }
 
+        handler->PSendSysMessage(LANG_EVENT_STARTED, uint16(eventId), eventData.Description);
         sGameEventMgr->StartEvent(eventId, true);
         return true;
     }
 
-    static bool HandleEventStopCommand(ChatHandler* handler, char const* args)
+    static bool HandleEventStopCommand(ChatHandler* handler, EventEntry const eventId)
     {
-        if (!*args)
-            return false;
-
-        // id or [name] Shift-click form |color|Hgameevent:id|h[name]|h|r
-        char* id =  handler->extractKeyFromLink((char*)args, "Hgameevent");
-        if (!id)
-            return false;
-
-        int32 eventId = atoul(id);
-
         GameEventMgr::GameEventDataMap const& events = sGameEventMgr->GetEventMap();
 
-        if (eventId < 1 || uint32(eventId) >= events.size())
+        if (*eventId < 1 || *eventId >= events.size())
         {
-            handler->SendSysMessage(LANG_EVENT_NOT_EXIST);
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage(LANG_EVENT_NOT_EXIST);
             return false;
         }
 
         GameEventData const& eventData = events[eventId];
         if (!eventData.isValid())
         {
-            handler->SendSysMessage(LANG_EVENT_NOT_EXIST);
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage(LANG_EVENT_NOT_EXIST);
             return false;
         }
 
@@ -203,11 +171,11 @@ public:
 
         if (activeEvents.find(eventId) == activeEvents.end())
         {
-            handler->PSendSysMessage(LANG_EVENT_NOT_ACTIVE, eventId);
-            handler->SetSentErrorMessage(true);
+            handler->SendErrorMessage(LANG_EVENT_NOT_ACTIVE, uint16(eventId), eventData.Description);
             return false;
         }
 
+        handler->PSendSysMessage(LANG_EVENT_STOPPED, uint16(eventId), eventData.Description);
         sGameEventMgr->StopEvent(eventId, true);
         return true;
     }
