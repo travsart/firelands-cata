@@ -97,7 +97,7 @@ struct SpawnData : public SpawnMetadata
     Position spawnPoint;
     int32 spawntimesecs = 0;
     uint8 spawnMask = 0;
-    uint8 phaseUseFlags = 0;
+    uint8 phaseUseFlags = 0;  //phaseMask
     uint32 phaseId = DEFAULT_PHASE;
     uint32 phaseGroup = 0;
     int32 terrainSwapMap = -1;

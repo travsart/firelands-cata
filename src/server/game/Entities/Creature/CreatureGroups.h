@@ -20,8 +20,12 @@
 
 #include "Define.h"
 #include "ObjectGuid.h"
+#include "Unit.h"
 #include <unordered_map>
 #include <map>
+
+class Creature;
+class CreatureGroup;
 
 enum class GroupAIFlags : uint16
 {

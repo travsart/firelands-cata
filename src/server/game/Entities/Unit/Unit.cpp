@@ -9684,7 +9684,7 @@ bool Unit::IsInDisallowedMountForm() const
 ########                         ########
 #######################################*/
 
-void Unit::HandleStatFlatModifier(UnitMods unitMod, UnitModifierFlatType modifierType, float amount, bool apply)
+void Unit::HandleStatFlatModifier(UnitMods unitMod, UnitModifierType modifierType, float amount, bool apply)
 {
     if (unitMod >= UNIT_MOD_END || modifierType >= MODIFIER_TYPE_FLAT_END)
     {
@@ -9708,7 +9708,7 @@ void Unit::HandleStatFlatModifier(UnitMods unitMod, UnitModifierFlatType modifie
     UpdateUnitMod(unitMod);
 }
 
-void Unit::ApplyStatPctModifier(UnitMods unitMod, UnitModifierPctType modifierType, float pct)
+void Unit::ApplyStatPctModifier(UnitMods unitMod, UnitModifierType modifierType, float pct)
 {
     if (unitMod >= UNIT_MOD_END || modifierType >= MODIFIER_TYPE_PCT_END)
     {
@@ -9732,7 +9732,7 @@ void Unit::ApplyStatPctModifier(UnitMods unitMod, UnitModifierPctType modifierTy
     UpdateUnitMod(unitMod);
 }
 
-void Unit::SetStatFlatModifier(UnitMods unitMod, UnitModifierFlatType modifierType, float val)
+void Unit::SetStatFlatModifier(UnitMods unitMod, UnitModifierType modifierType, float val)
 {
     if (m_auraFlatModifiersGroup[unitMod][modifierType] == val)
         return;
@@ -9741,7 +9741,7 @@ void Unit::SetStatFlatModifier(UnitMods unitMod, UnitModifierFlatType modifierTy
     UpdateUnitMod(unitMod);
 }
 
-void Unit::SetStatPctModifier(UnitMods unitMod, UnitModifierPctType modifierType, float val)
+void Unit::SetStatPctModifier(UnitMods unitMod, UnitModifierType modifierType, float val)
 {
     if (m_auraPctModifiersGroup[unitMod][modifierType] == val)
         return;
@@ -9750,7 +9750,7 @@ void Unit::SetStatPctModifier(UnitMods unitMod, UnitModifierPctType modifierType
     UpdateUnitMod(unitMod);
 }
 
-float Unit::GetFlatModifierValue(UnitMods unitMod, UnitModifierFlatType modifierType) const
+float Unit::GetFlatModifierValue(UnitMods unitMod, UnitModifierType modifierType) const
 {
     if (unitMod >= UNIT_MOD_END || modifierType >= MODIFIER_TYPE_FLAT_END)
     {
@@ -9761,7 +9761,7 @@ float Unit::GetFlatModifierValue(UnitMods unitMod, UnitModifierFlatType modifier
     return m_auraFlatModifiersGroup[unitMod][modifierType];
 }
 
-float Unit::GetPctModifierValue(UnitMods unitMod, UnitModifierPctType modifierType) const
+float Unit::GetPctModifierValue(UnitMods unitMod, UnitModifierType modifierType) const
 {
     if (unitMod >= UNIT_MOD_END || modifierType >= MODIFIER_TYPE_PCT_END)
     {

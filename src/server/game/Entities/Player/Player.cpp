@@ -7794,7 +7794,7 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
 
     if (armor)
     {
-        UnitModifierFlatType modType = TOTAL_VALUE;
+        UnitModifierType modType = TOTAL_VALUE;
         if (proto->GetClass() == ITEM_CLASS_ARMOR)
         {
             switch (proto->GetSubClass())

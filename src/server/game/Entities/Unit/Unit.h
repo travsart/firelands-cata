@@ -37,15 +37,54 @@
 
 #define WORLD_TRIGGER 12999
 
-#define MAX_SPELL_CHARM 4
-#define MAX_SPELL_VEHICLE 6
-#define MAX_SPELL_POSSESS 8
-#define MAX_SPELL_CONTROL_BAR 10
-
 #define MAX_AGGRO_RESET_TIME 10 // in seconds
 #define MAX_AGGRO_RADIUS 45.0f  // yards
 
 constexpr float DEFAULT_FOLLOW_ANGLE = float(M_PI / 2);
+
+static constexpr uint32 MAX_CREATURE_SPELLS = 8;
+static constexpr uint32 infinityCooldownDelay = 0x9A7EC800; // used for set "infinity cooldowns" for spells and check, MONTH*IN_MILLISECONDS
+static constexpr uint32 infinityCooldownDelayCheck = 0x4D3F6400; // MONTH*IN_MILLISECONDS/2;
+
+struct AbstractPursuer;
+struct FactionTemplateEntry;
+struct LiquidData;
+struct LiquidTypeEntry;
+struct MountCapabilityEntry;
+struct SpellValue;
+struct CharmInfo;
+
+class Aura;
+class AuraApplication;
+class AuraEffect;
+class Creature;
+class DynamicObject;
+class GameClient;
+class GameObject;
+class Guardian;
+class Item;
+class Minion;
+class MotionMaster;
+class MotionTransport;
+class Pet;
+class PetAura;
+class Spell;
+class SpellCastTargets;
+class SpellHistory;
+class SpellInfo;
+class StaticTransport;
+class Totem;
+class Transport;
+class TransportBase;
+class UnitAI;
+class UnitAura;
+class Vehicle;
+class VehicleJoinEvent;
+
+typedef std::list<Unit*> UnitList;
+typedef std::list< std::pair<Aura*, uint8> > DispelChargesList;
+
+enum CharmType : uint8;
 
 enum VictimState
 {
@@ -67,37 +106,6 @@ enum InventorySlot
     NULL_SLOT = 255
 };
 
-struct AbstractPursuer;
-struct FactionTemplateEntry;
-struct LiquidData;
-struct LiquidTypeEntry;
-struct MountCapabilityEntry;
-struct SpellValue;
-
-class Aura;
-class AuraApplication;
-class AuraEffect;
-class Creature;
-class DynamicObject;
-class GameClient;
-class GameObject;
-class Guardian;
-class Item;
-class Minion;
-class MotionMaster;
-class Pet;
-class Spell;
-class SpellCastTargets;
-class SpellHistory;
-class SpellInfo;
-class Totem;
-class Transport;
-class TransportBase;
-class UnitAI;
-class UnitAura;
-class Vehicle;
-class VehicleJoinEvent;
-
 enum ZLiquidStatus : uint32;
 
 namespace Movement
@@ -105,8 +113,6 @@ namespace Movement
     class ExtraMovementStatusElement;
     class MoveSpline;
 } // namespace Movement
-
-typedef std::list<Unit*> UnitList;
 
 class DispelableAura
 {
@@ -133,28 +139,24 @@ class DispelableAura
     int32 _chance;
     uint8 _charges;
 };
-typedef std::vector<DispelableAura> DispelChargesList;
 
 typedef std::unordered_multimap<uint32 /*type*/, uint32 /*spellId*/> SpellImmuneContainer;
 
-enum UnitModifierFlatType
+enum UnitModifierType
 {
     BASE_VALUE = 0,
-    TOTAL_VALUE = 1,
-    MODIFIER_TYPE_FLAT_END = 2
-};
-
-enum UnitModifierPctType
-{
-    BASE_PCT = 0,
-    TOTAL_PCT = 1,
-    MODIFIER_TYPE_PCT_END = 2
+    BASE_PCT = 1,
+    TOTAL_VALUE = 2,
+    TOTAL_PCT = 3,
+    MODIFIER_TYPE_END = 4
 };
 
 enum WeaponDamageRange
 {
     MINDAMAGE,
-    MAXDAMAGE
+    MAXDAMAGE,
+
+    MAX_WEAPON_DAMAGE_RANGE
 };
 
 enum UnitMods
@@ -223,6 +225,9 @@ enum DeathState
     JUST_RESPAWNED = 4
 };
 
+extern float baseMoveSpeed[MAX_MOVE_TYPE];
+extern float playerBaseMoveSpeed[MAX_MOVE_TYPE];
+
 enum UnitState : uint32
 {
     UNIT_STATE_DIED = 0x00000001,            // player has fake death aura
@@ -274,8 +279,52 @@ enum UnitState : uint32
     UNIT_STATE_ALL_STATE = 0xffffffff
 };
 
-FC_GAME_API extern float baseMoveSpeed[MAX_MOVE_TYPE];
-FC_GAME_API extern float playerBaseMoveSpeed[MAX_MOVE_TYPE];
+enum CombatRating
+{
+    CR_WEAPON_SKILL = 0,
+    CR_DEFENSE_SKILL = 1, // Removed in 4.0.1
+    CR_DODGE = 2,
+    CR_PARRY = 3,
+    CR_BLOCK = 4,
+    CR_HIT_MELEE = 5,
+    CR_HIT_RANGED = 6,
+    CR_HIT_SPELL = 7,
+    CR_CRIT_MELEE = 8,
+    CR_CRIT_RANGED = 9,
+    CR_CRIT_SPELL = 10,
+    CR_HIT_TAKEN_MELEE = 11,  // Deprecated since Cataclysm
+    CR_HIT_TAKEN_RANGED = 12, // Deprecated since Cataclysm
+    CR_HIT_TAKEN_SPELL = 13,  // Deprecated since Cataclysm
+    CR_RESILIENCE_CRIT_TAKEN = 14,
+    CR_RESILIENCE_PLAYER_DAMAGE_TAKEN = 15,
+    CR_CRIT_TAKEN_SPELL = 16, // Deprecated since Cataclysm
+    CR_HASTE_MELEE = 17,
+    CR_HASTE_RANGED = 18,
+    CR_HASTE_SPELL = 19,
+    CR_WEAPON_SKILL_MAINHAND = 20,
+    CR_WEAPON_SKILL_OFFHAND = 21,
+    CR_WEAPON_SKILL_RANGED = 22,
+    CR_EXPERTISE = 23,
+    CR_ARMOR_PENETRATION = 24,
+    CR_MASTERY = 25,
+};
+
+#define MAX_COMBAT_RATING 26
+
+enum DamageEffectType : uint8
+{
+    DIRECT_DAMAGE = 0,       // used for normal weapon damage (not for class abilities or spells)
+    SPELL_DIRECT_DAMAGE = 1, // spell/class abilities damage
+    DOT = 2,
+    HEAL = 3,
+    NODAMAGE = 4, // used also in case when damage applied to health but not applied to spell channelInterruptFlags/etc
+    SELF_DAMAGE = 5
+};
+
+namespace Movement
+{
+    class MoveSpline;
+}
 
 enum class MovementChangeType : uint8
 {
@@ -323,48 +372,6 @@ struct PlayerMovementPendingChange
     } knockbackInfo; // used if knockback
 };
 
-enum CombatRating
-{
-    CR_WEAPON_SKILL = 0,
-    CR_DEFENSE_SKILL = 1, // Removed in 4.0.1
-    CR_DODGE = 2,
-    CR_PARRY = 3,
-    CR_BLOCK = 4,
-    CR_HIT_MELEE = 5,
-    CR_HIT_RANGED = 6,
-    CR_HIT_SPELL = 7,
-    CR_CRIT_MELEE = 8,
-    CR_CRIT_RANGED = 9,
-    CR_CRIT_SPELL = 10,
-    CR_HIT_TAKEN_MELEE = 11,  // Deprecated since Cataclysm
-    CR_HIT_TAKEN_RANGED = 12, // Deprecated since Cataclysm
-    CR_HIT_TAKEN_SPELL = 13,  // Deprecated since Cataclysm
-    CR_RESILIENCE_CRIT_TAKEN = 14,
-    CR_RESILIENCE_PLAYER_DAMAGE_TAKEN = 15,
-    CR_CRIT_TAKEN_SPELL = 16, // Deprecated since Cataclysm
-    CR_HASTE_MELEE = 17,
-    CR_HASTE_RANGED = 18,
-    CR_HASTE_SPELL = 19,
-    CR_WEAPON_SKILL_MAINHAND = 20,
-    CR_WEAPON_SKILL_OFFHAND = 21,
-    CR_WEAPON_SKILL_RANGED = 22,
-    CR_EXPERTISE = 23,
-    CR_ARMOR_PENETRATION = 24,
-    CR_MASTERY = 25,
-};
-
-#define MAX_COMBAT_RATING 26
-
-enum DamageEffectType : uint8
-{
-    DIRECT_DAMAGE = 0,       // used for normal weapon damage (not for class abilities or spells)
-    SPELL_DIRECT_DAMAGE = 1, // spell/class abilities damage
-    DOT = 2,
-    HEAL = 3,
-    NODAMAGE = 4, // used also in case when damage applied to health but not applied to spell channelInterruptFlags/etc
-    SELF_DAMAGE = 5
-};
-
 enum UnitTypeMask
 {
     UNIT_MASK_NONE = 0x00000000,
@@ -407,6 +414,12 @@ enum MeleeHitOutcome : uint8
     MELEE_HIT_CRIT,
     MELEE_HIT_CRUSHING,
     MELEE_HIT_NORMAL
+};
+
+enum ExtraAttackSpells
+{
+    SPELL_SWORD_SPECIALIZATION   = 16459,
+    SPELL_HACK_AND_SLASH         = 66923
 };
 
 class DispelInfo
@@ -456,11 +469,16 @@ class FC_GAME_API DamageInfo
     uint32 m_resist;
     uint32 m_block;
     uint32 m_hitMask;
+    uint32 m_cleanDamage;
 
+    // amalgamation constructor (used for proc)
+    DamageInfo(DamageInfo const& dmg1, DamageInfo const& dmg2);
   public:
-    DamageInfo(Unit* attacker, Unit* victim, uint32 damage, SpellInfo const* spellInfo, SpellSchoolMask schoolMask, DamageEffectType damageType, WeaponAttackType attackType);
+    DamageInfo(Unit* attacker, Unit* victim, uint32 damage, SpellInfo const* spellInfo, SpellSchoolMask schoolMask, DamageEffectType damageType, WeaponAttackType attackType, uint32 cleanDamage = 0);
     explicit DamageInfo(CalcDamageInfo const& dmgInfo);
+    explicit DamageInfo(CalcDamageInfo const& dmgInfo, uint8 damageIndex);
     DamageInfo(SpellNonMeleeDamage const& spellNonMeleeDamage, DamageEffectType damageType, WeaponAttackType attackType, uint32 hitMask);
+    DamageInfo(SpellNonMeleeDamage const& spellNonMeleeDamage, DamageEffectType damageType);
 
     void ModifyDamage(int32 amount);
     void AbsorbDamage(uint32 amount);
@@ -479,6 +497,7 @@ class FC_GAME_API DamageInfo
     uint32 GetBlock() const { return m_block; }
 
     uint32 GetHitMask() const;
+    [[nodiscard]] uint32 GetUnmitigatedDamage() const;
 };
 
 class FC_GAME_API HealInfo
@@ -622,123 +641,7 @@ enum CurrentSpellTypes : uint8
 #define CURRENT_FIRST_NON_MELEE_SPELL 1
 #define CURRENT_MAX_SPELL 4
 
-#define UNIT_ACTION_BUTTON_ACTION(X) (uint32(X) & 0x00FFFFFF)
-#define UNIT_ACTION_BUTTON_TYPE(X) ((uint32(X) & 0xFF000000) >> 24)
-#define MAKE_UNIT_ACTION_BUTTON(A, T) (uint32(A) | (uint32(T) << 24))
-
-struct UnitActionBarEntry
-{
-    UnitActionBarEntry() : packedData(uint32(ACT_DISABLED) << 24) {}
-
-    uint32 packedData;
-
-    // helper
-    ActiveStates GetType() const { return ActiveStates(UNIT_ACTION_BUTTON_TYPE(packedData)); }
-    uint32 GetAction() const { return UNIT_ACTION_BUTTON_ACTION(packedData); }
-    bool IsActionBarForSpell() const
-    {
-        ActiveStates Type = GetType();
-        return Type == ACT_DISABLED || Type == ACT_ENABLED || Type == ACT_PASSIVE;
-    }
-
-    void SetActionAndType(uint32 action, ActiveStates type) { packedData = MAKE_UNIT_ACTION_BUTTON(action, type); }
-
-    void SetType(ActiveStates type) { packedData = MAKE_UNIT_ACTION_BUTTON(UNIT_ACTION_BUTTON_ACTION(packedData), type); }
-
-    void SetAction(uint32 action) { packedData = (packedData & 0xFF000000) | UNIT_ACTION_BUTTON_ACTION(action); }
-};
-
 typedef std::list<Player*> SharedVisionList;
-
-enum CharmType
-{
-    CHARM_TYPE_CHARM,
-    CHARM_TYPE_POSSESS,
-    CHARM_TYPE_VEHICLE,
-    CHARM_TYPE_CONVERT
-};
-
-typedef UnitActionBarEntry CharmSpellInfo;
-
-enum ActionBarIndex
-{
-    ACTION_BAR_INDEX_START = 0,
-    ACTION_BAR_INDEX_ATTACK = ACTION_BAR_INDEX_START,
-    ACTION_BAR_INDEX_FOLLOW = 1,
-    ACTION_BAR_INDEX_MOVE_TO = 2,
-    ACTION_BAR_INDEX_PET_SPELL_START = 3,
-    ACTION_BAR_INDEX_PET_SPELL_END = 7,
-    ACTION_BAR_INDEX_ASSIST = ACTION_BAR_INDEX_PET_SPELL_END,
-    ACTION_BAR_INDEX_DEFENSIVE = 8,
-    ACTION_BAR_INDEX_PASSIVE = 9,
-    ACTION_BAR_INDEX_END = 10
-};
-
-#define MAX_UNIT_ACTION_BAR_INDEX (ACTION_BAR_INDEX_END - ACTION_BAR_INDEX_START)
-
-struct FC_GAME_API CharmInfo
-{
-  public:
-    explicit CharmInfo(Unit* unit);
-    ~CharmInfo();
-    void RestoreState();
-    uint32 GetPetNumber() const { return _petnumber; }
-    void SetPetNumber(uint32 petnumber, bool statwindow);
-
-    void SetCommandState(CommandStates st) { _CommandState = st; }
-    CommandStates GetCommandState() const { return _CommandState; }
-    bool HasCommandState(CommandStates state) const { return (_CommandState == state); }
-
-    void InitPossessCreateSpells();
-    void InitCharmCreateSpells();
-    void InitPetActionBar();
-    void InitEmptyActionBar(bool withAttack = true);
-
-    // return true if successful
-    bool AddSpellToActionBar(SpellInfo const* spellInfo, ActiveStates newstate = ACT_DECIDE, uint8 preferredSlot = 0);
-    bool RemoveSpellFromActionBar(uint32 spell_id);
-    void LoadPetActionBar(const std::string& data);
-    void BuildActionBar(WorldPacket* data);
-    void SetSpellAutocast(SpellInfo const* spellInfo, bool state);
-    void SetActionBar(uint8 index, uint32 spellOrAction, ActiveStates type) { PetActionBar[index].SetActionAndType(spellOrAction, type); }
-    UnitActionBarEntry const* GetActionBarEntry(uint8 index) const { return &(PetActionBar[index]); }
-
-    void ToggleCreatureAutocast(SpellInfo const* spellInfo, bool apply);
-
-    CharmSpellInfo* GetCharmSpell(uint8 index) { return &(_charmspells[index]); }
-
-    void SetIsCommandAttack(bool val);
-    bool IsCommandAttack();
-    void SetIsCommandFollow(bool val);
-    bool IsCommandFollow();
-    void SetIsAtStay(bool val);
-    bool IsAtStay();
-    void SetIsFollowing(bool val);
-    bool IsFollowing();
-    void SetIsReturning(bool val);
-    bool IsReturning();
-    void SaveStayPosition();
-    void GetStayPosition(float& x, float& y, float& z);
-
-  private:
-    Unit* _unit;
-    UnitActionBarEntry PetActionBar[MAX_UNIT_ACTION_BAR_INDEX];
-    CharmSpellInfo _charmspells[4];
-    CommandStates _CommandState;
-    uint32 _petnumber;
-
-    // for restoration after charmed
-    ReactStates _oldReactState;
-
-    bool _isCommandAttack;
-    bool _isCommandFollow;
-    bool _isAtStay;
-    bool _isFollowing;
-    bool _isReturning;
-    float _stayX;
-    float _stayY;
-    float _stayZ;
-};
 
 // for clearing special attacks
 #define REACTIVE_TIMER_START 4000
@@ -1625,14 +1528,14 @@ class FC_GAME_API Unit : public WorldObject
 
     // stat system
     // stat system
-    void HandleStatFlatModifier(UnitMods unitMod, UnitModifierFlatType modifierType, float amount, bool apply);
-    void ApplyStatPctModifier(UnitMods unitMod, UnitModifierPctType modifierType, float amount);
+    void HandleStatFlatModifier(UnitMods unitMod, UnitModifierType modifierType, float amount, bool apply);
+    void ApplyStatPctModifier(UnitMods unitMod, UnitModifierType modifierType, float amount);
 
-    void SetStatFlatModifier(UnitMods unitMod, UnitModifierFlatType modifierType, float val);
-    void SetStatPctModifier(UnitMods unitMod, UnitModifierPctType modifierType, float val);
+    void SetStatFlatModifier(UnitMods unitMod, UnitModifierType modifierType, float val);
+    void SetStatPctModifier(UnitMods unitMod, UnitModifierType modifierType, float val);
 
-    float GetFlatModifierValue(UnitMods unitMod, UnitModifierFlatType modifierType) const;
-    float GetPctModifierValue(UnitMods unitMod, UnitModifierPctType modifierType) const;
+    float GetFlatModifierValue(UnitMods unitMod, UnitModifierType modifierType) const;
+    float GetPctModifierValue(UnitMods unitMod, UnitModifierType modifierType) const;
 
     void UpdateUnitMod(UnitMods unitMod);
 

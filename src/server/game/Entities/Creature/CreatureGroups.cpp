@@ -479,7 +479,7 @@ void CreatureGroup::LeaderStartedMoving()
     for (CreatureGroupMemberType::iterator itr = m_members.begin(); itr != m_members.end(); ++itr)
     {
         Creature* member = itr->first;
-        if (member == m_leader || !member->IsAlive() || member->GetVictim() || !(itr->second.groupAI & GROUP_AI_FLAG_FOLLOW_LEADER))
+        if (member == m_leader || !member->IsAlive() || member->GetVictim() || !(itr->second.groupAI & std::underlying_type_t<GroupAIFlags>(GroupAIFlags::GROUP_AI_FLAG_FOLLOW_LEADER)))
             continue;
 
         float angle = itr->second.follow_angle + float(M_PI);

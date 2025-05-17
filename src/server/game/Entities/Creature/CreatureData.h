@@ -42,6 +42,9 @@ enum class VisibilityDistanceType : uint8;
 
 #define MAX_EQUIPMENT_ITEMS 3
 
+static uint32 const MAX_CREATURE_MODELS = 4;
+static uint32 const MAX_CREATURE_SPELLS = 8;
+
 constexpr Milliseconds PET_FOCUS_REGEN_INTERVAL = 4s;
 
 enum class VisibilityDistanceType : uint8;
@@ -130,7 +133,8 @@ struct FC_GAME_API CreatureMovementData
     bool IsGravityDisabled() const { return Flight == CreatureFlightMovementType::DisableGravity; }
     bool CanFly() const { return Flight == CreatureFlightMovementType::CanFly; }
     bool IsHoverEnabled() const { return Ground == CreatureGroundMovementType::Hover; }
-
+    
+    CreatureChaseMovementType GetChase() const {  return Chase; }
     CreatureRandomMovementType GetRandom() const { return Random; }
 
     uint32 GetInteractionPauseTimer() const { return InteractionPauseTimer; }
@@ -140,10 +144,21 @@ struct FC_GAME_API CreatureMovementData
 
 static uint32 const CREATURE_NOPATH_EVADE_TIME = 5 * IN_MILLISECONDS;
 
-static uint8 const MAX_KILL_CREDIT = 2;
-static uint32 const MAX_CREATURE_MODELS = 4;
-static uint32 const MAX_CREATURE_QUEST_ITEMS = 6;
-static uint32 const MAX_CREATURE_SPELLS = 8;
+struct CreatureModel
+{
+    static CreatureModel const DefaultInvisibleModel;
+    static CreatureModel const DefaultVisibleModel;
+
+    CreatureModel() :
+        CreatureDisplayID(0), DisplayScale(0.0f), Probability(0.0f) { }
+
+    CreatureModel(uint32 creatureDisplayID, float displayScale, float probability) :
+        CreatureDisplayID(creatureDisplayID), DisplayScale(displayScale), Probability(probability) { }
+
+    uint32 CreatureDisplayID;
+    float DisplayScale;
+    float Probability;
+};
 
 // from `creature_template` table
 struct FC_GAME_API CreatureTemplate
@@ -151,6 +166,7 @@ struct FC_GAME_API CreatureTemplate
     uint32 Entry;
     uint32 DifficultyEntry[MAX_DIFFICULTY - 1];
     uint32 KillCredit[MAX_KILL_CREDIT];
+    std::vector<CreatureModel> Models;
     uint32 Modelid1;
     uint32 Modelid2;
     uint32 Modelid3;
@@ -168,7 +184,10 @@ struct FC_GAME_API CreatureTemplate
     uint32 npcflag;
     float speed_walk;
     float speed_run;
-    float scale;
+    float   speed_swim;
+    float   speed_flight;
+    float   detection_range;                                // Detection Range for Line of Sight aggro
+    float   scale;
     uint32 rank;
     uint32 dmgschool;
     uint32 BaseAttackTime;
@@ -180,7 +199,10 @@ struct FC_GAME_API CreatureTemplate
     uint32 unit_flags2; // enum UnitFlags2 mask values
     uint32 dynamicflags;
     CreatureFamily family; // enum CreatureFamily values (optional)
-    uint32 trainer_class;
+    uint32  trainer_type;
+    uint32  trainer_spell;
+    uint32  trainer_class;
+    uint32  trainer_race;
     uint32 type;        // enum CreatureType values
     uint32 type_flags;  // enum CreatureTypeFlags mask values
     uint32 type_flags2; // unknown enum, only set for 4 creatures (with value 1)
@@ -214,8 +236,12 @@ struct FC_GAME_API CreatureTemplate
     WorldPacket QueryData[TOTAL_LOCALES];
     uint32 GetRandomValidModelId() const;
     uint32 GetFirstValidModelId() const;
-    uint32 GetFirstInvisibleModel() const;
-    uint32 GetFirstVisibleModel() const;
+    CreatureModel const* GetModelByIdx(uint32 idx) const;
+    CreatureModel const* GetRandomValidModel() const;
+    CreatureModel const* GetFirstValidModel() const;
+    CreatureModel const* GetModelWithDisplayId(uint32 displayId) const;
+    CreatureModel const* GetFirstInvisibleModel() const;
+    CreatureModel const* GetFirstVisibleModel() const;
 
     // helpers
     SkillType GetRequiredLootSkill() const
@@ -241,11 +267,25 @@ struct FC_GAME_API CreatureTemplate
         return canTameExotic || !IsExotic();
     }
 
+    [[nodiscard]] bool HasFlagsExtra (uint32 flag) const { return (flags_extra & flag) != 0; }
+
     void InitializeQueryData();
     WorldPacket BuildQueryData(LocaleConstant loc) const;
 };
 
+typedef std::vector<uint32> CreatureQuestItemList;
+typedef std::unordered_map<uint32, CreatureQuestItemList> CreatureQuestItemMap;
+
+// Benchmarked: Faster than std::map (insert/find)
+typedef std::unordered_map<uint32, CreatureTemplate> CreatureTemplateContainer;
+
+// GCC have alternative #pragma pack(N) syntax and old gcc version not support pack(push, N), also any gcc version not support it at some platform
+#if defined(__GNUC__)
+#pragma pack(1)
+#else
 #pragma pack(push, 1)
+#endif
+
 
 // Defines base stats for creatures (used to calculate HP/mana/armor/attackpower/rangedattackpower/all damage).
 struct FC_GAME_API CreatureBaseStats
@@ -286,10 +326,25 @@ struct CreatureLocale
     std::vector<std::string> Title;
 };
 
+struct GossipMenuItemsLocale
+{
+    std::vector<std::string> OptionText;
+    std::vector<std::string> BoxText;
+};
+
+struct PointOfInterestLocale
+{
+    std::vector<std::string> Name;
+};
+
 struct EquipmentInfo
 {
     uint32 ItemEntry[MAX_EQUIPMENT_ITEMS];
 };
+
+// Benchmarked: Faster than std::map (insert/find)
+typedef std::unordered_map<uint8, EquipmentInfo> EquipmentInfoContainerInternal;
+typedef std::unordered_map<uint32, EquipmentInfoContainerInternal> EquipmentInfoContainer;
 
 // from `creature` table
 struct CreatureData : public SpawnData
@@ -325,7 +380,24 @@ enum InhabitTypeValues
     INHABIT_ANYWHERE = INHABIT_GROUND | INHABIT_WATER | INHABIT_AIR | INHABIT_ROOT
 };
 
+enum ChatType
+{
+    CHAT_TYPE_SAY               = 0,
+    CHAT_TYPE_YELL              = 1,
+    CHAT_TYPE_TEXT_EMOTE        = 2,
+    CHAT_TYPE_BOSS_EMOTE        = 3,
+    CHAT_TYPE_WHISPER           = 4,
+    CHAT_TYPE_BOSS_WHISPER      = 5,
+    CHAT_TYPE_ZONE_YELL         = 6,
+    CHAT_TYPE_END               = 255
+};
+
+// GCC have alternative #pragma pack() syntax and old gcc version not support pack(pop), also any gcc version not support it at some platform
+#if defined(__GNUC__)
+#pragma pack()
+#else
 #pragma pack(pop)
+#endif
 
 // `creature_addon` table
 struct CreatureAddon
@@ -343,10 +415,14 @@ struct CreatureAddon
     VisibilityDistanceType visibilityDistanceType;
 };
 
+typedef std::unordered_map<uint32, CreatureAddon> CreatureAddonContainer;
+
 // Vendors
 struct VendorItem
 {
     VendorItem() : item(0), maxcount(0), incrtime(0), ExtendedCost(0), Type(0), PlayerConditionId(0) {}
+    VendorItem(uint32 _item, int32 _maxcount, uint32 _incrtime, uint32 _ExtendedCost)
+        : item(_item), maxcount(_maxcount), incrtime(_incrtime), ExtendedCost(_ExtendedCost), Type(0), PlayerConditionId(0) {}
 
     uint32 item;
     uint32 maxcount; // 0 for infinity item amount
@@ -356,8 +432,10 @@ struct VendorItem
     uint32 PlayerConditionId;
 
     // helpers
-    bool IsGoldRequired(ItemTemplate const* pProto) const;
+    bool IsGoldRequired(ItemTemplate const* pProto) const { return pProto->HasFlag2(ITEM_FLAG2_DONT_IGNORE_BUY_PRICE) || !ExtendedCost; }
 };
+
+typedef std::vector<VendorItem*> VendorItemList;
 
 struct VendorItemData
 {
@@ -373,10 +451,31 @@ struct VendorItemData
     bool Empty() const { return m_items.empty(); }
     uint32 GetItemCount() const { return m_items.size(); }
     void AddItem(VendorItem vItem) { m_items.emplace_back(std::move(vItem)); }
+    void AddItem(uint32 item, int32 maxcount, uint32 ptime, uint32 ExtendedCost)
+    {
+        m_items.push_back(new VendorItem(item, maxcount, ptime, ExtendedCost));
+    }
+    bool RemoveItem(uint32 item_id);
     bool RemoveItem(uint32 item_id, uint8 type);
     VendorItem const* FindItemCostPair(uint32 item_id, uint32 extendedCost, uint8 type) const;
-    void Clear() { m_items.clear(); }
+    void Clear()
+    {
+        for (VendorItemList::const_iterator itr = m_items.begin(); itr != m_items.end(); ++itr)
+            delete (*itr);
+        m_items.clear();
+    }
 };
+
+struct VendorItemCount
+{
+    explicit VendorItemCount(uint32 _item, uint32 _count);
+
+    uint32 itemId;
+    uint32 count;
+    time_t lastIncrementTime;
+};
+
+typedef std::list<VendorItemCount> VendorItemCounts;
 
 typedef std::unordered_map<uint32, float /*SparringHealthLimit*/> CreatureSparringTemplateMap;
 
@@ -402,5 +501,16 @@ struct CreatureSpellFocusData
         ReacquiringTargetDelay = 0;
     }
 };
+
+struct CreatureSpellCooldown
+{
+    CreatureSpellCooldown()  = default;
+    CreatureSpellCooldown(uint16 categoryId, uint32 endTime) : category(categoryId), end(endTime) { }
+
+    uint16 category{0};
+    uint32 end{0};
+};
+
+typedef std::map<uint32, CreatureSpellCooldown> CreatureSpellCooldowns;
 
 #endif // CreatureData_h__
