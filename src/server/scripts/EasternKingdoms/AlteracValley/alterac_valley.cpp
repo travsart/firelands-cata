@@ -136,7 +136,7 @@ class npc_av_marshal_or_warmaster : public CreatureScript
                         {
                             if (Creature* mainBoss = bg->GetBGCreature((me->GetFaction() == FACTION_AV_ALLIANCE ? AV_CPLACE_A_BOSS : AV_CPLACE_H_BOSS)))
                             {
-                                if (mainBoss->IsAIEnabled() && !mainBoss->GetVictim())
+                                if (mainBoss->IsAIEnabled && !mainBoss->GetVictim())
                                 {
                                     mainBoss->AI()->AttackStart(victim);
                                 }

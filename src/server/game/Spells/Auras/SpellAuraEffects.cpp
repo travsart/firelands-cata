@@ -330,7 +330,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS] = {
     &AuraEffect::HandleNoImmediateEffect,                     // 260 SPELL_AURA_SCREEN_EFFECT (miscvalue = id in ScreenEffect.dbc) not required any code
     &AuraEffect::HandlePhase,                                 // 261 SPELL_AURA_PHASE
     &AuraEffect::HandleNoImmediateEffect,                     // 262 SPELL_AURA_ABILITY_IGNORE_AURASTATE implemented in Spell::CheckCast
-    &AuraEffect::HandleAuraDisableCastingExceptAbilities,     // 263 SPELL_AURA_DISABLE_CASTING_EXCEPT_ABILITIES implemented in Spell::CheckCast
+    &AuraEffect::HandleAuraDisableCastingExceptAbilities,     // 263 SPELL_AURA_ALLOW_ONLY_ABILITY implemented in Spell::CheckCast
     &AuraEffect::HandleAuraDisableAttackingExceptAbilities,   // 264 SPELL_AURA_DISABLE_ATTACKING_EXCEPT_ABILITIES implemented in Spell::CheckCast, Unit::Attack
     &AuraEffect::HandleUnused,                                // 265 unused (4.3.4)
     &AuraEffect::HandleUnused,                                // 266 unused (4.3.4)
@@ -2506,7 +2506,7 @@ void AuraEffect::HandleAuraDisableCastingExceptAbilities(AuraApplication const* 
         else
         {
             // do not remove unit flag if there are more than this auraEffect of that kind on unit on unit
-            if (target->HasAuraType(SPELL_AURA_DISABLE_CASTING_EXCEPT_ABILITIES))
+            if (target->HasAuraType(SPELL_AURA_ALLOW_ONLY_ABILITY))
                 return;
             target->RemoveFlag(PLAYER_FLAGS, PLAYER_FLAGS_DISABLE_CASTING_EXCEPT_ABILITIES);
         }

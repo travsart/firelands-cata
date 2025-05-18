@@ -777,7 +777,7 @@ struct npc_rhyolith_movement_controller_lord_rhyolith : public NullCreatureAI
             case EVENT_TELEPORT:
                 if (Creature* rhyolith = _instance->GetCreature(DATA_LORD_RHYOLITH))
                 {
-                    if (!rhyolith->IsAIEnabled())
+                    if (!rhyolith->IsAIEnabled)
                         break;
 
                     float angle = rhyolith->GetOrientation();

@@ -62,33 +62,33 @@ enum Gender
     GENDER_NONE = 2
 };
 
-// Race value is index in ChrRaces.dbc
-enum Races
+// DisplayRace values from CreatureDisplayInfoExtra.dbc
+enum class DisplayRace : uint8
 {
-    RACE_NONE = 0,
-    RACE_HUMAN = 1,
-    RACE_ORC = 2,
-    RACE_DWARF = 3,
-    RACE_NIGHTELF = 4,
-    RACE_UNDEAD_PLAYER = 5,
-    RACE_TAUREN = 6,
-    RACE_GNOME = 7,
-    RACE_TROLL = 8,
-    RACE_GOBLIN = 9,
-    RACE_BLOODELF = 10,
-    RACE_DRAENEI = 11,
-    // RACE_FEL_ORC            = 12,
-    // RACE_NAGA               = 13,
-    // RACE_BROKEN             = 14,
-    // RACE_SKELETON           = 15,
-    // RACE_VRYKUL             = 16,
-    // RACE_TUSKARR            = 17,
-    // RACE_FOREST_TROLL       = 18,
-    // RACE_TAUNKA             = 19,
-    // RACE_NORTHREND_SKELETON = 20,
-    // RACE_ICE_TROLL          = 21,
-    RACE_WORGEN = 22,
-    // RACE_GILNEAN            = 23
+    None              = 0,
+    Human             = 1,
+    Orc               = 2,
+    Dwarf             = 3,
+    NightElf          = 4,
+    Undead            = 5,
+    Tauren            = 6,
+    Gnome             = 7,
+    Troll             = 8,
+    Goblin            = 9,
+    BloodElf          = 10,
+    Draenei           = 11,
+    FelOrc            = 12,
+    Naga              = 13,
+    Broken            = 14,
+    Skeleton          = 15,
+    Vrykul            = 16,
+    Tuskarr           = 17,
+    ForestTroll       = 18,
+    Taunka            = 19,
+    NorthrendSkeleton = 20,
+    IceTroll          = 21,
+    RACE_WORGEN       = 22,
+    RACE_GILNEAN      = 23
 };
 
 // max+1 for player race

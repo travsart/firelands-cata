@@ -1198,14 +1198,14 @@ class spell_magmaw_massive_crash : public AuraScript
     void AfterApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         if (Creature* magmaw = GetTarget()->ToCreature())
-            if (magmaw->IsAIEnabled())
+            if (magmaw->IsAIEnabled)
                 magmaw->AI()->DoAction(ACTION_ENABLE_MOUNTING);
     }
 
     void AfterRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         if (Creature* magmaw = GetTarget()->ToCreature())
-            if (magmaw->IsAIEnabled())
+            if (magmaw->IsAIEnabled)
                 magmaw->AI()->DoAction(ACTION_DISABLE_MOUNTING);
     }
 
@@ -1221,14 +1221,14 @@ class spell_magmaw_impale_self : public AuraScript
     void AfterApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         if (Creature* magmaw = GetTarget()->ToCreature())
-            if (magmaw->IsAIEnabled())
+            if (magmaw->IsAIEnabled)
                 magmaw->AI()->DoAction(ACTION_EXPOSE_HEAD);
     }
 
     void AfterRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         if (Creature* magmaw = GetTarget()->ToCreature())
-            if (magmaw->IsAIEnabled())
+            if (magmaw->IsAIEnabled)
                 magmaw->AI()->DoAction(ACTION_COVER_HEAD);
     }
 

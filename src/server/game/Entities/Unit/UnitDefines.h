@@ -117,6 +117,44 @@ enum UnitRename : uint8
     UNIT_CAN_BE_ABANDONED   = 0x02
 };
 
+enum UnitTypeMask
+{
+    UNIT_MASK_NONE = 0x00000000,
+    UNIT_MASK_SUMMON = 0x00000001,
+    UNIT_MASK_MINION = 0x00000002,
+    UNIT_MASK_GUARDIAN = 0x00000004,
+    UNIT_MASK_TOTEM = 0x00000008,
+    UNIT_MASK_PET = 0x00000010,
+    UNIT_MASK_VEHICLE = 0x00000020,
+    UNIT_MASK_PUPPET = 0x00000040,
+    UNIT_MASK_HUNTER_PET = 0x00000080,
+    UNIT_MASK_CONTROLABLE_GUARDIAN = 0x00000100,
+    UNIT_MASK_ACCESSORY = 0x00000200
+};
+
+// Used for IsClass hook
+enum ClassContext : uint8
+{
+    CLASS_CONTEXT_NONE                  = 0,    // Default
+    CLASS_CONTEXT_INIT                  = 1,
+    CLASS_CONTEXT_TELEPORT              = 2,
+    CLASS_CONTEXT_QUEST                 = 3,
+    CLASS_CONTEXT_STATS                 = 4,
+    CLASS_CONTEXT_TAXI                  = 5,
+    CLASS_CONTEXT_SKILL                 = 6,
+    CLASS_CONTEXT_TALENT_POINT_CALC     = 7,
+    CLASS_CONTEXT_ABILITY               = 8,
+    CLASS_CONTEXT_ABILITY_REACTIVE      = 9,
+    CLASS_CONTEXT_PET                   = 10,
+    CLASS_CONTEXT_PET_CHARM             = 11,
+    CLASS_CONTEXT_EQUIP_RELIC           = 12,
+    CLASS_CONTEXT_EQUIP_SHIELDS         = 13,
+    CLASS_CONTEXT_EQUIP_ARMOR_CLASS     = 14,
+    CLASS_CONTEXT_WEAPON_SWAP           = 15,
+    CLASS_CONTEXT_GRAVEYARD             = 16,
+    CLASS_CONTEXT_CLASS_TRAINER         = 17
+};
+
 // Value masks for UNIT_FIELD_FLAGS
 enum UnitFlags : uint32
 {
@@ -216,6 +254,8 @@ enum NPCFlags : uint32
     UNIT_NPC_FLAG_TRANSMOGRIFIER        = 0x10000000,       // transmogrification
     UNIT_NPC_FLAG_VAULTKEEPER           = 0x20000000        // void storage
 };
+
+DEFINE_ENUM_FLAG(NPCFlags);
 
 enum MovementFlags : uint32
 {
@@ -365,6 +405,12 @@ enum CommandStates : uint8
     COMMAND_ATTACK  = 2,
     COMMAND_ABANDON = 3,
     COMMAND_MOVE_TO = 4
+};
+
+enum class SearchMethod
+{
+    MatchAll,
+    MatchAny
 };
 
 #endif // UnitDefines_h__

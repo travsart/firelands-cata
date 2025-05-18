@@ -477,7 +477,7 @@ struct npc_greymanes_horse : public VehicleAI
                                 for (Unit* attacker : storedAttackers)
                                 {
                                     if (Creature* creature = attacker->ToCreature())
-                                        if (creature->IsAIEnabled())
+                                        if (creature->IsAIEnabled)
                                             creature->AI()->EnterEvadeMode();
                                 }
 
@@ -582,7 +582,7 @@ struct npc_crowleys_horse : public VehicleAI
                     for (Unit* attacker : attackersCopy)
                     {
                         if (Creature* creature = attacker->ToCreature())
-                            if (creature->IsAIEnabled())
+                            if (creature->IsAIEnabled)
                                 creature->AI()->EnterEvadeMode();
                     }
 

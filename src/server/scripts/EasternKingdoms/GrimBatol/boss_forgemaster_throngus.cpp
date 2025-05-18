@@ -349,7 +349,7 @@ class spell_throngus_personal_phalanx : public AuraScript
     {
         Unit* target = GetTarget();
         if (Creature* throngus = target->ToCreature())
-            if (throngus->IsAIEnabled())
+            if (throngus->IsAIEnabled)
                 throngus->AI()->DoAction(ACTION_END_PHALLANX);
 
         target->ModifyAuraState(AURA_STATE_UNKNOWN22, false);

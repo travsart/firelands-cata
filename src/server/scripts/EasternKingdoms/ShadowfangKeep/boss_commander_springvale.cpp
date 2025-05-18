@@ -460,7 +460,7 @@ public:
 
                 if (aura)
                     if (aura->GetStackAmount() == 3)
-                        if (target->GetTypeId() == TYPEID_UNIT && target->IsAIEnabled())
+                        if (target->GetTypeId() == TYPEID_UNIT && target->IsAIEnabled)
                             target->ToCreature()->AI()->DoAction(ACTION_UNHOLY_POWER);
             }
         }
@@ -504,7 +504,7 @@ public:
                 if (!aura)
                     target->GetAura(SPELL_UNHOLY_POWER);
 
-                if (aura && aura->GetStackAmount() == 3 && target->IsAIEnabled())
+                if (aura && aura->GetStackAmount() == 3 && target->IsAIEnabled)
                     target->ToCreature()->AI()->DoAction(ACTION_UNHOLY_POWER);
 
                 if (InstanceScript* instance = target->GetInstanceScript())

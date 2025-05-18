@@ -1712,7 +1712,7 @@ class GameEventAIHookWorker
         void Visit(std::unordered_map<ObjectGuid, Creature*>& creatureMap)
         {
             for (auto const& p : creatureMap)
-                if (p.second->IsInWorld() && p.second->IsAIEnabled())
+                if (p.second->IsInWorld() && p.second->IsAIEnabled)
                     p.second->AI()->OnGameEvent(_activate, _eventId);
         }
 

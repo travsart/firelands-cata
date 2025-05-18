@@ -71,6 +71,16 @@ FC_COMMON_API tm TimeBreakdown(time_t t);
 
 FC_COMMON_API std::string secsToTimeString(uint64 timeInSecs, bool shortText = false, bool hoursOnly = false);
 FC_COMMON_API uint32 TimeStringToSecs(std::string const& timestring);
+
+FC_COMMON_API inline void ApplyPercentModFloatVar(float& var, float val, bool apply)
+{
+    if (val == -100.0f)     // prevent set var to zero
+    {
+        val = -99.99f;
+    }
+    var *= (apply ? (100.0f + val) / 100.0f : 100.0f / (100.0f + val));
+}
+
 FC_COMMON_API std::string TimeToTimestampStr(time_t t);
 FC_COMMON_API std::string TimeToHumanReadable(time_t t);
 

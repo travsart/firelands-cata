@@ -490,7 +490,7 @@ struct boss_nefarians_end : public BossAI
                     machine->CastSpell(machine, SPELL_ELECTROCUTE);
 
                 if (Creature* onyxia = instance->GetCreature(DATA_ONYXIA))
-                    if (onyxia->IsAIEnabled())
+                    if (onyxia->IsAIEnabled)
                         onyxia->AI()->DoAction(ACTION_REANIMATED);
 
                 SetupTransportSpawns(SUMMON_GROUP_CONTROLLER_STALKER);
@@ -673,7 +673,7 @@ struct boss_nefarians_end : public BossAI
                         instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me, FRAME_INDEX_NEFARIAN);
                         events.ScheduleEvent(EVENT_ENGAGE_PLAYERS, 2s, 0, PHASE_ONE);
                         if (Creature* onyxia = instance->GetCreature(DATA_ONYXIA))
-                            if (onyxia->IsAIEnabled())
+                            if (onyxia->IsAIEnabled)
                                 onyxia->AI()->DoAction(ACTION_NEFARIAN_LANDED);
                     }
                     else if (events.IsInPhase(PHASE_THREE))
@@ -896,7 +896,7 @@ private:
         for (ObjectGuid guid : summons)
         {
             if (Creature* creature = ObjectAccessor::GetCreature(*me, guid))
-                if (creature->GetEntry() == NPC_CHROMATIC_PROTOTYPE &&  creature->IsAlive() && creature->IsAIEnabled())
+                if (creature->GetEntry() == NPC_CHROMATIC_PROTOTYPE &&  creature->IsAlive() && creature->IsAIEnabled)
                     creature->AI()->DoAction(ACTION_DISENGAGE_PLAYERS);
         }
     }
@@ -946,7 +946,7 @@ struct npc_nefarians_end_onyxia : public ScriptedAI
 
         if (Creature* controller = _instance->GetCreature(DATA_CONTROLLER_STALKER))
         {
-            if (controller->IsAIEnabled())
+            if (controller->IsAIEnabled)
                 controller->AI()->DoZoneInCombat();
 
             controller->CastSpell(controller, SPELL_PET_HACK_1);
@@ -1166,7 +1166,7 @@ struct npc_nefarians_end_animated_bone_warrior : public ScriptedAI
         me->m_Events.AddEventAtOffset([this]()
         {
             me->SetReactState(REACT_AGGRESSIVE);
-            if (me->IsAIEnabled())
+            if (me->IsAIEnabled)
                 DoZoneInCombat();
         }, 800ms);
     }
@@ -1309,7 +1309,7 @@ struct npc_nefarians_end_shadowblaze : public NullCreatureAI
             _summonedByController = true;
 
         if (Creature* nefarian = _instance->GetCreature(DATA_NEFARIANS_END))
-            if (nefarian->IsAIEnabled())
+            if (nefarian->IsAIEnabled)
                 nefarian->AI()->JustSummoned(me);
     }
 
@@ -1418,7 +1418,7 @@ class spell_nefarians_end_electrical_charge : public AuraScript
                 break;
             case NPC_ONYXIA:
                 ModStackAmount(1);
-                if (target->IsAIEnabled())
+                if (target->IsAIEnabled)
                     target->AI()->DoAction(ACTION_UPDATE_ELECTRICAL_CHARGE);
                 break;
             default:
@@ -1607,7 +1607,7 @@ class spell_nefarians_end_shadowflame_breath : public SpellScript
         if (target->HasAura(SPELL_PERMANENT_FEIGN_DEATH_2))
         {
             target->SetReactState(REACT_AGGRESSIVE);
-            if (target->IsAIEnabled())
+            if (target->IsAIEnabled)
                 target->AI()->DoZoneInCombat();
 
             target->RemoveAurasDueToSpell(SPELL_PERMANENT_FEIGN_DEATH_2);
@@ -1709,7 +1709,7 @@ class spell_nefarians_end_onyxia_start_fight_2_effect : public SpellScript
 
         if (Creature* caster = GetCaster()->ToCreature())
         {
-            if (caster->IsAIEnabled() && !caster->IsInCombat())
+            if (caster->IsAIEnabled && !caster->IsInCombat())
                 caster->AI()->DoZoneInCombat();
 
             if (target->GetTransOffsetZ() > 9.5f)
@@ -1796,7 +1796,7 @@ class spell_nefarians_end_brushfire_growth : public AuraScript
     void HandlePeriodicTick(AuraEffect const* /*aurEff*/)
     {
         if (Creature* creature = GetTarget()->ToCreature())
-            if (creature->IsAIEnabled())
+            if (creature->IsAIEnabled)
                 creature->AI()->DoAction(ACTION_SPREAD_FLAMES);
     }
 
@@ -1827,7 +1827,7 @@ class spell_nefarians_end_shadowblaze : public SpellScript
         if (target->HasAura(SPELL_PERMANENT_FEIGN_DEATH_2))
         {
             target->SetReactState(REACT_AGGRESSIVE);
-            if (target->IsAIEnabled())
+            if (target->IsAIEnabled)
                 target->AI()->DoZoneInCombat();
 
             target->RemoveAurasDueToSpell(SPELL_PERMANENT_FEIGN_DEATH_2);
@@ -2052,7 +2052,7 @@ struct go_nefarians_end_orb_of_culmination : public GameObjectAI
             stalker->RemoveAllAuras();
 
         if (Creature* nefarius = _instance->GetCreature(DATA_LORD_VICTOR_NEFARIUS_NEFARIANS_END))
-            if (nefarius->IsAIEnabled())
+            if (nefarius->IsAIEnabled)
                 nefarius->AI()->DoAction(ACTION_START_INTRO);
 
         player->PlayerTalkClass->SendCloseGossip();

@@ -162,7 +162,7 @@ struct boss_chimaeron : public BossAI
             DoSummon(NPC_LORD_VICTOR_NEFARIUS_GENERIC, LordVictorNefariusSummonPosition, 0, TEMPSUMMON_MANUAL_DESPAWN);
 
         if (Creature * finkle = instance->GetCreature(DATA_FINKLE_EINHORN))
-            if (finkle->IsAIEnabled())
+            if (finkle->IsAIEnabled)
                 finkle->AI()->DoAction(ACTION_ENCOUNTER_STARTED);
     }
 
@@ -192,16 +192,16 @@ struct boss_chimaeron : public BossAI
         me->RemoveAllAuras();
 
         if (Creature* bileOTron = instance->GetCreature(DATA_BILE_O_TRON_800))
-            if (bileOTron->IsAIEnabled())
+            if (bileOTron->IsAIEnabled)
                 bileOTron->AI()->DoAction(ACTION_SHUT_DOWN);
 
         if (Creature* finkle = instance->GetCreature(DATA_FINKLE_EINHORN))
-            if (finkle->IsAIEnabled())
+            if (finkle->IsAIEnabled)
                 finkle->AI()->DoAction(ACTION_CHIMAERON_DIED);
 
         if (IsHeroic())
             if (Creature* nefarius = instance->GetCreature(DATA_LORD_VICTOR_NEFARIUS_GENERIC))
-                if (nefarius->IsAIEnabled())
+                if (nefarius->IsAIEnabled)
                     nefarius->AI()->DoAction(ACTION_CHIMAERON_DEFEATED);
     }
 
@@ -229,7 +229,7 @@ struct boss_chimaeron : public BossAI
 
             if (IsHeroic())
                 if (Creature* nefarius = instance->GetCreature(DATA_LORD_VICTOR_NEFARIUS_GENERIC))
-                    if (nefarius->IsAIEnabled())
+                    if (nefarius->IsAIEnabled)
                         nefarius->AI()->DoAction(ACTION_ENTER_PHASE_2);
         }
     }
@@ -258,11 +258,11 @@ struct boss_chimaeron : public BossAI
 
                 if (roll_chance_i(_knockOutChance))
                 {
-                    if (bileOTron->IsAIEnabled())
+                    if (bileOTron->IsAIEnabled)
                         bileOTron->AI()->DoAction(ACTION_KNOCK_OUT_BILE_O_TRON);
 
                     if (Creature* finkle = instance->GetCreature(DATA_FINKLE_EINHORN))
-                        if (finkle->IsAIEnabled())
+                        if (finkle->IsAIEnabled)
                             finkle->AI()->Talk(SAY_BILE_O_TRON_KNOCKED_OUT, me);
 
                     me->StopMoving();
@@ -289,7 +289,7 @@ struct boss_chimaeron : public BossAI
                 _isInFeud = true;
                 if (IsHeroic())
                     if (Creature* nefarius = instance->GetCreature(DATA_LORD_VICTOR_NEFARIUS_GENERIC))
-                        if (nefarius->IsAIEnabled())
+                        if (nefarius->IsAIEnabled)
                             nefarius->AI()->DoAction(ACTION_STOP_FEUD);
                 break;
             case ACTION_END_FEUD:
@@ -385,7 +385,7 @@ struct npc_chimaeron_finkle_einhorn : public ScriptedAI
         {
             _events.Reset();
             if (Creature* bileOTron = _instance->GetCreature(DATA_BILE_O_TRON_800))
-                if (bileOTron->IsAIEnabled())
+                if (bileOTron->IsAIEnabled)
                     bileOTron->AI()->DoAction(ACTION_ACTIVATE_BILE_O_TRON);
 
             if (Creature* chimaeron = _instance->GetCreature(DATA_CHIMAERON))
@@ -637,7 +637,7 @@ class spell_chimaeron_reroute_power : public AuraScript
     void HandleActivation(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         if (Creature* target = GetTarget()->ToCreature())
-            if (target->IsAIEnabled())
+            if (target->IsAIEnabled)
                 target->AI()->DoAction(ACTION_BILE_O_TRON_BACK_ONLINE);
     }
 
@@ -652,14 +652,14 @@ class spell_chimaeron_feud : public AuraScript
     void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         if (Creature* target = GetTarget()->ToCreature())
-            if (target->IsAIEnabled())
+            if (target->IsAIEnabled)
                 target->AI()->DoAction(ACTION_START_FEUD);
     }
 
     void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         if (Creature* target = GetTarget()->ToCreature())
-            if (target->IsAIEnabled())
+            if (target->IsAIEnabled)
                 target->AI()->DoAction(ACTION_END_FEUD);
     }
 

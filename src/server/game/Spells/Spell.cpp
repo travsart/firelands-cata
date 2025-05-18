@@ -2709,10 +2709,10 @@ void Spell::TargetInfo::DoDamageAndTriggers(Spell* spell)
     {
         // AI functions
         if (_spellHitTarget->GetTypeId() == TYPEID_UNIT)
-            if (_spellHitTarget->ToCreature()->IsAIEnabled())
+            if (_spellHitTarget->ToCreature()->IsAIEnabled)
                 _spellHitTarget->ToCreature()->AI()->SpellHit(spell->m_caster, spell->m_spellInfo);
 
-        if (spell->m_caster->GetTypeId() == TYPEID_UNIT && spell->m_caster->ToCreature()->IsAIEnabled())
+        if (spell->m_caster->GetTypeId() == TYPEID_UNIT && spell->m_caster->ToCreature()->IsAIEnabled)
             spell->m_caster->ToCreature()->AI()->SpellHitTarget(_spellHitTarget, spell->m_spellInfo);
 
         // Needs to be called after dealing damage/healing to not remove breaking on damage auras
@@ -5367,9 +5367,9 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* param1 /*= nullptr*/, uint
             if (!(_triggeredCastFlags & TRIGGERED_IGNORE_CASTER_AURASTATE))
             {
                 // These two auras check SpellFamilyName defined by dbc class data instead of current spell SpellFamilyName
-                if (m_caster->HasAuraType(SPELL_AURA_DISABLE_CASTING_EXCEPT_ABILITIES) && !m_spellInfo->HasAttribute(SPELL_ATTR0_USES_RANGED_SLOT) && !m_spellInfo->HasEffect(SPELL_EFFECT_ATTACK) &&
+                if (m_caster->HasAuraType(SPELL_AURA_ALLOW_ONLY_ABILITY) && !m_spellInfo->HasAttribute(SPELL_ATTR0_USES_RANGED_SLOT) && !m_spellInfo->HasEffect(SPELL_EFFECT_ATTACK) &&
                     !m_caster->HasAuraTypeWithFamilyFlags(
-                        SPELL_AURA_DISABLE_CASTING_EXCEPT_ABILITIES, sChrClassesStore.AssertEntry(m_caster->getClass())->SpellClassSet, m_spellInfo->SpellFamilyFlags))
+                        SPELL_AURA_ALLOW_ONLY_ABILITY, sChrClassesStore.AssertEntry(m_caster->getClass())->SpellClassSet, m_spellInfo->SpellFamilyFlags))
                     return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
 
                 if (m_caster->HasAuraType(SPELL_AURA_DISABLE_ATTACKING_EXCEPT_ABILITIES))

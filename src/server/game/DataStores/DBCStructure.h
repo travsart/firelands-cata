@@ -742,7 +742,8 @@ struct FactionTemplateEntry
     }
 
     bool IsHostileToPlayers() const { return (EnemyGroup & FACTION_GROUP_MASK_PLAYER) != 0; }
-    bool IsHostileToPvpActivePlayers() const { return GetFlags().HasFlag(FactionTemplateFlags::AttackPvPActivePlayers); }
+    bool IsContestedGuardFaction() const { return GetFlags().HasFlag(FactionTemplateFlags::AttackPvPActivePlayers); }
+    [[nodiscard]] bool IsHostileToPlayers() const { return (EnemyGroup & FACTION_GROUP_MASK_PLAYER) != 0; }
     bool IsNeutralToAll() const
     {
         for (uint8 i = 0; i < MAX_FACTION_RELATIONS; i++)
@@ -751,6 +752,8 @@ struct FactionTemplateEntry
 
         return EnemyGroup == FACTION_GROUP_MASK_NONE && FriendGroup == FACTION_GROUP_MASK_NONE;
     }
+    [[nodiscard]] bool IsContestedGuardFaction() const { return GetFlags().HasFlag(FactionTemplateFlags::AttackPvPActivePlayers); }
+    [[nodiscard]] bool FactionRespondsToCallForHelp() const { return GetFlags().HasFlag(FactionTemplateFlags::RespondToCallForHelp); }
 };
 
 struct GameObjectArtKitEntry

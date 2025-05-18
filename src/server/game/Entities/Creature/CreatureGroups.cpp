@@ -316,7 +316,7 @@ void CreatureGroup::MemberEvaded(Creature* member)
                 continue;
             }
 
-            if (pMember->IsAIEnabled()) {
+            if (pMember->IsAIEnabled) {
                 if (CreatureAI* pMemberAI = pMember->AI()) {
                     pMemberAI->EnterEvadeMode();
                 }

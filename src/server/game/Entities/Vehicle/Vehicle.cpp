@@ -563,7 +563,7 @@ Vehicle* Vehicle::RemovePassenger(WorldObject* passenger)
             unit->m_movementInfo.transport = _me->m_movementInfo.transport;
     }
 
-    if (_me->GetTypeId() == TYPEID_UNIT && _me->ToCreature()->IsAIEnabled())
+    if (_me->GetTypeId() == TYPEID_UNIT && _me->ToCreature()->IsAIEnabled)
         _me->ToCreature()->AI()->PassengerBoarded(unit, seat->first, false);
 
     if (GetBase()->GetTypeId() == TYPEID_UNIT)
