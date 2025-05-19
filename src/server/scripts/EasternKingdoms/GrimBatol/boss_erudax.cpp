@@ -503,7 +503,7 @@ class spell_erudax_twilight_corruption_AuraScript : public AuraScript
 
     void OnAuraRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-        if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::ByDeath))
+        if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::ByDeath))
         {
             if (Unit* caster = GetCaster())
                 if (Creature* creature = caster->ToCreature())

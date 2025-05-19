@@ -521,7 +521,7 @@ class spell_majordomo_staghelm_searing_seeds_AuraScript : public AuraScript
 
     void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-        if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::Expired))
+        if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::Expired))
             GetTarget()->CastSpell(nullptr, SPELL_SEARING_SEED, true);
     }
 

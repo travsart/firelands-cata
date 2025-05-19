@@ -4672,7 +4672,7 @@ void AuraEffect::HandleAuraDummy(AuraApplication const* aurApp, uint8 mode, bool
                     break;
                 case 43681: // Inactive
                 {
-                    if (target->GetTypeId() != TYPEID_PLAYER || !aurApp->GetRemoveMode().HasFlag(AuraRemoveFlags::Expired))
+                    if (target->GetTypeId() != TYPEID_PLAYER || !aurApp->GetRemoveMode().HasFlag(AuraRemoveMode::Expired))
                         return;
 
                     if (target->GetMap()->IsBattleground())
@@ -4690,7 +4690,7 @@ void AuraEffect::HandleAuraDummy(AuraApplication const* aurApp, uint8 mode, bool
                     target->CastSpell(nullptr, GetAmount(), this);
                     break;
                 case 91604: // Restricted Flight Area
-                    if (aurApp->GetRemoveMode().HasFlag(AuraRemoveFlags::Expired))
+                    if (aurApp->GetRemoveMode().HasFlag(AuraRemoveMode::Expired))
                         target->CastSpell(target, 58601, true);
                     break;
                 }
@@ -4952,7 +4952,7 @@ void AuraEffect::HandleChannelDeathItem(AuraApplication const* aurApp, uint8 mod
     if (!(mode & AURA_EFFECT_HANDLE_REAL))
         return;
 
-    if (apply || !aurApp->GetRemoveMode().HasFlag(AuraRemoveFlags::ByDeath))
+    if (apply || !aurApp->GetRemoveMode().HasFlag(AuraRemoveMode::ByDeath))
         return;
 
     Unit* caster = GetCaster();

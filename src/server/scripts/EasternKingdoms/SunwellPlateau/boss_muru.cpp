@@ -641,7 +641,7 @@ class spell_dark_fiend_skin : public SpellScriptLoader
         {
             void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
-                if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::ByEnemySpell))
+                if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::ByEnemySpell))
                     return;
 
                 if (Creature* target = GetTarget()->ToCreature())

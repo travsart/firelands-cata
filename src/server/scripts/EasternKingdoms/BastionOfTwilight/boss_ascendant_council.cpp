@@ -2317,7 +2317,7 @@ class spell_terrastra_harden_skin final : public AuraScript
 
     void OnAuraRemoveHandler(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
     {
-        if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::ByEnemySpell))
+        if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::ByEnemySpell))
             if (Unit* target = GetTarget())
                 target->CastSpell(nullptr, SPELL_SHATTER, CastSpellExtraArgs(aurEff).AddSpellBP0(_absorbedDamage));
     }

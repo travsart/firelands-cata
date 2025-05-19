@@ -716,7 +716,7 @@ class spell_kalecgos_curse_of_boundless_agony : public AuraScript
             if (instance->GetBossState(DATA_KALECGOS) == IN_PROGRESS)
                 return;
 
-        Remove(AuraRemoveFlags::ByCancel);
+        Remove(AuraRemoveMode::ByCancel);
     }
 
     void OnPeriodic(AuraEffect const* aurEff)
@@ -737,7 +737,7 @@ class spell_kalecgos_curse_of_boundless_agony : public AuraScript
 
     void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-        if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::ByCancel))
+        if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::ByCancel))
             GetTarget()->CastSpell(GetTarget(), SPELL_AGONY_CURSE_ALLY, true);
     }
 

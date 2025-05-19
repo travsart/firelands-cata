@@ -58,7 +58,7 @@ enum AuraEffectHandleModes
     AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK = (AURA_EFFECT_HANDLE_REAPPLY | AURA_EFFECT_HANDLE_REAL)
 };
 
-enum class AuraRemoveFlags : uint32
+enum class AuraRemoveMode : uint32
 {
     None                   = 0x00000000,
     ByDefault              = 0x00000001, // scripted remove, remove by stack with aura with different ids and sc aura remove
@@ -70,7 +70,7 @@ enum class AuraRemoveFlags : uint32
     DontResetPeriodicTimer = 0x00001000, // Do not reset periodic timer. Used by Aura::ModStackAmount.
 };
 
-DEFINE_ENUM_FLAG(AuraRemoveFlags)
+DEFINE_ENUM_FLAG(AuraRemoveMode)
 
 //m_schoolAbsorb
 enum DAMAGE_ABSORB_TYPE

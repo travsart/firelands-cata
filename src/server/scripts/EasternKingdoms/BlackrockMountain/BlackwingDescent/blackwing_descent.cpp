@@ -575,7 +575,7 @@ class spell_bwd_grievous_wound : public AuraScript
         if (GetUnitOwner()->HealthAbovePct(90))
         {
             PreventDefaultAction();
-            Remove(AuraRemoveFlags::ByEnemySpell);
+            Remove(AuraRemoveMode::ByEnemySpell);
         }
     }
 
@@ -627,7 +627,7 @@ class spell_bwd_execution_sentence : public AuraScript
 
     void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-        if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::ByCancel | AuraRemoveFlags::ByDeath))
+        if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::ByCancel | AuraRemoveMode::ByDeath))
             if (Unit* caster = GetCaster())
                 caster->CastSpell(caster, SPELL_EXECUTION_SENTENCE_DUMMY, true);
     }
@@ -658,7 +658,7 @@ class spell_bwd_stoneblood : public SpellScript
 
         for (std::unordered_set<Aura*>::const_iterator itr = aurasToRemove.begin(); itr != aurasToRemove.end();)
         {
-            (*itr)->Remove(AuraRemoveFlags::ByEnemySpell);
+            (*itr)->Remove(AuraRemoveMode::ByEnemySpell);
             itr = aurasToRemove.erase(itr);
         }
     }

@@ -328,7 +328,7 @@ void WorldSession::HandleCancelAuraOpcode(WorldPacket& recvPacket)
         return;
 
     // maybe should only remove one buff when there are multiple?
-    _player->RemoveOwnedAura(spellId, ObjectGuid::Empty, 0, AuraRemoveFlags::ByCancel);
+    _player->RemoveOwnedAura(spellId, ObjectGuid::Empty, 0, AuraRemoveMode::ByCancel);
 
     // If spell being removed is a resource tracker, see if player was tracking both (herbs / minerals) and remove the other
     if (sWorld->getBoolConfig(CONFIG_ALLOW_TRACK_BOTH_RESOURCES) && spellInfo->HasAura(SPELL_AURA_TRACK_RESOURCES))
@@ -346,7 +346,7 @@ void WorldSession::HandleCancelAuraOpcode(WorldPacket& recvPacket)
 
             // Remove all auras related to resource tracking (only Herbs and Minerals in 3.3.5a)
             for (std::list<uint32>::iterator it = spellIDs.begin(); it != spellIDs.end(); ++it)
-                _player->RemoveOwnedAura(*it, ObjectGuid::Empty, 0, AuraRemoveFlags::ByCancel);
+                _player->RemoveOwnedAura(*it, ObjectGuid::Empty, 0, AuraRemoveMode::ByCancel);
         }
     }
 }
@@ -387,7 +387,7 @@ void WorldSession::HandlePetCancelAuraOpcode(WorldPacket& recvPacket)
         return;
     }
 
-    pet->RemoveOwnedAura(spellId, ObjectGuid::Empty, 0, AuraRemoveFlags::ByCancel);
+    pet->RemoveOwnedAura(spellId, ObjectGuid::Empty, 0, AuraRemoveMode::ByCancel);
 }
 
 void WorldSession::HandleCancelGrowthAuraOpcode(WorldPacket& /*recvPacket*/) {}

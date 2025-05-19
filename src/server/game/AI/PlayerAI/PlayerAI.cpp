@@ -703,7 +703,7 @@ void PlayerAI::CancelAllShapeshifts()
     }
 
     for (Aura* aura : removableShapeshifts)
-        me->RemoveOwnedAura(aura, AuraRemoveFlags::ByCancel);
+        me->RemoveOwnedAura(aura, AuraRemoveMode::ByCancel);
 }
 
 Unit* PlayerAI::SelectAttackTarget() const { return me->GetCharmer() ? me->GetCharmer()->GetVictim() : nullptr; }

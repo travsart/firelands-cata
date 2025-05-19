@@ -1362,8 +1362,8 @@ class FC_GAME_API AuraScript : public _SpellScript
     // returns owner if it's dynobj, nullptr otherwise
     DynamicObject* GetDynobjOwner() const;
 
-    // removes aura with remove mode (see AuraRemoveFlags enum)
-    void Remove(AuraRemoveFlags removeMode = AuraRemoveFlags::ByDefault);
+    // removes aura with remove mode (see AuraRemoveMode enum)
+    void Remove(AuraRemoveMode removeMode = AuraRemoveMode::ByDefault);
     // returns aura object of script
     Aura* GetAura() const;
 
@@ -1389,15 +1389,15 @@ class FC_GAME_API AuraScript : public _SpellScript
     void SetCharges(uint8 charges);
     uint8 CalcMaxCharges() const;
     bool ModCharges(
-        int8 num, AuraRemoveFlags removeMode = AuraRemoveFlags::ByDefault);
+        int8 num, AuraRemoveMode removeMode = AuraRemoveMode::ByDefault);
     // returns true if last charge dropped
-    bool DropCharge(AuraRemoveFlags removeMode = AuraRemoveFlags::ByDefault);
+    bool DropCharge(AuraRemoveMode removeMode = AuraRemoveMode::ByDefault);
 
     // stack amount manipulation
     uint8 GetStackAmount() const;
     void SetStackAmount(uint8 num);
     bool ModStackAmount(
-        int32 num, AuraRemoveFlags removeMode = AuraRemoveFlags::ByDefault);
+        int32 num, AuraRemoveMode removeMode = AuraRemoveMode::ByDefault);
 
     // passive - "working in background", not saved, not removed by immunities,
     // not seen by player

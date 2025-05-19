@@ -757,7 +757,7 @@ class spell_red_dragonblood : public SpellScriptLoader
     {
         void HandleEffectRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
-            if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::Expired) || !GetCaster())
+            if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::Expired) || !GetCaster())
                 return;
 
             Creature* owner = GetOwner()->ToCreature();

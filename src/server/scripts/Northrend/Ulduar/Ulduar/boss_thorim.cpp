@@ -2094,7 +2094,7 @@ class spell_iron_ring_guard_impale : public SpellScriptLoader
             {
                 if (GetTarget()->HealthAbovePct(GetSpellInfo()->Effects[EFFECT_1].CalcValue()))
                 {
-                    Remove(AuraRemoveFlags::ByEnemySpell);
+                    Remove(AuraRemoveMode::ByEnemySpell);
                     PreventDefaultAction();
                 }
             }

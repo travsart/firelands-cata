@@ -1918,7 +1918,7 @@ class spell_illidan_parasitic_shadowfiend : public AuraScript
     void HandleEffectRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         auto removeMode = GetTargetApplication()->GetRemoveMode();
-        if (!removeMode.HasFlag(AuraRemoveFlags::Expired | AuraRemoveFlags::ByDeath))
+        if (!removeMode.HasFlag(AuraRemoveMode::Expired | AuraRemoveMode::ByDeath))
             return;
 
         Unit* target = GetTarget();

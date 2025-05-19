@@ -499,7 +499,7 @@ class spell_blood_queen_vampiric_bite : public SpellScriptLoader
                     return;
 
                 uint32 spellId = sSpellMgr->GetSpellIdForDifficulty(SPELL_FRENZIED_BLOODTHIRST, GetCaster());
-                GetCaster()->RemoveAura(spellId, ObjectGuid::Empty, 0, AuraRemoveFlags::ByEnemySpell);
+                GetCaster()->RemoveAura(spellId, ObjectGuid::Empty, 0, AuraRemoveMode::ByEnemySpell);
                 GetCaster()->CastSpell(GetCaster(), SPELL_ESSENCE_OF_THE_BLOOD_QUEEN_PLR, TRIGGERED_FULL_MASK);
 
                 // Shadowmourne questline
@@ -556,7 +556,7 @@ class spell_blood_queen_frenzied_bloodthirst : public SpellScriptLoader
             void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
                 Unit* target = GetTarget();
-                if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::Expired))
+                if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::Expired))
                     if (InstanceScript* instance = target->GetInstanceScript())
                         if (Creature* bloodQueen = ObjectAccessor::GetCreature(*target, instance->GetGuidData(DATA_BLOOD_QUEEN_LANA_THEL)))
                         {

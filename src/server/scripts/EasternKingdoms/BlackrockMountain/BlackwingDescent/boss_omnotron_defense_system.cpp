@@ -1241,7 +1241,7 @@ class spell_omnotron_recharging : public AuraScript
 {
     void AfterRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-        if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::Expired))
+        if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::Expired))
             if (Creature* golem = GetTarget()->ToCreature())
                 if (golem->IsAIEnabled)
                     golem->AI()->DoAction(ACTION_ACTIVATE_GOLEM);
@@ -1432,7 +1432,7 @@ class spell_omnotron_barrier : public AuraScript
 
     void HandleAbsorbRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-        if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::ByEnemySpell))
+        if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::ByEnemySpell))
             if (Unit* caster = GetCaster())
                 caster->CastSpell(caster, SPELL_BACKDRAFT, true);
     }

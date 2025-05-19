@@ -1051,7 +1051,7 @@ class spell_hadronox_leeching_poison : public SpellScriptLoader
 
         void HandleEffectRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
-            if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::ByDeath))
+            if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::ByDeath))
                 return;
 
             if (GetTarget()->IsGuardian())

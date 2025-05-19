@@ -142,7 +142,7 @@ class spell_marwyn_shared_suffering : public SpellScriptLoader
         {
             void HandleEffectRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
             {
-                if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::ByEnemySpell))
+                if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::ByEnemySpell))
                     return;
 
                 if (Unit* caster = GetCaster())

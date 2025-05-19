@@ -176,7 +176,7 @@ class spell_loatheb_deathbloom : public SpellScriptLoader
 
             void AfterRemove(AuraEffect const* eff, AuraEffectHandleModes /*mode*/)
             {
-                if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::Expired))
+                if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::Expired))
                     return;
 
                 GetTarget()->CastSpell(nullptr, SPELL_DEATHBLOOM_FINAL_DAMAGE, { eff, GetCasterGUID() });

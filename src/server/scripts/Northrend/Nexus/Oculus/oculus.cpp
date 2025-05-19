@@ -519,7 +519,7 @@ class spell_oculus_shock_lance : public SpellScriptLoader
                     if (AuraEffect const* shockCharges = target->GetAuraEffect(SPELL_AMBER_SHOCK_CHARGE, EFFECT_0, GetCaster()->GetGUID()))
                     {
                         damage += shockCharges->GetAmount();
-                        shockCharges->GetBase()->Remove(AuraRemoveFlags::ByEnemySpell);
+                        shockCharges->GetBase()->Remove(AuraRemoveMode::ByEnemySpell);
                     }
                 }
 

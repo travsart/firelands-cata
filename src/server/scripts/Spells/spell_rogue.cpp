@@ -918,7 +918,7 @@ class spell_rog_tricks_of_the_trade_aura : public AuraScript
 
     void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-        if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::ByDefault) || !GetTarget()->HasAura(SPELL_ROGUE_TRICKS_OF_THE_TRADE_PROC))
+        if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::ByDefault) || !GetTarget()->HasAura(SPELL_ROGUE_TRICKS_OF_THE_TRADE_PROC))
             GetTarget()->GetThreatManager().UnregisterRedirectThreat(SPELL_ROGUE_TRICKS_OF_THE_TRADE);
     }
 
@@ -933,7 +933,7 @@ class spell_rog_tricks_of_the_trade_aura : public AuraScript
             rogue->CastSpell(target, SPELL_ROGUE_TRICKS_OF_THE_TRADE_DMG_BOOST, aurEff);
             rogue->CastSpell(rogue, SPELL_ROGUE_TRICKS_OF_THE_TRADE_PROC, aurEff);
         }
-        Remove(AuraRemoveFlags::ByCancel);
+        Remove(AuraRemoveMode::ByCancel);
     }
 
     void Register() override

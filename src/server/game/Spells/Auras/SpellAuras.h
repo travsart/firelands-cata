@@ -60,7 +60,7 @@ class FC_GAME_API AuraApplication
   private:
     Unit* const _target;
     Aura* const _base;
-    EnumFlag<AuraRemoveFlags> _removeMode; // Store info for know remove aura reason
+    EnumFlag<AuraRemoveMode> _removeMode; // Store info for know remove aura reason
     uint8 _slot;                           // Aura slot on unit
     uint8 _flags;                          // Aura info flag
     uint8 _effectsToApply;                 // Used only at spell hit to determine which effect should be applied
@@ -115,11 +115,11 @@ class FC_GAME_API AuraApplication
 
     void UpdateApplyEffectMask(uint8 newEffMask);
 
-    void SetRemoveMode(AuraRemoveFlags mode)
+    void SetRemoveMode(AuraRemoveMode mode)
     {
         _removeMode = mode;
     }
-    EnumFlag<AuraRemoveFlags> GetRemoveMode() const
+    EnumFlag<AuraRemoveMode> GetRemoveMode() const
     {
         return _removeMode;
     }
@@ -198,8 +198,8 @@ class FC_GAME_API Aura
 
     virtual void _ApplyForTarget(Unit* target, Unit* caster, AuraApplication* auraApp);
     virtual void _UnapplyForTarget(Unit* target, Unit* caster, AuraApplication* auraApp);
-    void _Remove(AuraRemoveFlags removeMode);
-    virtual void Remove(AuraRemoveFlags removeMode = AuraRemoveFlags::ByDefault) = 0;
+    void _Remove(AuraRemoveMode removeMode);
+    virtual void Remove(AuraRemoveMode removeMode = AuraRemoveMode::ByDefault) = 0;
 
     virtual void FillTargetMap(std::unordered_map<Unit*, uint8>& targets, Unit* caster) = 0;
     void UpdateTargetMap(Unit* caster, bool apply = true);
@@ -266,20 +266,20 @@ class FC_GAME_API Aura
     {
         return CalcMaxCharges(GetCaster());
     }
-    bool ModCharges(int32 num, AuraRemoveFlags removeMode = AuraRemoveFlags::ByDefault);
-    bool DropCharge(AuraRemoveFlags removeMode = AuraRemoveFlags::ByDefault)
+    bool ModCharges(int32 num, AuraRemoveMode removeMode = AuraRemoveMode::ByDefault);
+    bool DropCharge(AuraRemoveMode removeMode = AuraRemoveMode::ByDefault)
     {
         return ModCharges(-1, removeMode);
     }
-    void ModChargesDelayed(int32 num, AuraRemoveFlags removeMode = AuraRemoveFlags::ByDefault);
-    void DropChargeDelayed(uint32 delay, AuraRemoveFlags removeMode = AuraRemoveFlags::ByDefault);
+    void ModChargesDelayed(int32 num, AuraRemoveMode removeMode = AuraRemoveMode::ByDefault);
+    void DropChargeDelayed(uint32 delay, AuraRemoveMode removeMode = AuraRemoveMode::ByDefault);
 
     uint8 GetStackAmount() const
     {
         return m_stackAmount;
     }
     void SetStackAmount(uint8 num);
-    bool ModStackAmount(int32 num, AuraRemoveFlags removeMode = AuraRemoveFlags::ByDefault);
+    bool ModStackAmount(int32 num, AuraRemoveMode removeMode = AuraRemoveMode::ByDefault);
 
     bool CanApplyResilience() const
     {
@@ -522,7 +522,7 @@ class FC_GAME_API UnitAura : public Aura
     void _ApplyForTarget(Unit* target, Unit* caster, AuraApplication* aurApp) override;
     void _UnapplyForTarget(Unit* target, Unit* caster, AuraApplication* aurApp) override;
 
-    void Remove(AuraRemoveFlags removeMode = AuraRemoveFlags::ByDefault) override;
+    void Remove(AuraRemoveMode removeMode = AuraRemoveMode::ByDefault) override;
 
     void FillTargetMap(std::unordered_map<Unit*, uint8>& targets, Unit* caster) override;
 
@@ -551,7 +551,7 @@ class FC_GAME_API DynObjAura : public Aura
     explicit DynObjAura(AuraCreateInfo const& createInfo);
 
   public:
-    void Remove(AuraRemoveFlags removeMode = AuraRemoveFlags::ByDefault) override;
+    void Remove(AuraRemoveMode removeMode = AuraRemoveMode::ByDefault) override;
 
     void FillTargetMap(std::unordered_map<Unit*, uint8>& targets, Unit* caster) override;
 };
@@ -561,13 +561,13 @@ class FC_GAME_API ChargeDropEvent : public BasicEvent
     friend class Aura;
 
   protected:
-    ChargeDropEvent(Aura* base, AuraRemoveFlags mode) : _base(base), _mode(mode)
+    ChargeDropEvent(Aura* base, AuraRemoveMode mode) : _base(base), _mode(mode)
     {
     }
     bool Execute(uint64 /*e_time*/, uint32 /*p_time*/) override;
 
   private:
     Aura* _base;
-    AuraRemoveFlags _mode;
+    AuraRemoveMode _mode;
 };
 #endif

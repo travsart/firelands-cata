@@ -714,7 +714,7 @@ class spell_deep_corruption : public AuraScript
             if (Unit* owner = GetOwner()->ToUnit())
             {
                 owner->CastSpell(owner, GetSpellInfo()->Id == SPELL_DEEP_CORRUPTION_TRASH_TR ? SPELL_DEEP_CORRUPTION_TRASH : SPELL_DEEP_CORRUPTION_EXPLOSION, true);
-                Remove(AuraRemoveFlags::ByDefault);
+                Remove(AuraRemoveMode::ByDefault);
             }
         }
     }

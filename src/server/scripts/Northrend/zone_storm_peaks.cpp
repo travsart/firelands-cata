@@ -1116,7 +1116,7 @@ class spell_grip : public SpellScriptLoader
 
                 // while we could do ModStackAmount(-stacksToRemove), this is how it's done in sniffs :)
                 for (uint32 i = 0; i < stacksToRemove; ++i)
-                    ModStackAmount(-1, AuraRemoveFlags::Expired);
+                    ModStackAmount(-1, AuraRemoveMode::Expired);
 
                 if (GetStackAmount() < 15 && !_warning)
                 {
@@ -1129,7 +1129,7 @@ class spell_grip : public SpellScriptLoader
 
             void HandleDrop(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
-                if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::Expired))
+                if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::Expired))
                     return;
 
                 GetTarget()->GetAI()->DoAction(ACTION_GRIP_LOST);
@@ -1165,7 +1165,7 @@ class spell_grab_on : public SpellScriptLoader
             void HandleScript(SpellEffIndex /*effIndex*/)
             {
                 if (Aura* grip = GetCaster()->GetAura(SPELL_GRIP, GetCaster()->GetGUID()))
-                    grip->ModStackAmount(GetEffectValue(), AuraRemoveFlags::ByDefault);
+                    grip->ModStackAmount(GetEffectValue(), AuraRemoveMode::ByDefault);
             }
 
             void Register() override
@@ -1194,7 +1194,7 @@ class spell_loosen_grip : public SpellScriptLoader
             void HandleScript(SpellEffIndex /*effIndex*/)
             {
                 if (Aura* grip = GetCaster()->GetAura(SPELL_GRIP))
-                    grip->ModStackAmount(-StacksLost, AuraRemoveFlags::Expired);
+                    grip->ModStackAmount(-StacksLost, AuraRemoveMode::Expired);
             }
 
             void Register() override

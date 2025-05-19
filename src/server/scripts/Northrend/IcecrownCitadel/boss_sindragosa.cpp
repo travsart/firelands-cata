@@ -1235,7 +1235,7 @@ class spell_sindragosa_instability : public SpellScriptLoader
 
             void OnRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
             {
-                if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::Expired))
+                if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::Expired))
                     GetTarget()->CastSpell(GetTarget(), SPELL_BACKLASH, CastSpellExtraArgs().SetOriginalCaster(GetCasterGUID()).AddSpellBP0(aurEff->GetAmount()).SetTriggeringAura(aurEff));
             }
 

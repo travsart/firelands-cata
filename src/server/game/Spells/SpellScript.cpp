@@ -659,7 +659,7 @@ DynamicObject* AuraScript::GetDynobjOwner() const
     return m_aura->GetDynobjOwner();
 }
 
-void AuraScript::Remove(AuraRemoveFlags removeMode)
+void AuraScript::Remove(AuraRemoveMode removeMode)
 {
     m_aura->Remove(removeMode);
 }
@@ -734,12 +734,12 @@ uint8 AuraScript::CalcMaxCharges() const
     return m_aura->CalcMaxCharges();
 }
 
-bool AuraScript::ModCharges(int8 num, AuraRemoveFlags removeMode /*= AuraRemoveFlags::ByDefault*/)
+bool AuraScript::ModCharges(int8 num, AuraRemoveMode removeMode /*= AuraRemoveMode::ByDefault*/)
 {
     return m_aura->ModCharges(num, removeMode);
 }
 
-bool AuraScript::DropCharge(AuraRemoveFlags removeMode)
+bool AuraScript::DropCharge(AuraRemoveMode removeMode)
 {
     return m_aura->DropCharge(removeMode);
 }
@@ -754,7 +754,7 @@ void AuraScript::SetStackAmount(uint8 num)
     m_aura->SetStackAmount(num);
 }
 
-bool AuraScript::ModStackAmount(int32 num, AuraRemoveFlags removeMode)
+bool AuraScript::ModStackAmount(int32 num, AuraRemoveMode removeMode)
 {
     return m_aura->ModStackAmount(num, removeMode);
 }

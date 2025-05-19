@@ -256,7 +256,7 @@ class spell_warl_bane_of_doom : public AuraScript
         if (!GetCaster())
             return;
 
-        if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::ByDeath) || !IsExpired())
+        if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::ByDeath) || !IsExpired())
             return;
 
         if (GetCaster()->ToPlayer()->isHonorOrXPTarget(GetTarget()))
@@ -817,7 +817,7 @@ class spell_warl_seed_of_corruption : public AuraScript
 
         Unit* target = GetTarget();
 
-        if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::ByDeath))
+        if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::ByDeath))
         {
             if (_affectedBySoulburn)
             {
@@ -1256,7 +1256,7 @@ class spell_warl_drain_soul : public AuraScript
 
     void OnAuraRemoveHandler(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-        if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::ByDeath))
+        if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::ByDeath))
             if (Unit* caster = GetCaster())
                 if (GetOwner() && caster->ToPlayer() && caster->ToPlayer()->isHonorOrXPTarget(GetOwner()->ToUnit()))
                     caster->CastSpell(caster, SPELL_WARLOCK_SOUL_SHARD_ENERGIZE, true);
@@ -1425,7 +1425,7 @@ class spell_warl_shadowburn : public AuraScript
         if (!caster || !caster->IsPlayer())
             return;
 
-        if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::ByDeath))
+        if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::ByDeath))
             if (caster->ToPlayer()->isHonorOrXPTarget(GetTarget()))
                 caster->CastSpell(caster, SPELL_WARLOCK_SOUL_SHARD, CastSpellExtraArgs(aurEff).AddSpellBP0(aurEff->GetAmount()));
     }

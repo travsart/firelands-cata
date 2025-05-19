@@ -2052,7 +2052,7 @@ class SanityReduction : public SpellScript
     {
         if (Unit* target = GetHitUnit())
             if (Aura* sanity = target->GetAura(SPELL_SANITY))
-                sanity->ModStackAmount(-int32(_stacks), AuraRemoveFlags::ByEnemySpell);
+                sanity->ModStackAmount(-int32(_stacks), AuraRemoveMode::ByEnemySpell);
     }
 
   protected:
@@ -2151,7 +2151,7 @@ class spell_yogg_saron_malady_of_the_mind : public SpellScriptLoader // 63830, 6
 
         void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
-            if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::ByEnemySpell | AuraRemoveFlags::Expired | AuraRemoveFlags::ByDeath))
+            if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::ByEnemySpell | AuraRemoveMode::Expired | AuraRemoveMode::ByDeath))
                 return;
 
             GetTarget()->CastSpell(GetTarget(), SPELL_MALADY_OF_THE_MIND_JUMP);
@@ -2218,7 +2218,7 @@ class spell_yogg_saron_brain_link : public SpellScriptLoader // 63802
 
             if (SaraAI* ai = CAST_AI(SaraAI, caster->GetAI()))
             {
-                if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::Expired))
+                if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::Expired))
                     ai->RemoveLinkFrom(GetTarget()->GetGUID());
                 else
                 {
@@ -2838,7 +2838,7 @@ class spell_yogg_saron_induce_madness : public SpellScriptLoader // 64059
             if (Unit* target = GetHitUnit())
             {
                 target->CastSpell(target, SPELL_TELEPORT_BACK_TO_MAIN_ROOM);
-                target->RemoveAurasDueToSpell(SPELL_SANITY, ObjectGuid::Empty, 0, AuraRemoveFlags::ByEnemySpell);
+                target->RemoveAurasDueToSpell(SPELL_SANITY, ObjectGuid::Empty, 0, AuraRemoveMode::ByEnemySpell);
                 target->RemoveAurasDueToSpell(uint32(GetEffectValue()));
             }
         }
@@ -2904,7 +2904,7 @@ class spell_yogg_saron_sanity : public SpellScriptLoader // 63050
 
         void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
-            if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::ByEnemySpell))
+            if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::ByEnemySpell))
                 return;
 
             if (InstanceScript* instance = GetTarget()->GetInstanceScript())

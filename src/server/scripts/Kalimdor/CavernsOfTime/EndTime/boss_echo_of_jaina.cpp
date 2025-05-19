@@ -450,7 +450,7 @@ class spell_echo_of_jaina_flarecore_periodic : public AuraScript
 
     void AfterRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-        if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::Expired))
+        if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::Expired))
         {
             GetTarget()->CastSpell(nullptr, SPELL_FLARE);
             GetTarget()->RemoveAurasDueToSpell(SPELL_FLARECORE_PERIODIC);

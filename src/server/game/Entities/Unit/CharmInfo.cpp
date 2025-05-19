@@ -1,9 +1,9 @@
 /*
- * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
+ * This file is part of the FirelandsCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
+ * Free Software Foundation; either version 2 of the License, or (at your
  * option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
@@ -11,12 +11,13 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along
+ * You should have received a copy of the GNU Affero General Public License along
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "CharmInfo.h"
 #include "Creature.h"
+#include "DynamicTree.h"
 #include "GameTime.h"
 #include "Map.h"
 #include "SpellInfo.h"
@@ -25,6 +26,7 @@
 #include "StringConvert.h"
 #include "Tokenize.h"
 #include "Unit.h"
+#include "Vector3.h"
 
 CharmInfo::CharmInfo(Unit* unit)
     : _unit(unit), _CommandState(COMMAND_FOLLOW), _petnumber(0), _oldReactState(REACT_PASSIVE),
@@ -248,7 +250,7 @@ void CharmInfo::SetPetNumber(uint32 petnumber, bool statwindow)
 
 void CharmInfo::LoadPetActionBar(const std::string& data)
 {
-    std::vector<std::string_view> tokens = Acore::Tokenize(data, ' ', false);
+    std::vector<std::string_view> tokens = Firelands::Tokenize(data, ' ', false);
 
     if (tokens.size() != (ACTION_BAR_INDEX_END - ACTION_BAR_INDEX_START) * 2)
         return;                                             // non critical, will reset to default
@@ -256,8 +258,8 @@ void CharmInfo::LoadPetActionBar(const std::string& data)
     auto iter = tokens.begin();
     for (uint8 index = ACTION_BAR_INDEX_START; index < ACTION_BAR_INDEX_END; ++index)
     {
-        Optional<uint8> type = Acore::StringTo<uint8>(*(iter++));
-        Optional<uint32> action = Acore::StringTo<uint32>(*(iter++));
+        Optional<uint8> type = Firelands::StringTo<uint8>(*(iter++));
+        Optional<uint32> action = Firelands::StringTo<uint32>(*(iter++));
 
         if (!type || !action)
         {

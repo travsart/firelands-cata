@@ -2429,7 +2429,7 @@ class spell_q10929_fumping : SpellScriptLoader
 
             void HandleEffectRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
-                if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::Expired))
+                if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::Expired))
                     return;
 
                 if (Unit* caster = GetCaster())

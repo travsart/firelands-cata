@@ -21,13 +21,16 @@
 #include "DBCEnums.h"
 #include "CombatManager.h"
 #include "EventProcessor.h"
+#include "FollowerRefMgr.h"
+#include "FollowerReference.h"
+#include "HostileRefMgr.h"
 #include "ItemTemplate.h"
 #include "Object.h"
 #include "SpellAuraDefines.h"
 #include "SpellDefines.h"
 #include "SpellPacketsCommon.h"
 #include "TaskScheduler.h"
-#include "ThreatManager.h"
+#include "ThreatMgr.h"
 #include "Timer.h"
 #include "UnitDefines.h"
 #include "Util.h"
@@ -802,6 +805,8 @@ class FC_GAME_API Unit : public WorldObject
     void SetCreatorGUID(ObjectGuid creator) { SetGuidValue(UNIT_FIELD_CREATEDBY, creator); }
     ObjectGuid GetMinionGUID() const { return GetGuidValue(UNIT_FIELD_SUMMON); }
     void SetMinionGUID(ObjectGuid guid) { SetGuidValue(UNIT_FIELD_SUMMON, guid); }
+    [[nodiscard]] ObjectGuid GetCharmerGUID() const { return GetGuidValue(UNIT_FIELD_CHARMEDBY); }
+    void SetCharmerGUID(ObjectGuid owner) { SetGuidValue(UNIT_FIELD_CHARMEDBY, owner); }
     ObjectGuid GetPetGUID() const { return m_SummonSlot[SUMMON_SLOT_PET]; }
     void SetPetGUID(ObjectGuid guid) { m_SummonSlot[SUMMON_SLOT_PET] = guid; }
     ObjectGuid GetCritterGUID() const { return GetGuidValue(UNIT_FIELD_CRITTER); }
@@ -1023,6 +1028,7 @@ class FC_GAME_API Unit : public WorldObject
     Unit* SelectNearbyNoTotemTarget(Unit* exclude = nullptr, float dist = NOMINAL_MELEE_RANGE) const;
     void SendMeleeAttackStop(Unit* victim = nullptr);
     void SendMeleeAttackStart(Unit* victim, Player* sendTo = nullptr);
+    void UpdatePetCombatState();
 
     [[nodiscard]] uint32 GetAttackTime(WeaponAttackType att) const
     {
@@ -1370,28 +1376,12 @@ class FC_GAME_API Unit : public WorldObject
     static bool IsDamageReducedByArmor(SpellSchoolMask damageSchoolMask, SpellInfo const* spellInfo = nullptr, uint8 effIndex = MAX_SPELL_EFFECTS);
     static uint32 CalcArmorReducedDamage(Unit const* attacker, Unit const* victim, const uint32 damage, SpellInfo const* spellInfo, uint8 attackerLevel = 0, WeaponAttackType attackType = MAX_ATTACK);
 
-    // Resilience reduction - player or player's pet resilience (-1%), cap 100%
-    [[nodiscard]] uint32 GetMeleeDamageReduction(uint32 damage) const { return GetCombatRatingDamageReduction(CR_CRIT_TAKEN_MELEE, 2.0f, 100.0f, damage); }
-    [[nodiscard]] uint32 GetRangedDamageReduction(uint32 damage) const { return GetCombatRatingDamageReduction(CR_CRIT_TAKEN_RANGED, 2.0f, 100.0f, damage); }
-    [[nodiscard]] uint32 GetSpellDamageReduction(uint32 damage) const { return GetCombatRatingDamageReduction(CR_CRIT_TAKEN_SPELL, 2.0f, 100.0f, damage); }
-
-    // Critic damages - For resilience: player or player's pet resilience (-1%)
-    static uint32 SpellCriticalDamageBonus(Unit const* caster, SpellInfo const* spellProto, uint32 damage, Unit const* victim);
-
-    [[nodiscard]] float GetMeleeCritChanceReduction() const { return GetCombatRatingReduction(CR_CRIT_TAKEN_MELEE); }
-    [[nodiscard]] float GetRangedCritChanceReduction() const { return GetCombatRatingReduction(CR_CRIT_TAKEN_RANGED); }
-    [[nodiscard]] float GetSpellCritChanceReduction() const { return GetCombatRatingReduction(CR_CRIT_TAKEN_SPELL); }
-
-    [[nodiscard]] uint32 GetMeleeCritDamageReduction(uint32 damage) const { return GetCombatRatingDamageReduction(CR_CRIT_TAKEN_MELEE, 2.2f, 33.0f, damage); }
-    [[nodiscard]] uint32 GetRangedCritDamageReduction(uint32 damage) const { return GetCombatRatingDamageReduction(CR_CRIT_TAKEN_RANGED, 2.2f, 33.0f, damage); }
-    [[nodiscard]] uint32 GetSpellCritDamageReduction(uint32 damage) const { return GetCombatRatingDamageReduction(CR_CRIT_TAKEN_SPELL, 2.2f, 33.0f, damage); }
-
     /*********************************************************/
     /***         METHODS RELATED TO CHARM SYSTEM           ***/
     /*********************************************************/
     CharmInfo* GetCharmInfo() { return m_charmInfo; }
     CharmInfo* InitCharmInfo();
-
+    
     [[nodiscard]] Unit* GetCharmer() const;
     [[nodiscard]] Unit* GetCharm() const;
     [[nodiscard]] Unit* GetCharmerOrOwner() const { return GetCharmerGUID() ? GetCharmer() : GetOwner(); }
@@ -1428,7 +1418,7 @@ class FC_GAME_API Unit : public WorldObject
         else
             return false;
     }
-    bool isPossessing(Unit* u) const { return u->isPossessed() && GetCharmGUID() == u->GetGUID(); }
+    bool isPossessing(Unit* u) const { return u->isPossessed() && IsCharmed() == u->GetGUID(); }
 
     void SetCharm(Unit* target, bool apply);
     bool SetCharmedBy(Unit* charmer, CharmType type, AuraApplication const* aurApp = nullptr);
@@ -1439,6 +1429,12 @@ class FC_GAME_API Unit : public WorldObject
     void RemoveCharmAuras();
     void RemoveAllControlled(bool onDeath = false);
     void DeleteCharmInfo();
+
+    // base client control of this unit (possess effects, vehicles and similar). Not affected by temporary CC.
+    bool IsCharmerOrSelfPlayer() const { return GetCharmerOrSelf()->IsPlayer(); }
+    Unit* GetCharmerOrSelf() const;
+    Player* GetCharmerOrSelfPlayer() const { return GetCharmerOrSelf()->ToPlayer(); }
+    Unit* GetCharmedOrSelf() const { return IsCharmed() ? GetCharm() : const_cast<Unit*>(this); }
 
     /*********************************************************/
     /***          METHODS RELATED TO COOLDOWNS             ***/
@@ -1467,6 +1463,7 @@ class FC_GAME_API Unit : public WorldObject
     Aura* _TryStackingOrRefreshingExistingAura(SpellInfo const* newAura, uint8 effMask, Unit* caster, int32* baseAmount = nullptr, Item* castItem = nullptr, ObjectGuid casterGUID = ObjectGuid::Empty, bool periodicReset = false);
     void _AddAura(UnitAura* aura, Unit* caster);
     AuraApplication* _CreateAuraApplication(Aura* aura, uint8 effMask);
+
     void _ApplyAuraEffect(Aura* aura, uint8 effIndex);
     void _ApplyAura(AuraApplication* aurApp, uint8 effMask);
     void _UnapplyAura(AuraApplicationMap::iterator& i, AuraRemoveMode removeMode);
@@ -1480,9 +1477,9 @@ class FC_GAME_API Unit : public WorldObject
     AuraMap&       GetOwnedAuras()       { return m_ownedAuras; }
     [[nodiscard]] AuraMap const& GetOwnedAuras() const { return m_ownedAuras; }
 
-    void RemoveOwnedAura(AuraMap::iterator& i, AuraRemoveMode removeMode = AURA_REMOVE_BY_DEFAULT);
-    void RemoveOwnedAura(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, uint8 reqEffMask = 0, AuraRemoveMode removeMode = AURA_REMOVE_BY_DEFAULT);
-    void RemoveOwnedAura(Aura* aura, AuraRemoveMode removeMode = AURA_REMOVE_BY_DEFAULT);
+    void RemoveOwnedAura(AuraMap::iterator& i, AuraRemoveMode removeMode = AuraRemoveMode::ByDefault);
+    void RemoveOwnedAura(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, uint8 reqEffMask = 0, AuraRemoveMode removeMode = AuraRemoveMode::ByDefault);
+    void RemoveOwnedAura(Aura* aura, AuraRemoveMode removeMode = AuraRemoveMode::ByDefault);
 
     Aura* GetOwnedAura(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, ObjectGuid itemCasterGUID = ObjectGuid::Empty, uint8 reqEffMask = 0, Aura* except = nullptr) const;
 
@@ -1490,10 +1487,10 @@ class FC_GAME_API Unit : public WorldObject
     AuraApplicationMap&       GetAppliedAuras()       { return m_appliedAuras; }
     [[nodiscard]] AuraApplicationMap const& GetAppliedAuras() const { return m_appliedAuras; }
 
-    void RemoveAura(AuraApplicationMap::iterator& i, AuraRemoveMode mode = AURA_REMOVE_BY_DEFAULT);
-    void RemoveAura(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, uint8 reqEffMask = 0, AuraRemoveMode removeMode = AURA_REMOVE_BY_DEFAULT);
-    void RemoveAura(AuraApplication* aurApp, AuraRemoveMode mode = AURA_REMOVE_BY_DEFAULT);
-    void RemoveAura(Aura* aur, AuraRemoveMode mode = AURA_REMOVE_BY_DEFAULT);
+    void RemoveAura(AuraApplicationMap::iterator& i, AuraRemoveMode mode = AuraRemoveMode::ByDefault);
+    void RemoveAura(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, uint8 reqEffMask = 0, AuraRemoveMode removeMode = AuraRemoveMode::ByDefault);
+    void RemoveAura(AuraApplication* aurApp, AuraRemoveMode mode = AuraRemoveMode::ByDefault);
+    void RemoveAura(Aura* aur, AuraRemoveMode mode = AuraRemoveMode::ByDefault);
 
     void RemoveBindSightAuras();
 
@@ -1505,19 +1502,24 @@ class FC_GAME_API Unit : public WorldObject
     void RemoveAppliedAuras(uint32 spellId, std::function<bool(AuraApplication const*)> const& check);
     void RemoveOwnedAuras(uint32 spellId, std::function<bool(Aura const*)> const& check);
 
-    void RemoveAurasDueToSpell(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, uint8 reqEffMask = 0, AuraRemoveMode removeMode = AURA_REMOVE_BY_DEFAULT);
-    void RemoveAuraFromStack(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, AuraRemoveMode removeMode = AURA_REMOVE_BY_DEFAULT);
+    void RemoveAurasDueToSpell(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, uint8 reqEffMask = 0, AuraRemoveMode removeMode = AuraRemoveMode::ByDefault);
+    void RemoveAuraFromStack(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, AuraRemoveMode removeMode = AuraRemoveMode::ByDefault);
     void RemoveAurasDueToSpellByDispel(uint32 spellId, uint32 dispellerSpellId, ObjectGuid casterGUID, Unit* dispeller, uint8 chargesRemoved = 1);
     void RemoveAurasDueToSpellBySteal(uint32 spellId, ObjectGuid casterGUID, Unit* stealer);
     void RemoveAurasDueToItemSpell(uint32 spellId, ObjectGuid castItemGuid);
     void RemoveAurasByType(AuraType auraType, ObjectGuid casterGUID = ObjectGuid::Empty, Aura* except = nullptr, bool negative = true, bool positive = true);
     void RemoveNotOwnSingleTargetAuras();
-    void RemoveAurasWithInterruptFlags(uint32 flag, uint32 except = 0, bool isAutoshot = false);
+    template <typename InterruptFlags> void RemoveAurasWithInterruptFlags(InterruptFlags flag, uint32 except = 0, Spell* interruptingSpell = nullptr);
     void RemoveAurasWithAttribute(uint32 flags);
     void RemoveAurasWithFamily(SpellFamilyNames family, uint32 familyFlag1, uint32 familyFlag2, uint32 familyFlag3, ObjectGuid casterGUID);
-    void RemoveAurasWithMechanic(uint32 mechanic_mask, AuraRemoveMode removemode = AURA_REMOVE_BY_DEFAULT, uint32 except = 0);
+    void RemoveAurasWithMechanic(uint32 mechanic_mask, AuraRemoveMode removemode = AuraRemoveMode::ByDefault, uint32 except = 0);
     void RemoveMovementImpairingAuras(bool withRoot);
     void RemoveAurasByShapeShift();
+
+    // @todo do we need?
+    void RemoveNotOwnLimitedTargetAuras(bool onPhaseChange = false);
+    void RemoveAurasOnEvade();
+    void RemoveAllGroupBuffsFromCaster(ObjectGuid casterGUID);
 
     void RemoveAreaAurasDueToLeaveWorld();
     void RemoveAllAuras();
@@ -1686,6 +1688,8 @@ class FC_GAME_API Unit : public WorldObject
     void SetCannotReachTargetUnit(bool target, bool isChase);
     [[nodiscard]] bool CanNotReachTarget() const;
     bool m_cannotReachTarget;
+    UnitAI* i_AI;
+    UnitAI* i_disabledAI;
     
     uint32 m_extraAttacks;
     bool m_canDualWield;
@@ -1900,9 +1904,7 @@ class FC_GAME_API Unit : public WorldObject
     void CastSpell(WorldObject* target, uint32 spellId, CastSpellExtraArgs const& args = {});
     void CastSpell(Position const& dest, uint32 spellId, CastSpellExtraArgs const& args = {});
 
-    Aura* AddAura(uint32 spellId, Unit* target);
-    Aura* AddAura(SpellInfo const* spellInfo, uint8 effMask, Unit* target);
-    void SetAuraStack(uint32 spellId, Unit* target, uint32 stack);
+
     void SendPlaySpellVisualKit(uint32 id, uint32 type, uint32 duration) const;
     void SendPlaySpellVisual(ObjectGuid guid, uint32 id);
     void SendPlaySpellVisual(uint32 spellVisualId, Unit const* target = nullptr, Optional<Position> targetPosition = {}, float travelSpeed = 0.f, uint16 missReason = 0, uint16 reflectStatus = 0,
@@ -1974,32 +1976,7 @@ class FC_GAME_API Unit : public WorldObject
     void SetMinion(Minion* minion, bool apply);
     void GetAllMinionsByEntry(std::list<Creature*>& Minions, uint32 entry);
     void RemoveAllMinionsByEntry(uint32 entry);
-    void SetCharm(Unit* target, bool apply);
     Unit* GetNextRandomRaidMemberOrPet(float radius);
-    bool SetCharmedBy(Unit* charmer, CharmType type, AuraApplication const* aurApp = nullptr);
-    void RemoveCharmedBy(Unit* charmer);
-
-
-    ControlList m_Controlled;
-    Unit* GetFirstControlled() const;
-    void RemoveAllControlled(bool onDeath = false);
-
-    bool IsCharmed() const { return !GetCharmerGUID().IsEmpty(); }
-    bool IsCharming() const { return !GetCharmedGUID().IsEmpty(); }
-    bool isPossessed() const { return HasUnitState(UNIT_STATE_POSSESSED); }
-    bool isPossessedByPlayer() const;
-    bool isPossessing() const;
-    bool isPossessing(Unit* u) const;
-
-    CharmInfo* GetCharmInfo() { return m_charmInfo; }
-    CharmInfo* InitCharmInfo();
-    void DeleteCharmInfo();
-
-    // base client control of this unit (possess effects, vehicles and similar). Not affected by temporary CC.
-    bool IsCharmerOrSelfPlayer() const { return GetCharmerOrSelf()->IsPlayer(); }
-    Unit* GetCharmerOrSelf() const;
-    Player* GetCharmerOrSelfPlayer() const { return GetCharmerOrSelf()->ToPlayer(); }
-    Unit* GetCharmedOrSelf() const { return IsCharming() ? GetCharmed() : const_cast<Unit*>(this); }
 
     // real time client control status of this unit (possess effects, vehicles and similar). For example, if this unit is a player temporarly under fear, it will return false.
     bool IsMovedByClient() const { return _gameClientMovingMe != nullptr; }
@@ -2011,81 +1988,15 @@ class FC_GAME_API Unit : public WorldObject
     void AddPlayerToVision(Player* player);
     void RemovePlayerFromVision(Player* player);
     bool HasSharedVision() const { return !m_sharedVision.empty(); }
-    void RemoveBindSightAuras();
     void RemoveCharmAuras();
 
     Pet* CreateTamedPetFrom(Creature* creatureTarget, uint32 spell_id = 0);
     Pet* CreateTamedPetFrom(uint32 creatureEntry, uint32 spell_id = 0);
     bool InitTamedPet(Pet* pet, uint8 level, uint32 spell_id);
 
-    // aura apply/remove helpers - you should better not use these
-    Aura* _TryStackingOrRefreshingExistingAura(AuraCreateInfo& createInfo);
-    void _AddAura(UnitAura* aura, Unit* caster);
-    AuraApplication* _CreateAuraApplication(Aura* aura, uint8 effMask);
-    void _ApplyAuraEffect(Aura* aura, uint8 effIndex);
-    void _ApplyAura(AuraApplication* aurApp, uint8 effMask);
-    void _UnapplyAura(AuraApplicationMap::iterator& i, AuraRemoveFlags removeMode);
-    void _UnapplyAura(AuraApplication* aurApp, AuraRemoveFlags removeMode);
-    void _RemoveNoStackAurasDueToAura(Aura* aura);
-    void _RegisterAuraEffect(AuraEffect* aurEff, bool apply);
 
-    // m_ownedAuras container management
-    AuraMap& GetOwnedAuras() { return m_ownedAuras; }
-    AuraMap const& GetOwnedAuras() const { return m_ownedAuras; }
 
-    void RemoveOwnedAura(AuraMap::iterator& i, AuraRemoveFlags removeMode = AuraRemoveFlags::ByDefault);
-    void RemoveOwnedAura(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, uint8 reqEffMask = 0, AuraRemoveFlags removeMode = AuraRemoveFlags::ByDefault);
-    void RemoveOwnedAura(Aura* aura, AuraRemoveFlags removeMode = AuraRemoveFlags::ByDefault);
-
-    Aura* GetOwnedAura(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, ObjectGuid itemCasterGUID = ObjectGuid::Empty, uint8 reqEffMask = 0, Aura* except = nullptr) const;
-
-    // m_appliedAuras container management
-    AuraApplicationMap& GetAppliedAuras() { return m_appliedAuras; }
-    AuraApplicationMap const& GetAppliedAuras() const { return m_appliedAuras; }
-
-    void RemoveAura(AuraApplicationMap::iterator& i, AuraRemoveFlags mode = AuraRemoveFlags::ByDefault);
-    void RemoveAura(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, uint8 reqEffMask = 0, AuraRemoveFlags removeMode = AuraRemoveFlags::ByDefault);
-    void RemoveAura(AuraApplication* aurApp, AuraRemoveFlags mode = AuraRemoveFlags::ByDefault);
-    void RemoveAura(Aura* aur, AuraRemoveFlags mode = AuraRemoveFlags::ByDefault);
-
-    // Convenience methods removing auras by predicate
-    void RemoveAppliedAuras(std::function<bool(AuraApplication const*)> const& check);
-    void RemoveOwnedAuras(std::function<bool(Aura const*)> const& check);
-
-    // Optimized overloads taking advantage of map key
-    void RemoveAppliedAuras(uint32 spellId, std::function<bool(AuraApplication const*)> const& check);
-    void RemoveOwnedAuras(uint32 spellId, std::function<bool(Aura const*)> const& check);
-
-    void RemoveAurasByType(AuraType auraType, std::function<bool(AuraApplication const*)> const& check);
-
-    void RemoveAurasDueToSpell(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, uint8 reqEffMask = 0, AuraRemoveFlags removeMode = AuraRemoveFlags::ByDefault);
-    void RemoveAuraFromStack(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, AuraRemoveFlags removeMode = AuraRemoveFlags::ByDefault);
-    void RemoveAurasDueToSpellByDispel(uint32 spellId, uint32 dispellerSpellId, ObjectGuid casterGUID, Unit* dispeller, uint8 chargesRemoved = 1);
-    void RemoveAurasDueToSpellBySteal(uint32 spellId, ObjectGuid casterGUID, Unit* stealer);
-    void RemoveAurasDueToItemSpell(uint32 spellId, ObjectGuid castItemGuid);
-    void RemoveAurasByType(AuraType auraType, ObjectGuid casterGUID = ObjectGuid::Empty, Aura* except = nullptr, bool negative = true, bool positive = true);
-    void RemoveNotOwnLimitedTargetAuras(bool onPhaseChange = false);
-    template <typename InterruptFlags> void RemoveAurasWithInterruptFlags(InterruptFlags flag, uint32 except = 0, Spell* interruptingSpell = nullptr);
-    void RemoveAurasWithAttribute(uint32 flags);
-    void RemoveAurasWithFamily(SpellFamilyNames family, uint32 familyFlag1, uint32 familyFlag2, uint32 familyFlag3, ObjectGuid casterGUID);
-    void RemoveAurasWithMechanic(uint32 mechanic_mask, AuraRemoveFlags removemode = AuraRemoveFlags::ByDefault, uint32 except = 0);
-    void RemoveMovementImpairingAuras(bool withRoot);
-    void RemoveAurasByShapeShift();
-
-    void RemoveAreaAurasDueToLeaveWorld();
-    void RemoveAllAuras();
-    void RemoveArenaAuras();
-    void RemoveAurasOnEvade();
-    void RemoveAllAurasOnDeath();
-    void RemoveAllAurasRequiringDeadTarget();
-    void RemoveAllAurasExceptType(AuraType type);
-    void RemoveAllAurasExceptType(AuraType type1, AuraType type2); /// @todo: once we support variadic templates use them here
-    void RemoveAllGroupBuffsFromCaster(ObjectGuid casterGUID);
-    void DelayOwnedAuras(uint32 spellId, ObjectGuid caster, int32 delaytime);
-
-    void _RemoveAllAuraStatMods();
-    void _ApplyAllAuraStatMods();
-
+   
     AuraEffectList const& GetAuraEffectsByType(AuraType type) const { return m_modAuras[type]; }
     AuraList& GetLimitedCastAuras(uint32 spellId) { return m_ltAuras[spellId]; }
     AurasBySpellIdMap& GetAllLimitedCastAuras() { return m_ltAuras; }
@@ -2512,15 +2423,15 @@ class FC_GAME_API Unit : public WorldObject
     uint32 m_removedAurasCount;
 
     AuraEffectList m_modAuras[TOTAL_AURAS];
+    AuraList m_scAuras;                        // casted singlecast auras
     AurasBySpellIdMap m_ltAuras;              // cast limited target auras
     AuraApplicationList m_interruptableAuras; // auras which have interrupt mask applied on unit
     AuraStateAurasMap m_auraStateAuras;       // Used for improve performance of aura state checks on aura apply/remove
     EnumFlag<SpellAuraInterruptFlags> m_interruptMask;
     EnumFlag<SpellAuraInterruptFlags2> m_interruptMask2;
 
-    float m_auraFlatModifiersGroup[UNIT_MOD_END][MODIFIER_TYPE_FLAT_END];
-    float m_auraPctModifiersGroup[UNIT_MOD_END][MODIFIER_TYPE_PCT_END];
-    float m_weaponDamage[MAX_ATTACK][2];
+    float m_auraModifiersGroup[UNIT_MOD_END][MODIFIER_TYPE_END];
+    float m_weaponDamage[MAX_ATTACK][MAX_WEAPON_DAMAGE_RANGE][MAX_ITEM_PROTO_DAMAGES];
     bool m_canModifyStats;
     VisibleAuraMap m_visibleAuras;
 
@@ -2528,6 +2439,15 @@ class FC_GAME_API Unit : public WorldObject
 
     Unit* m_charmer; // Unit that is charming ME
     Unit* m_charmed; // Unit that is being charmed BY ME
+
+    CharmInfo* m_charmInfo;
+
+    int32 m_regenTimer;
+
+    ThreatMgr m_ThreatMgr;
+    typedef std::map<ObjectGuid, float> CharmThreatMap;
+    CharmThreatMap _charmThreatInfo;
+
     CharmInfo* m_charmInfo;
     SharedVisionList m_sharedVision;
     GameClient* _gameClientMovingMe;
@@ -2541,10 +2461,15 @@ class FC_GAME_API Unit : public WorldObject
 
     uint32 m_unitTypeMask;
     LiquidTypeEntry const* _lastLiquid;
+
     uint32 _powerBarId;
     float _powerFraction[MAX_POWERS_PER_CLASS];
     int32 _powerUpdateTimer;
     int32 _healthRegenerationTimer;
+    bool m_applyResilience;
+    bool _instantCast;
+
+    uint32 m_rootTimes;
 
     bool IsAlwaysVisibleFor(WorldObject const* seer) const override;
     bool IsAlwaysDetectableFor(WorldObject const* seer) const override;
@@ -2583,7 +2508,9 @@ class FC_GAME_API Unit : public WorldObject
     void SetRooted(bool apply, bool packetOnly = false);
 
   private:
-    uint32 m_state; // Even derived shouldn't modify
+    uint32 m_state;                                     // Even derived shouldn't modify
+    uint32 m_CombatTimer;
+    uint32 m_lastManaUse;  
     TimeTrackerSmall m_splineSyncTimer;
 
     DiminishingReturn m_Diminishing[DIMINISHING_MAX];
@@ -2594,14 +2521,24 @@ class FC_GAME_API Unit : public WorldObject
 
     FollowerRefMgr m_FollowingRefMgr;
 
+    Unit* m_comboTarget;
+    int8 m_comboPoints;
+    std::unordered_set<Unit*> m_ComboPointHolders;
+
+    RedirectThreatInfo _redirectThreatInfo;
+
+    uint32 _oldFactionId;           ///< faction before charm
+    bool _isWalkingBeforeCharm;     ///< Are we walking before we were charmed?
+
+    uint32 _lastExtraAttackSpell;
+    std::unordered_map<ObjectGuid /*guid*/, uint32 /*count*/> extraAttacksTargets;
+    ObjectGuid _lastDamagedTargetGuid;
 
     // Threat+combat management
     bool m_isEngaged;
     // Manage all Units that are threatened by us
     friend class CombatManager;
     CombatManager m_combatManager;
-    friend class ThreatManager;
-    ThreatManager m_threatManager;
 
     void UpdateCharmAI();
     void RestoreDisabledAI();
@@ -2610,13 +2547,9 @@ class FC_GAME_API Unit : public WorldObject
     std::shared_ptr<UnitAI> i_AI;
     bool m_aiLocked;
 
-    GuidSet m_ComboPointHolders;
 
     bool m_cleanupDone;           // lock made to not add stuff after cleanup before delete
     bool m_duringRemoveFromWorld; // lock made to not add stuff after begining removing from world
-
-    uint32 _oldFactionId;       ///< faction before charm
-    bool _isWalkingBeforeCharm; ///< Are we walking before we were charmed?
 
     SpellHistory* m_spellHistory;
 

@@ -248,7 +248,7 @@ void DynamicObject::RemoveAura()
     _removedAura = _aura;
     _aura = nullptr;
     if (!_removedAura->IsRemoved())
-        _removedAura->_Remove(AuraRemoveFlags::ByDefault);
+        _removedAura->_Remove(AuraRemoveMode::ByDefault);
 }
 
 void DynamicObject::SetCasterViewpoint()

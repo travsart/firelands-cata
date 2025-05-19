@@ -467,7 +467,7 @@ class spell_warr_shattering_throw : public SpellScript
 
         // remove shields, will still display immune to damage part
         if (Unit* target = GetHitUnit())
-            target->RemoveAurasWithMechanic(1 << MECHANIC_IMMUNE_SHIELD, AuraRemoveFlags::ByEnemySpell);
+            target->RemoveAurasWithMechanic(1 << MECHANIC_IMMUNE_SHIELD, AuraRemoveMode::ByEnemySpell);
     }
 
     void Register() override

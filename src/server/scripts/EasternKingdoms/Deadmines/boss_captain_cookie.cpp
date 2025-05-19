@@ -331,7 +331,7 @@ class spell_cookie_satiated : public SpellScriptLoader
             {
                 if (Unit* caster = GetCaster())
                     if (Aura* nauseatedAura = caster->GetAura(GetSpellInfo()->Effects[effIndex].BasePoints))
-                        nauseatedAura->ModStackAmount(-1, AuraRemoveFlags::ByDefault | AuraRemoveFlags::DontResetPeriodicTimer);
+                        nauseatedAura->ModStackAmount(-1, AuraRemoveMode::ByDefault | AuraRemoveMode::DontResetPeriodicTimer);
             }
 
             void Register() override

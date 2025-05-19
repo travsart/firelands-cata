@@ -244,7 +244,7 @@ class spell_trash_npc_glacial_strike : public SpellScriptLoader
             {
                 if (GetTarget()->IsFullHealth())
                 {
-                    GetTarget()->RemoveAura(GetId(), ObjectGuid::Empty, 0, AuraRemoveFlags::ByEnemySpell);
+                    GetTarget()->RemoveAura(GetId(), ObjectGuid::Empty, 0, AuraRemoveMode::ByEnemySpell);
                     PreventDefaultAction();
                 }
             }

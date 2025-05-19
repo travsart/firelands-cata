@@ -901,7 +901,7 @@ class spell_hoo_bubble_bound_periodic : public AuraScript
 
     void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-        if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::ByDeath | AuraRemoveFlags::ByDefault))
+        if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::ByDeath | AuraRemoveMode::ByDefault))
             GetTarget()->CastSpell(GetTarget(), SPELL_BUBBLE_BOUND_INSTAKILL, true);
     }
 
@@ -925,7 +925,7 @@ class spell_hoo_bubble_bound_script : public SpellScript
             return;
 
         if (Unit* summoner = summon->GetSummoner())
-            summoner->RemoveAurasDueToSpell(sSpellMgr->GetSpellIdForDifficulty(SPELL_BUBBLE_BOUND_PERIODIC, summon), ObjectGuid::Empty, 0, AuraRemoveFlags::ByCancel);
+            summoner->RemoveAurasDueToSpell(sSpellMgr->GetSpellIdForDifficulty(SPELL_BUBBLE_BOUND_PERIODIC, summon), ObjectGuid::Empty, 0, AuraRemoveMode::ByCancel);
     }
 
     void Register() override

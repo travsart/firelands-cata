@@ -3278,7 +3278,7 @@ void Spell::cancel(Spell* interruptingSpell /* = nullptr */)
 
             if (removeOwnedAura)
                 if (Unit* unit = m_caster->GetGUID() == targetInfo.TargetGUID ? m_caster : ObjectAccessor::GetUnit(*m_caster, targetInfo.TargetGUID))
-                    unit->RemoveOwnedAura(m_spellInfo->Id, m_originalCasterGUID, 0, AuraRemoveFlags::ByCancel);
+                    unit->RemoveOwnedAura(m_spellInfo->Id, m_originalCasterGUID, 0, AuraRemoveMode::ByCancel);
         }
 
         // Only send channel updates if we are interrupt with a spell that is not the one currently channeled.
@@ -3916,7 +3916,7 @@ void Spell::update(uint32 difftime)
                 // Also remove applied auras
                 for (TargetInfo const& target : m_UniqueTargetInfo)
                     if (Unit* unit = m_caster->GetGUID() == target.TargetGUID ? m_caster : ObjectAccessor::GetUnit(*m_caster, target.TargetGUID))
-                        unit->RemoveOwnedAura(m_spellInfo->Id, m_originalCasterGUID, 0, AuraRemoveFlags::ByCancel);
+                        unit->RemoveOwnedAura(m_spellInfo->Id, m_originalCasterGUID, 0, AuraRemoveMode::ByCancel);
             }
 
             if (m_timer > 0)

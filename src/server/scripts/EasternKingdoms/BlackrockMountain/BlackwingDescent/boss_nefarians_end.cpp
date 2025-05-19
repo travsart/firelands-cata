@@ -800,7 +800,7 @@ struct boss_nefarians_end : public BossAI
 
                     if (Creature* onyxia = instance->GetCreature(DATA_ONYXIA))
                         if (Aura* charge = onyxia->GetAura(SPELL_ELECTRICAL_CHARGE_ONYXIA))
-                            charge->ModStackAmount(17, AuraRemoveFlags::ByDefault | AuraRemoveFlags::DontResetPeriodicTimer);
+                            charge->ModStackAmount(17, AuraRemoveMode::ByDefault | AuraRemoveMode::DontResetPeriodicTimer);
                     break;
                 case EVENT_DOMINION:
                     DoCastAOE(SPELL_DOMINION_DUMMY);
@@ -1412,7 +1412,7 @@ class spell_nefarians_end_electrical_charge : public AuraScript
                     if (Creature* onyxia = instance->GetCreature(DATA_ONYXIA))
                     {
                         if (Aura* charge = onyxia->GetAura(SPELL_ELECTRICAL_CHARGE_ONYXIA))
-                            charge->ModStackAmount(1, AuraRemoveFlags::Expired | AuraRemoveFlags::DontResetPeriodicTimer);
+                            charge->ModStackAmount(1, AuraRemoveMode::Expired | AuraRemoveMode::DontResetPeriodicTimer);
                     }
                 }
                 break;
@@ -2032,7 +2032,7 @@ class spell_nefarians_end_explosive_cinders : public AuraScript
 
     void AfterRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-        if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::Expired))
+        if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveMode::Expired))
             GetTarget()->CastSpell(GetTarget(), SPELL_EXPLOSIVE_CINDERS_EXPLOSION, true);
     }
 

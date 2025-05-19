@@ -1009,7 +1009,7 @@ class spell_blood_corruption_aura : public AuraScript
 
     void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-        if (GetTargetApplication()->GetRemoveMode() != AuraRemoveFlags::ByEnemySpell)
+        if (GetTargetApplication()->GetRemoveMode() != AuraRemoveMode::ByEnemySpell)
         {
             GetTarget()->CastSpell(GetTarget(), GetId() == SPELL_BLOOD_CORRUPTION_DEATH ? SPELL_BLOOD_OF_DEATHWING : SPELL_BLOOD_OF_NELTHARION, true);
             // Blood Corruption: Earth now applies two stacks of Blood of Neltharion when it expires on 25-player heroic difficulty.
