@@ -622,14 +622,6 @@ bool Unit::IsWithinBoundaryRadius(const Unit* obj) const
     return IsInDist(obj, objBoundaryRadius);
 }
 
-AuraApplication* Unit::GetVisibleAura(uint8 slot) const
-{
-    VisibleAuraMap::const_iterator itr = m_visibleAuras.find(slot);
-    if (itr != m_visibleAuras.end())
-        return itr->second;
-    return 0;
-}
-
 void Unit::SetVisibleAura(uint8 slot, AuraApplication* aur)
 {
     m_visibleAuras[slot] = aur;
@@ -1331,7 +1323,7 @@ void Unit::CalculateMeleeDamage(Unit* victim, uint32 damage, CalcDamageInfo* dam
     {
         damageInfo->HitInfo |= HITINFO_GLANCING;
         damageInfo->TargetState = VICTIMSTATE_HIT;
-        int32 leveldif = int32(victim->getLevelForTarget(this)) - int32(getLevel());
+        int32 leveldif = int32(victim->getLevelForTarget(this)) - int32(GetLevel());
         if (leveldif < 0)
         {
             LOG_DEBUG("entities.unit", "Unit::CalculateMeleeDamage: (Player) %s attacked %s. Glancing should never happen against lower level target", GetGUID().ToString().c_str(),
@@ -1446,8 +1438,8 @@ void Unit::DealMeleeDamage(CalcDamageInfo* damageInfo, bool durabilityLoss)
         float chance = 20.0f;
 
         // there is a newbie protection, at level 10 just 7% base chance; assuming linear function
-        if (victim->getLevel() < 30)
-            chance = 0.65f * victim->getLevel() + 0.5f;
+        if (victim->GetLevel() < 30)
+            chance = 0.65f * victim->GetLevel() + 0.5f;
 
         uint32 const victimDefense = victim->GetMaxSkillValueForLevel(this);
         uint32 const attackerMeleeSkill = GetMaxSkillValueForLevel();
@@ -1597,7 +1589,7 @@ static float GetArmorReduction(float armor, uint8 attackerLevel)
             armor = 0.0f;
     }
 
-    float armorReduction = 100.f - GetArmorReduction(armor, attacker ? attacker->getLevel() : attackerLevel);
+    float armorReduction = 100.f - GetArmorReduction(armor, attacker ? attacker->GetLevel() : attackerLevel);
 
     return std::max<uint32>(CalculatePct(damage, armorReduction), 1);
 }
@@ -1704,9 +1696,10 @@ static float GetArmorReduction(float armor, uint8 attackerLevel)
     if (attacker && (!spellInfo || !spellInfo->HasAttribute(SPELL_ATTR0_CU_BINARY_SPELL)))
         victimResistance += std::max((float(victim->getLevelForTarget(attacker)) - float(attacker->getLevelForTarget(victim))) * 5.0f, 0.0f);
 
-    static uint32 const BOSS_LEVEL = 83;
+    // Max +3
+    static uint32 const BOSS_LEVEL = 85 + 3;
     static float const BOSS_RESISTANCE_CONSTANT = 510.0f;
-    uint32 level = victim->getLevel();
+    uint32 level = victim->GetLevel();
     float resistanceConstant = 0.0f;
 
     if (level == BOSS_LEVEL)
@@ -1717,26 +1710,39 @@ static float GetArmorReduction(float armor, uint8 attackerLevel)
     return victimResistance / (victimResistance + resistanceConstant);
 }
 
-/*static*/ void Unit::CalcAbsorbResist(DamageInfo& damageInfo)
+// START HERRRRRRRRRRRRRRRR
+void Unit::CalcAbsorbResist(DamageInfo& dmgInfo, bool Splited)
 {
-    if (!damageInfo.GetVictim() || !damageInfo.GetVictim()->IsAlive() || !damageInfo.GetDamage())
+    Unit* victim = dmgInfo.GetVictim();
+    Unit* attacker = dmgInfo.GetAttacker();
+    uint32 damage = dmgInfo.GetDamage();
+    SpellSchoolMask schoolMask = dmgInfo.GetSchoolMask();
+    SpellInfo const* spellInfo = dmgInfo.GetSpellInfo();
+
+    if (!victim || !victim->IsAlive() || !damage)
         return;
 
-    uint32 resistedDamage = Unit::CalcSpellResistedDamage(damageInfo.GetAttacker(), damageInfo.GetVictim(), damageInfo.GetDamage(), damageInfo.GetSchoolMask(), damageInfo.GetSpellInfo());
-    damageInfo.ResistDamage(resistedDamage);
+    // Magic damage, check for resists
+    // Ignore spells that cant be resisted
+    // Xinef: holy resistance exists for npcs
+    if (!(schoolMask & SPELL_SCHOOL_MASK_NORMAL) && (!(schoolMask & SPELL_SCHOOL_MASK_HOLY) || victim->IsCreature()) && (!spellInfo || (!spellInfo->HasAttribute(SPELL_ATTR0_CU_BINARY_SPELL) && !spellInfo->HasAttribute(SPELL_ATTR4_IGNORE_RESISTANCES))))
+    {
+        uint32 resistedDamage = Unit::CalcSpellResistedDamage(attacker, victim, damage, schoolMask, spellInfo);
+        dmgInfo.ResistDamage(resistedDamage);
+    }
 
     // Ignore Absorption Auras
     float auraAbsorbMod = 0.f;
-    if (Unit* attacker = damageInfo.GetAttacker())
+    if (Unit* attacker = dmgInfo.GetAttacker())
     {
-        auraAbsorbMod = attacker->GetMaxPositiveAuraModifierByMiscMask(SPELL_AURA_MOD_TARGET_ABSORB_SCHOOL, damageInfo.GetSchoolMask());
+        auraAbsorbMod = attacker->GetMaxPositiveAuraModifierByMiscMask(SPELL_AURA_MOD_TARGET_ABSORB_SCHOOL, dmgInfo.GetSchoolMask());
         auraAbsorbMod = std::max(auraAbsorbMod, static_cast<float>(attacker->GetMaxPositiveAuraModifier(SPELL_AURA_MOD_TARGET_ABILITY_ABSORB_SCHOOL,
-                                                    [&damageInfo](AuraEffect const* aurEff) -> bool
+                                                    [&dmgInfo](AuraEffect const* aurEff) -> bool
                                                     {
-                                                        if (!(aurEff->GetMiscValue() & damageInfo.GetSchoolMask()))
+                                                        if (!(aurEff->GetMiscValue() & dmgInfo.GetSchoolMask()))
                                                             return false;
 
-                                                        if (!aurEff->IsAffectingSpell(damageInfo.GetSpellInfo()))
+                                                        if (!aurEff->IsAffectedOnSpell(dmgInfo.GetSpellInfo()))
                                                             return false;
 
                                                         return true;
@@ -1745,23 +1751,23 @@ static float GetArmorReduction(float armor, uint8 attackerLevel)
 
     RoundToInterval(auraAbsorbMod, 0.0f, 100.0f);
 
-    int32 absorbIgnoringDamage = CalculatePct(damageInfo.GetDamage(), auraAbsorbMod);
-    damageInfo.ModifyDamage(-absorbIgnoringDamage);
+    int32 absorbIgnoringDamage = CalculatePct(dmgInfo.GetDamage(), auraAbsorbMod);
+    dmgInfo.ModifyDamage(-absorbIgnoringDamage);
 
     // We're going to call functions which can modify content of the list during iteration over it's elements
     // Let's copy the list so we can prevent iterator invalidation
-    AuraEffectList vSchoolAbsorbCopy(damageInfo.GetVictim()->GetAuraEffectsByType(SPELL_AURA_SCHOOL_ABSORB));
+    AuraEffectList vSchoolAbsorbCopy(dmgInfo.GetVictim()->GetAuraEffectsByType(SPELL_AURA_SCHOOL_ABSORB));
     vSchoolAbsorbCopy.sort(Firelands::AbsorbAuraOrderPred());
 
     // absorb without mana cost
-    for (AuraEffectList::iterator itr = vSchoolAbsorbCopy.begin(); (itr != vSchoolAbsorbCopy.end()) && (damageInfo.GetDamage() > 0); ++itr)
+    for (AuraEffectList::iterator itr = vSchoolAbsorbCopy.begin(); (itr != vSchoolAbsorbCopy.end()) && (dmgInfo.GetDamage() > 0); ++itr)
     {
         AuraEffect* absorbAurEff = *itr;
         // Check if aura was removed during iteration - we don't need to work on such auras
-        AuraApplication const* aurApp = absorbAurEff->GetBase()->GetApplicationOfTarget(damageInfo.GetVictim()->GetGUID());
+        AuraApplication const* aurApp = absorbAurEff->GetBase()->GetApplicationOfTarget(dmgInfo.GetVictim()->GetGUID());
         if (!aurApp)
             continue;
-        if (!(absorbAurEff->GetMiscValue() & damageInfo.GetSchoolMask()))
+        if (!(absorbAurEff->GetMiscValue() & dmgInfo.GetSchoolMask()))
             continue;
 
         // get amount which can be still absorbed by the aura
@@ -1774,7 +1780,7 @@ static float GetArmorReduction(float armor, uint8 attackerLevel)
 
         bool defaultPrevented = false;
 
-        absorbAurEff->GetBase()->CallScriptEffectAbsorbHandlers(absorbAurEff, aurApp, damageInfo, tempAbsorb, defaultPrevented);
+        absorbAurEff->GetBase()->CallScriptEffectAbsorbHandlers(absorbAurEff, aurApp, dmgInfo, tempAbsorb, defaultPrevented);
         currentAbsorb = tempAbsorb;
 
         if (defaultPrevented)
@@ -1920,6 +1926,11 @@ static float GetArmorReduction(float armor, uint8 attackerLevel)
         }
     }
 }
+
+
+
+
+
 
 /*static*/ void Unit::CalcHealAbsorb(HealInfo& healInfo)
 {
@@ -2634,7 +2645,7 @@ SpellMissInfo Unit::MagicSpellHitResult(Unit* victim, SpellInfo const* spellInfo
     tmp += resist_chance;
 
     // Chance resist debuff
-    if (!spellInfo->IsPositive() && !spellInfo->HasAttribute(SPELL_ATTR4_NO_CAST_LOG))
+    if (!spellInfo->IsPositive() && !spellInfo->HasAttribute(SPELL_ATTR4_IGNORE_RESISTANCES))
     {
         bool bNegativeAura = true;
         for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
@@ -2647,15 +2658,10 @@ SpellMissInfo Unit::MagicSpellHitResult(Unit* victim, SpellInfo const* spellInfo
             }
         }
 
-        if (bNegativeAura)
-        {
-            tmp += victim->GetMaxPositiveAuraModifierByMiscValue(SPELL_AURA_MOD_DEBUFF_RESISTANCE, int32(spellInfo->Dispel)) * 100;
-            tmp += victim->GetMaxNegativeAuraModifierByMiscValue(SPELL_AURA_MOD_DEBUFF_RESISTANCE, int32(spellInfo->Dispel)) * 100;
-        }
 
         // Players resistance for binary spells
         if (spellInfo->HasAttribute(SPELL_ATTR0_CU_BINARY_SPELL) && (spellInfo->GetSchoolMask() & (SPELL_SCHOOL_MASK_NORMAL | SPELL_SCHOOL_MASK_HOLY)) == 0)
-            tmp += int32(Unit::GetEffectiveResistChance(this, spellInfo->GetSchoolMask(), victim) * 10000.0f); // 100 for spell calculations, and 100 for return value percentage
+            tmp += int32(Unit::CalculateAverageResistReduction(this, spellInfo->GetSchoolMask(), victim, spellInfo) * 10000.0f); // 100 for spell calculations, and 100 for return value percentage
     }
 
     // Roll chance
@@ -6368,20 +6374,17 @@ void Unit::SetCharm(Unit* charm, bool apply)
     UpdatePetCombatState();
 }
 
-/*static*/ void Unit::DealHeal(HealInfo& healInfo)
+int32 Unit::DealHeal(Unit* healer, Unit* victim, uint32 addhealth)
 {
     int32 gain = 0;
-    Unit* healer = healInfo.GetHealer();
-    Unit* victim = healInfo.GetTarget();
-    uint32 addhealth = healInfo.GetHeal();
 
     if (healer)
     {
-        if (UnitAI* victimAI = victim->GetAI())
-            victimAI->HealReceived(healer, addhealth);
+        if (victim->IsAIEnabled)
+            victim->GetAI()->HealReceived(healer, addhealth);
 
-        if (UnitAI* healerAI = healer->GetAI())
-            healerAI->HealDone(victim, addhealth);
+        if (healer->IsAIEnabled)
+            healer->GetAI()->HealDone(victim, addhealth);
     }
 
     if (addhealth)
@@ -6392,32 +6395,31 @@ void Unit::SetCharm(Unit* charm, bool apply)
 
     Unit* unit = healer;
 
-    if (healer && healer->GetTypeId() == TYPEID_UNIT && healer->IsTotem())
+    if (healer && healer->IsCreature() && healer->ToCreature()->IsTotem())
         unit = healer->GetOwner();
 
-    if (unit)
+    if (!unit)
+        return gain;
+
+    if (Player* player = unit->ToPlayer())
     {
-        if (Player* player = unit->ToPlayer())
-        {
-            if (Battleground* bg = player->GetBattleground())
-                bg->UpdatePlayerScore(player, SCORE_HEALING_DONE, gain);
+        if (Battleground* bg = player->GetBattleground())
+            bg->UpdatePlayerScore(player, SCORE_HEALING_DONE, gain);
 
-            // use the actual gain, as the overheal shall not be counted, skip gain 0 (it ignored anyway in to criteria)
-            if (gain)
-                player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HEALING_DONE, gain, 0, 0, victim);
+        // use the actual gain, as the overheal shall not be counted, skip gain 0 (it ignored anyway in to criteria)
+        if (gain && player->InBattleground()) // pussywizard: InBattleground() optimization
+            player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HEALING_DONE, gain, 0, victim);
 
-            player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_HEAL_CAST, addhealth);
-        }
+        //player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_HEAL_CASTED, addhealth); // pussywizard: optimization
     }
 
-    if (Player* player = victim->ToPlayer())
+    /*if (Player* player = victim->ToPlayer())
     {
-        player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_TOTAL_HEALING_RECEIVED, gain);
-        player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_HEALING_RECEIVED, addhealth);
-    }
+        //player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_TOTAL_HEALING_RECEIVED, gain); // pussywizard: optimization
+        //player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_HEALING_RECEIVED, addhealth); // pussywizard: optimization
+    }*/
 
-    if (gain)
-        healInfo.SetEffectiveHeal(gain > 0 ? static_cast<uint32>(gain) : 0UL);
+    return gain;
 }
 
 bool Unit::IsMagnet() const
@@ -6676,7 +6678,8 @@ int32 Unit::HealBySpell(HealInfo& healInfo, bool critical /*= false*/)
 {
     // calculate heal absorb and reduce healing
     Unit::CalcHealAbsorb(healInfo);
-    Unit::DealHeal(healInfo);
+    int32 gain = Unit::DealHeal(healInfo.GetHealer(), healInfo.GetTarget(), healInfo.GetHeal());
+    healInfo.SetEffectiveHeal(gain);
 
     SendHealSpellLog(healInfo, critical);
     return healInfo.GetEffectiveHeal();
@@ -7332,7 +7335,7 @@ float Unit::SpellCritChanceTaken(
             // Spell crit suppression
             if (GetTypeId() == TYPEID_UNIT)
             {
-                int32 const levelDiff = static_cast<int32>(getLevelForTarget(caster)) - caster->getLevel();
+                int32 const levelDiff = static_cast<int32>(getLevelForTarget(caster)) - caster->GetLevel();
                 crit_chance -= levelDiff * 0.7f;
             }
         }
@@ -7472,12 +7475,12 @@ float Unit::SpellCritChanceTaken(
     return damage;
 }
 
-uint32 Unit::SpellHealingBonusDone(Unit* victim, SpellInfo const* spellProto, uint32 healamount, DamageEffectType damagetype, uint8 effIndex, uint32 stack) const
+uint32 Unit::SpellHealingBonusDone(Unit* victim, SpellInfo const* spellProto, uint32 healamount, DamageEffectType damagetype, uint8 effIndex, float TotalMod, uint32 stack)
 {
     // For totems get healing bonus from owner (statue isn't totem in fact)
-    if (GetTypeId() == TYPEID_UNIT && IsTotem())
+    if (IsCreature() && IsTotem())
         if (Unit* owner = GetOwner())
-            return owner->SpellHealingBonusDone(victim, spellProto, healamount, damagetype, effIndex, stack);
+            return owner->SpellHealingBonusDone(victim, spellProto, healamount, damagetype, effIndex, TotalMod, stack);
 
     // Some spells don't benefit from done mods
     if (spellProto->HasAttribute(SPELL_ATTR3_NO_DONE_BONUS))
@@ -7487,29 +7490,49 @@ uint32 Unit::SpellHealingBonusDone(Unit* victim, SpellInfo const* spellProto, ui
     if (spellProto->SpellFamilyName == SPELLFAMILY_POTION)
         return healamount;
 
+    float ApCoeffMod = 1.0f;
+    float DoneTotalMod = TotalMod ? TotalMod : SpellPctHealingModsDone(victim, spellProto, damagetype);
     int32 DoneTotal = 0;
-    float DoneTotalMod = SpellHealingPctDone(victim, spellProto);
 
     // done scripted mod (take it from owner)
-    Unit const* owner = GetOwner() ? GetOwner() : this;
-    for (AuraEffect const* overrideClassScripts : owner->GetAuraEffectsByType(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS))
+    Unit* owner = GetOwner() ? GetOwner() : this;
+    int32 DoneAdvertisedBenefit = 0;
+    AuraEffectList const& mOverrideClassScript = owner->GetAuraEffectsByType(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS);
+    for (AuraEffectList::const_iterator i = mOverrideClassScript.begin(); i != mOverrideClassScript.end(); ++i)
     {
-        if (!overrideClassScripts->IsAffectingSpell(spellProto))
+        if (!(*i)->IsAffectedOnSpell(spellProto))
             continue;
 
-        switch (overrideClassScripts->GetMiscValue())
+        switch ((*i)->GetMiscValue())
         {
-        case 4415: // Increased Rejuvenation Healing
-        case 4953:
-            DoneTotal += overrideClassScripts->GetAmount();
-            break;
-        default:
-            break;
+            case 4415: // Increased Rejuvenation Healing
+            case 4953:
+                DoneAdvertisedBenefit += (*i)->GetAmount();
+                break;
+            case 3736: // Hateful Totem of the Third Wind / Increased Lesser Healing Wave / LK Arena (4/5/6) Totem of the Third Wind / Savage Totem of the Third Wind
+                DoneAdvertisedBenefit += (*i)->GetAmount();
+                break;
         }
     }
 
+    switch (spellProto->SpellFamilyName)
+    {
+        case SPELLFAMILY_DEATHKNIGHT:
+        {
+            // Impurity
+            if (AuraEffect* aurEff = GetDummyAuraEffect(SPELLFAMILY_DEATHKNIGHT, 1986, 0))
+            {
+                AddPct(ApCoeffMod, aurEff->GetAmount());
+            }
+            break;
+        }
+        default:
+            break;
+    }
+
     // Done fixed damage bonus auras
-    int32 DoneAdvertisedBenefit = SpellBaseHealingBonusDone(spellProto->GetSchoolMask(), true);
+    DoneAdvertisedBenefit += SpellBaseHealingBonusDone(spellProto->GetSchoolMask());
+    float coeff = spellProto->Effects[effIndex].BonusMultiplier;
 
     // modify spell power by victim's SPELL_AURA_MOD_HEALING auras (eg Amplify/Dampen Magic)
     DoneAdvertisedBenefit += victim->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_HEALING, spellProto->GetSchoolMask());
@@ -7587,10 +7610,19 @@ uint32 Unit::SpellHealingBonusDone(Unit* victim, SpellInfo const* spellProto, ui
     return uint32(std::max(heal, 0.0f));
 }
 
-float Unit::SpellHealingPctDone(Unit* victim, SpellInfo const* spellProto) const
+float Unit::SpellPctHealingModsDone(Unit* victim, SpellInfo const* spellProto, DamageEffectType damagetype)
 {
-    // For totems pct done mods are calculated when its calculation is run on the player in SpellHealingBonusDone.
-    if (GetTypeId() == TYPEID_UNIT && IsTotem())
+    // For totems get healing bonus from owner (statue isn't totem in fact)
+    if (IsCreature() && IsTotem())
+        if (Unit* owner = GetOwner())
+            return owner->SpellPctHealingModsDone(victim, spellProto, damagetype);
+
+    // Some spells don't benefit from done mods
+    if (spellProto->HasAttribute(SPELL_ATTR3_NO_DONE_BONUS))
+        return 1.0f;
+
+    // xinef: Some spells don't benefit from done mods
+    if (spellProto->HasAttribute(SPELL_ATTR6_LIMIT_PCT_HEALING_MODS))
         return 1.0f;
 
     // No bonus healing for potion spells
@@ -7605,11 +7637,21 @@ float Unit::SpellHealingPctDone(Unit* victim, SpellInfo const* spellProto) const
     else
         DoneTotalMod *= GetTotalAuraMultiplier(SPELL_AURA_MOD_HEALING_DONE_PERCENT);
 
+    // Healing done percent
+    AuraEffectList const& mHealingDonePct = GetAuraEffectsByType(SPELL_AURA_MOD_HEALING_DONE_PERCENT);
+    for (auto const& auraEff : mHealingDonePct)
+    {
+        if (!sScriptMgr->IsNeedModHealPercent(this, auraEff, DoneTotalMod, spellProto))
+            continue;
+
+        AddPct(DoneTotalMod, auraEff->GetAmount());
+    }
+
     // done scripted mod (take it from owner)
     Unit const* owner = GetOwner() ? GetOwner() : this;
     for (AuraEffect const* overrideClassScripts : owner->GetAuraEffectsByType(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS))
     {
-        if (!overrideClassScripts->IsAffectingSpell(spellProto))
+        if (!overrideClassScripts->IsAffectedOnSpell(spellProto))
             continue;
 
         switch (overrideClassScripts->GetMiscValue())
@@ -7641,33 +7683,47 @@ float Unit::SpellHealingPctDone(Unit* victim, SpellInfo const* spellProto) const
             AddPct(DoneTotalMod, modPercent);
             break;
         }
+        case 7871: // Glyph of Lesser Healing Wave
+        {
+            // xinef: affected by any earth shield
+            if (victim->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_SHAMAN, 0, 0x00000400, 0))
+                AddPct(DoneTotalMod, overrideClassScripts->GetAmount());
+            break;
+        }
         default:
             break;
         }
     }
 
-    // Custom scripted damage
     switch (spellProto->SpellFamilyName)
     {
-    case SPELLFAMILY_SHAMAN:
-    {
-        // Nature's Blessing
-        if (AuraEffect const* blessing = GetDummyAuraEffect(SPELLFAMILY_SHAMAN, 2012, EFFECT_0))
-            if (blessing->IsAffectingSpell(spellProto) && victim->HasAura(974, GetGUID()))
-                AddPct(DoneTotalMod, blessing->GetAmount());
-        break;
-    }
-    default:
-        break;
-    }
+        case SPELLFAMILY_GENERIC:
+            // Talents and glyphs for healing stream totem
+            if (spellProto->Id == 52042)
+            {
+                // Glyph of Healing Stream Totem
+                if (AuraEffect* dummy = owner->GetAuraEffect(55456, EFFECT_0))
+                    AddPct(DoneTotalMod, dummy->GetAmount());
 
-    float healthPctDiff = 100.f - victim->GetHealthPct();
-    for (AuraEffect const* healingDonePctVsTargetHealth : owner->GetAuraEffectsByType(SPELL_AURA_MOD_HEALING_DONE_PCT_VERSUS_TARGET_HEALTH))
-    {
-        if (!healingDonePctVsTargetHealth->IsAffectingSpell(spellProto))
-            continue;
-
-        AddPct(DoneTotalMod, CalculatePct(float(healingDonePctVsTargetHealth->GetAmount()), healthPctDiff));
+                // Healing Stream totem - Restorative Totems
+                if (AuraEffect* aurEff = GetDummyAuraEffect(SPELLFAMILY_SHAMAN, 338, 1))
+                    AddPct(DoneTotalMod, aurEff->GetAmount());
+            }
+            break;
+        case SPELLFAMILY_PRIEST:
+            // T9 HEALING 4P, empowered renew instant heal
+            if (spellProto->Id == 63544)
+                if (AuraEffect* aurEff = GetAuraEffect(67202, EFFECT_0))
+                    AddPct(DoneTotalMod, aurEff->GetAmount());
+            break;
+        case SPELLFAMILY_SHAMAN:
+        {
+            // Nature's Blessing
+            if (AuraEffect const* blessing = GetDummyAuraEffect(SPELLFAMILY_SHAMAN, 2012, EFFECT_0))
+                if (blessing->IsAffectedOnSpell(spellProto) && victim->HasAura(974, GetGUID()))
+                    AddPct(DoneTotalMod, blessing->GetAmount());
+            break;
+        }
     }
 
     return DoneTotalMod;
@@ -11560,7 +11616,7 @@ uint32 Unit::GetCastingTimeForBonus(SpellInfo const* spellProto, DamageEffectTyp
     if (overTime > 0 && CastingTime > 0 && DirectDamage)
     {
         // mainly for DoTs which are 3500 here otherwise
-        uint32 OriginalCastTime = spellProto->CalcCastTime(getLevel());
+        uint32 OriginalCastTime = spellProto->CalcCastTime(GetLevel());
         if (OriginalCastTime > 7000)
             OriginalCastTime = 7000;
         if (OriginalCastTime < 1500)
@@ -11651,7 +11707,7 @@ float Unit::CalculateDefaultCoefficient(SpellInfo const* spellInfo, DamageEffect
             DotFactor /= DotTicks;
     }
 
-    int32 CastingTime = spellInfo->IsChanneled() ? spellInfo->GetDuration() : spellInfo->CalcCastTime(getLevel());
+    int32 CastingTime = spellInfo->IsChanneled() ? spellInfo->GetDuration() : spellInfo->CalcCastTime(GetLevel());
     // Distribute Damage over multiple effects, reduce by AoE
     CastingTime = GetCastingTimeForBonus(spellInfo, damagetype, CastingTime);
 
@@ -11712,7 +11768,7 @@ Pet* Unit::CreateTamedPetFrom(Creature* creatureTarget, uint32 spell_id)
         return nullptr;
     }
 
-    uint8 level = getLevel();
+    uint8 level = GetLevel();
 
     InitTamedPet(pet, level, spell_id);
 
@@ -11730,7 +11786,7 @@ Pet* Unit::CreateTamedPetFrom(uint32 creatureEntry, uint32 spell_id)
 
     Pet* pet = new Pet(ToPlayer(), HUNTER_PET);
 
-    if (!pet->CreateBaseAtCreatureInfo(creatureInfo, this) || !InitTamedPet(pet, getLevel(), spell_id))
+    if (!pet->CreateBaseAtCreatureInfo(creatureInfo, this) || !InitTamedPet(pet, GetLevel(), spell_id))
     {
         delete pet;
         return nullptr;
@@ -15220,7 +15276,7 @@ void Unit::ProcessPendingSpellCastRequest()
     {
         if (Unit* target = targets.GetUnitTarget())
         {
-            SpellInfo const* actualSpellInfo = spellInfo->GetAuraRankForLevel(target->getLevel());
+            SpellInfo const* actualSpellInfo = spellInfo->GetAuraRankForLevel(target->GetLevel());
 
             // if rank not found then function return NULL but in explicit cast case original spell can be cast and later failed
             // with appropriate error message

@@ -156,7 +156,7 @@ class FC_GAME_API AuraEffect
     {
         m_isPeriodic = isPeriodic;
     }
-    bool IsAffectingSpell(SpellInfo const* spell) const;
+    bool IsAffectedOnSpell(SpellInfo const* spell) const;
     bool HasSpellClassMask() const
     {
         return m_spellInfo->Effects[m_effIndex].SpellClassMask;

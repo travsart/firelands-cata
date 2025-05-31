@@ -544,7 +544,7 @@ int32 AuraEffect::CalculateAmount(Unit* caster)
             Unit::AuraEffectList const& overrideClassScripts = caster->GetAuraEffectsByType(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS);
             for (Unit::AuraEffectList::const_iterator itr = overrideClassScripts.begin(); itr != overrideClassScripts.end(); ++itr)
             {
-                if ((*itr)->IsAffectingSpell(m_spellInfo))
+                if ((*itr)->IsAffectedOnSpell(m_spellInfo))
                 {
                     // Glyph of Frost nova and similar auras
                     if ((*itr)->GetMiscValue() == 7801)
@@ -998,18 +998,19 @@ float AuraEffect::GetCritChanceFor(Unit const* caster, Unit const* target) const
     return target->SpellCritChanceTaken(caster, GetSpellInfo(), GetSpellInfo()->GetSchoolMask(), GetBase()->GetCritChance(), GetSpellInfo()->GetAttackType(), true);
 }
 
-bool AuraEffect::IsAffectingSpell(SpellInfo const* spell) const
+bool AuraEffect::IsAffectedOnSpell(SpellInfo const* spell) const
 {
     if (!spell)
         return false;
-
-    // Check family name and EffectClassMask
-    if (!spell->IsAffected(m_spellInfo->SpellFamilyName, m_spellInfo->Effects[m_effIndex].SpellClassMask))
+    // Check family name
+    if (spell->SpellFamilyName != m_spellInfo->SpellFamilyName)
         return false;
 
-    return true;
+    // Check EffectClassMask
+    if (m_spellInfo->Effects[m_effIndex].SpellClassMask & spell->SpellFamilyFlags)
+        return true;
+    return false;
 }
-
 void AuraEffect::SendTickImmune(Unit* target, Unit* caster) const
 {
     if (caster)
@@ -6095,7 +6096,8 @@ void AuraEffect::HandlePeriodicHealAurasTick(Unit* target, Unit* caster) const
 
     HealInfo healInfo(caster, target, damage, GetSpellInfo(), GetSpellInfo()->GetSchoolMask());
     Unit::CalcHealAbsorb(healInfo);
-    Unit::DealHeal(healInfo);
+    int32 gain = Unit::DealHeal(caster, target, healInfo.GetHeal());
+    healInfo.SetEffectiveHeal(gain);
 
     SpellPeriodicAuraLogInfo pInfo(this, heal, heal - healInfo.GetEffectiveHeal(), healInfo.GetAbsorb(), 0, 0.0f, crit);
     target->SendPeriodicAuraLog(&pInfo);
