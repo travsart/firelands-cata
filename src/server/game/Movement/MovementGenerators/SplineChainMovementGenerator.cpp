@@ -125,7 +125,7 @@ void SplineChainMovementGenerator::Finalize(Unit* me)
         return;
     Creature* ownerCreature = me->ToCreature();
     if (CreatureAI* AI = ownerCreature ? ownerCreature->AI() : nullptr)
-        AI->MovementInform(SPLINE_CHAIN_MOTION_TYPE, _id);
+        AI->MovementInform(ESCORT_MOTION_TYPE, _id);
 }
 
 bool SplineChainMovementGenerator::Update(Unit* me, uint32 diff)
@@ -177,7 +177,7 @@ SplineChainResumeInfo SplineChainMovementGenerator::GetResumeInfo(Unit const* me
 {
     if (MovementGenerator const* activeGen = me->GetMotionMaster()->GetMotionSlot(MOTION_SLOT_ACTIVE))
     {
-        if (activeGen->GetMovementGeneratorType() == SPLINE_CHAIN_MOTION_TYPE)
+        if (activeGen->GetMovementGeneratorType() == ESCORT_MOTION_TYPE)
         {
             info = reinterpret_cast<SplineChainMovementGenerator const*>(activeGen)->GetResumeInfo(me);
             return;

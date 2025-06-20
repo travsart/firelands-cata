@@ -362,7 +362,7 @@ public:
             Movement::MoveSplineInit init(who);
             init.DisableTransportPathTransformations();
             init.MoveTo(0.3320355f, 0.05355075f, 5.196949f, false);
-            who->GetMotionMaster()->LaunchMoveSpline(std::move(init), EVENT_VEHICLE_BOARD, MOTION_SLOT_CONTROLLED);
+            who->GetMotionMaster()->LaunchMoveSpline(std::move(init), EVENT_VEHICLE_BOARD, MOTION_SLOT_ACTIVE);
 
             me->setActive(true);
             me->SetFarVisible(true);
@@ -377,7 +377,7 @@ public:
 
         void MovementInform(uint32 type, uint32 pointId) override
         {
-            if (type != SPLINE_CHAIN_MOTION_TYPE)
+            if (type != ESCORT_MOTION_TYPE)
                 return;
 
             switch (pointId)

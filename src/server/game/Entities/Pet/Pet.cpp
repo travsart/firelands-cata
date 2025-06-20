@@ -171,7 +171,7 @@ bool Pet::LoadPetData(Player* owner, uint32 petEntry, uint32 petnumber, bool cur
     if (IsCritter())
     {
         Position pos = owner->GetPosition();
-        owner->MovePositionToFirstCollision(pos, DEFAULT_FOLLOW_DISTANCE_PET, DEFAULT_FOLLOW_ANGLE);
+        owner->MovePositionToFirstCollision(pos, PET_FOLLOW_DIST, DEFAULT_FOLLOW_ANGLE);
         Relocate(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), owner->GetOrientation());
 
         if (!IsPositionValid())
@@ -221,7 +221,7 @@ bool Pet::LoadPetData(Player* owner, uint32 petEntry, uint32 petnumber, bool cur
     SynchronizeLevelWithOwner();
 
     Position pos = owner->GetPosition();
-    owner->MovePositionToFirstCollision(pos, DEFAULT_FOLLOW_DISTANCE_PET, float(M_PI_2));
+    owner->MovePositionToFirstCollision(pos, PET_FOLLOW_DIST, float(M_PI_2));
     Relocate(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), owner->GetOrientation());
 
     if (!IsPositionValid())

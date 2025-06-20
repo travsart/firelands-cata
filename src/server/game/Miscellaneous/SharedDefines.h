@@ -1638,6 +1638,8 @@ enum SpellImmunity
     IMMUNITY_DISPEL = 4,   // enum DispelType
     IMMUNITY_MECHANIC = 5, // enum Mechanics
     IMMUNITY_ID = 6,
+    IMMUNITY_ALLOW_ID = 7, // xinef: special type of immunity, npc is immune to everything except for those spells id
+
 
     MAX_SPELL_IMMUNITY
 };

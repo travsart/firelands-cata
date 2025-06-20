@@ -29,7 +29,7 @@ class FormationMovementGenerator : public MovementGeneratorMedium<Creature, Form
     public:
         explicit FormationMovementGenerator(Unit* leader, float range, float angle, int32 point1, int32 point2);
 
-        MovementGeneratorType GetMovementGeneratorType() const override { return FORMATION_MOTION_TYPE; }
+        MovementGeneratorType GetMovementGeneratorType() const override { return NULL_MOTION_TYPE; }
 
         void DoInitialize(Creature* owner);
         void DoFinalize(Creature* owner);

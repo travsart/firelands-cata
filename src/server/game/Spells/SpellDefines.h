@@ -19,6 +19,7 @@
 #define FIRELANDS_SPELLDEFINES_H
 
 #include "Define.h"
+#include "SharedDefines.h"
 #include "EnumFlag.h"
 #include "ObjectGuid.h"
 #include <vector>
@@ -185,6 +186,12 @@ enum TriggerCastFlags : uint32
     TRIGGERED_FULL_DEBUG_MASK = 0xFFFFFFFF
 };
 
+enum SpellImmuneBlockType
+{
+    SPELL_BLOCK_TYPE_ALL        = 0,
+    SPELL_BLOCK_TYPE_POSITIVE   = 1,
+};
+
 struct FC_GAME_API CastSpellExtraArgs
 {
     CastSpellExtraArgs()
@@ -282,5 +289,26 @@ enum class SummonPropertiesParamType : uint8
     MaxSummons = 6, // Totem Slot
     NumUnitsMax = 7 // Fail if less than 1
 };
+
+typedef std::pair<SpellValueMod, int32> CustomSpellValueMod;
+class CustomSpellValues : public std::vector<CustomSpellValueMod>
+{
+public:
+    void AddSpellMod(SpellValueMod mod, int32 value)
+    {
+        push_back(std::make_pair(mod, value));
+    }
+};
+
+struct SpellImmune
+{
+    SpellImmune() : spellId(0), type(IMMUNITY_EFFECT), blockType(SPELL_BLOCK_TYPE_ALL) { }
+
+    uint32 spellId;
+    uint32 type;
+    uint32 blockType;
+};
+
+typedef std::vector<SpellImmune> SpellImmuneList;
 
 #endif // FIRELANDS_SPELLDEFINES_H

@@ -9205,7 +9205,7 @@ void Unit::SetSpeedRateReal(UnitMoveType mtype, float rate)
             pet->SetSpeedRate(mtype, rate);
 
     m_speed_rate[mtype] = rate;
-    PropagateSpeedChange();
+    propagateSpeedChange();
 }
 
 void Unit::FollowTarget(Unit* target)
@@ -9220,7 +9220,7 @@ void Unit::FollowTarget(Unit* target)
     bool joinFormation = false;   // unit will follow its target in a generated formation shape and catches up to its target
     bool catchUpToTarget = false; // unit will allign to the target speed and catches up to the target automatically
     bool faceTarget = false;      // unit will face its target with every spline
-    float distance = DEFAULT_FOLLOW_DISTANCE_PET;
+    float distance = PET_FOLLOW_DIST;
 
     if (TempSummon* summon = ToTempSummon())
     {
@@ -11214,7 +11214,7 @@ void Unit::SendPetAIReaction(ObjectGuid guid)
 
 ///----------End of Pet responses methods----------
 
-void Unit::PropagateSpeedChange() { GetMotionMaster()->PropagateSpeedChange(); }
+void Unit::propagateSpeedChange() { GetMotionMaster()->propagateSpeedChange(); }
 
 void Unit::StopMoving()
 {
@@ -12493,7 +12493,7 @@ bool Unit::SetCharmedBy(Unit* charmer, CharmType type, AuraApplication const* au
             break;
         case CHARM_TYPE_POSSESS:
             SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_POSSESSED);
-            charmer->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_REMOVE_CLIENT_CONTROL);
+            charmer->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);
             playerCharmer->SetClientControl(this, true);
             playerCharmer->PossessSpellInitialize();
             AddUnitState(UNIT_STATE_POSSESSED);
@@ -12594,7 +12594,7 @@ void Unit::RemoveCharmedBy(Unit* charmer)
             ClearUnitState(UNIT_STATE_POSSESSED);
             playerCharmer->SetClientControl(this, false);
             playerCharmer->SetClientControl(charmer, true);
-            charmer->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_REMOVE_CLIENT_CONTROL);
+            charmer->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);
             RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_POSSESSED);
             break;
         case CHARM_TYPE_CHARM:
@@ -13813,7 +13813,7 @@ void Unit::_ExitVehicle(Position const* exitPosition)
     init.MoveTo(pos.GetPositionX(), pos.GetPositionY(), height, false);
     init.SetFacing(pos.GetOrientation());
     init.SetTransportExit();
-    GetMotionMaster()->LaunchMoveSpline(std::move(init), EVENT_VEHICLE_EXIT, MOTION_SLOT_CONTROLLED);
+    GetMotionMaster()->LaunchMoveSpline(std::move(init), EVENT_VEHICLE_EXIT, MOTION_SLOT_ACTIVE);
 
     if (player)
     {

@@ -4729,7 +4729,7 @@ void Spell::EffectResurrectPet(SpellEffIndex /*effIndex*/)
     {
         // Reposition the pet's corpse before reviving so as not to grab aggro
         Position pos = player->GetPosition();
-        player->MovePositionToFirstCollision(pos, DEFAULT_FOLLOW_DISTANCE_PET, float(M_PI_2));
+        player->MovePositionToFirstCollision(pos, PET_FOLLOW_DIST, float(M_PI_2));
         pet->NearTeleportTo(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), player->GetOrientation());
         pet->Relocate(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), player->GetOrientation()); // This is needed so SaveStayPosition() will get the proper coords.
     }
@@ -5329,7 +5329,7 @@ void Spell::EffectCreateTamedPet(SpellEffIndex effIndex)
 
     // relocate
     Position pos = unitTarget->GetPosition();
-    unitTarget->MovePositionToFirstCollision(pos, DEFAULT_FOLLOW_DISTANCE_PET, float(M_PI_2));
+    unitTarget->MovePositionToFirstCollision(pos, PET_FOLLOW_DIST, float(M_PI_2));
     pet->Relocate(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), unitTarget->GetOrientation());
 
     // add to world

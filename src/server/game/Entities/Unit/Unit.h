@@ -1739,6 +1739,7 @@ class FC_GAME_API Unit : public WorldObject
 
     
     uint32 SpellHealingBonusDone(Unit* victim, SpellInfo const* spellProto, uint32 healamount, DamageEffectType damagetype, uint8 effIndex, uint32 stack = 1) const;
+    int32 SpellBaseHealingBonusDone(SpellSchoolMask schoolMask);
     int32 SpellBaseHealingBonusTaken(SpellSchoolMask schoolMask);
     float SpellPctHealingModsDone(Unit* victim, SpellInfo const* spellProto, DamageEffectType damagetype);
     uint32 SpellHealingBonusDone(Unit* victim, SpellInfo const* spellProto, uint32 healamount, DamageEffectType damagetype, uint8 effIndex, float TotalMod = 0.0f, uint32 stack = 1);
@@ -1756,6 +1757,7 @@ class FC_GAME_API Unit : public WorldObject
     void ApplySpellImmune(uint32 spellId, uint32 op, uint32 type, bool apply, SpellImmuneBlockType blockType = SPELL_BLOCK_TYPE_ALL);
     void ApplySpellDispelImmunity(SpellInfo const* spellProto, DispelType type, bool apply);
     virtual bool IsImmunedToSpell(SpellInfo const* spellInfo, Spell const* spell = nullptr);
+
     [[nodiscard]] bool IsImmunedToDamage(SpellSchoolMask meleeSchoolMask) const;
     [[nodiscard]] bool IsImmunedToDamage(SpellInfo const* spellInfo) const;
     [[nodiscard]] bool IsImmunedToDamage(Spell const* spell) const;
@@ -2721,7 +2723,7 @@ class FC_GAME_API Unit : public WorldObject
     void SendPetAIReaction(ObjectGuid guid);
     ///----------End of Pet responses methods----------
 
-    void PropagateSpeedChange();
+    void propagateSpeedChange();
 
     // reactive attacks
     void ClearAllReactives();

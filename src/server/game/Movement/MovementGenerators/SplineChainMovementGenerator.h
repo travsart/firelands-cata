@@ -30,7 +30,7 @@ class FC_GAME_API SplineChainMovementGenerator : public MovementGenerator
         void Finalize(Unit* me) override;
         void Reset(Unit* /*me*/) override { };
         bool Update(Unit* me, uint32 diff) override;
-        MovementGeneratorType GetMovementGeneratorType() const override { return SPLINE_CHAIN_MOTION_TYPE; }
+        MovementGeneratorType GetMovementGeneratorType() const override { return ESCORT_MOTION_TYPE; }
         // Builds info that can later be used to resume this spline chain movement at the current position
         static void GetResumeInfo(Unit const* me, SplineChainResumeInfo& info);
         // Leaving the object method public for people that know what they're doing to use

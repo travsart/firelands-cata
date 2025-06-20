@@ -162,7 +162,7 @@ void WorldSession::HandlePetActionHelper(Unit* pet, ObjectGuid guid1, uint32 spe
             switch (spellid)
             {
                 case COMMAND_STAY:                          //flat=1792  //STAY
-                    if (pet->GetMotionMaster()->GetCurrentSlot() != MOTION_SLOT_CONTROLLED)
+                    if (pet->GetMotionMaster()->GetCurrentSlot() != MOTION_SLOT_ACTIVE)
                         pet->StopMoving();
 
                     pet->GetMotionMaster()->Clear(MOTION_SLOT_IDLE);

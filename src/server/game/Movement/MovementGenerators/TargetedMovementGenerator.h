@@ -43,7 +43,7 @@ public:
         : TargetedMovementGeneratorBase(target), i_leashExtensionTimer(5000), i_path(nullptr), i_recheckDistance(0), i_recalculateTravel(true), _range(range), _angle(angle) {}
     ~ChaseMovementGenerator() { }
 
-    MovementGeneratorType GetMovementGeneratorType() { return CHASE_MOTION_TYPE; }
+    MovementGeneratorType GetMovementGeneratorType() const override { return CHASE_MOTION_TYPE; }
 
     bool DoUpdate(T*, uint32);
     void DoInitialize(T*);
@@ -80,7 +80,7 @@ public:
         : TargetedMovementGeneratorBase(target), i_path(nullptr), i_recheckPredictedDistanceTimer(0), i_recheckPredictedDistance(false), _range(range), _angle(angle),_inheritWalkState(inheritWalkState), _inheritSpeed(inheritSpeed) {}
     ~FollowMovementGenerator() { }
 
-    MovementGeneratorType GetMovementGeneratorType() { return FOLLOW_MOTION_TYPE; }
+    MovementGeneratorType GetMovementGeneratorType() const override { return FOLLOW_MOTION_TYPE; }
 
     bool DoUpdate(T*, uint32);
     void DoInitialize(T*);

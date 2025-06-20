@@ -622,7 +622,7 @@ struct npc_martha_goslin : public CreatureScript
 
         void MovementInform(uint32 type, uint32 id) override
         {
-            if (type == SPLINE_CHAIN_MOTION_TYPE)
+            if (type == ESCORT_MOTION_TYPE)
             {
                 switch (id)
                 {
@@ -769,7 +769,7 @@ struct npc_jena_anderson : public CreatureScript
 
         void MovementInform(uint32 type, uint32 id) override
         {
-            if (type == SPLINE_CHAIN_MOTION_TYPE)
+            if (type == ESCORT_MOTION_TYPE)
             {
                 switch (id)
                 {
@@ -878,7 +878,7 @@ struct npc_bartleby_battson : public CreatureScript
 
         void MovementInform(uint32 type, uint32 id) override
         {
-            if (type == SPLINE_CHAIN_MOTION_TYPE)
+            if (type == ESCORT_MOTION_TYPE)
             {
                 switch (id)
                 {
@@ -999,7 +999,7 @@ struct npc_malcolm_moore : public CreatureScript
 
         void MovementInform(uint32 type, uint32 id) override
         {
-            if (type == SPLINE_CHAIN_MOTION_TYPE)
+            if (type == ESCORT_MOTION_TYPE)
             {
                 switch (id)
                 {
@@ -1154,7 +1154,7 @@ struct npc_sergeant_morigan : public CreatureScript
 
         void MovementInform(uint32 type, uint32 id) override
         {
-            if (type == SPLINE_CHAIN_MOTION_TYPE)
+            if (type == ESCORT_MOTION_TYPE)
                 switch (id)
                 {
                     case MOVEID_EVENT1:
@@ -1299,7 +1299,7 @@ struct npc_roger_owens : public CreatureScript
 
         void MovementInform(uint32 type, uint32 id) override
         {
-            if (type == SPLINE_CHAIN_MOTION_TYPE)
+            if (type == ESCORT_MOTION_TYPE)
             {
                 switch (id)
                 {

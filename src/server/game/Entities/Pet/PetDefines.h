@@ -204,5 +204,9 @@ enum PetScalingSpells
 
 // Used by companions (minipets) and quest slot summons
 constexpr float DEFAULT_FOLLOW_DISTANCE = 2.5f;
-constexpr float DEFAULT_FOLLOW_DISTANCE_PET = 3.f;
+constexpr float PET_FOLLOW_DIST = 3.f;
+
+#define PET_FOLLOW_DIST  3.f
+#define PET_FOLLOW_ANGLE (M_PI/2)
+
 #endif

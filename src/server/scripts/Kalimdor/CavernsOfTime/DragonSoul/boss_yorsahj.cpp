@@ -210,7 +210,7 @@ struct boss_yorsahj : public BossAI
         if (Creature* portal = me->FindNearestCreature(NPC_TRAVEL_TO_WYRMREST_TEMPLE, 200.00f))
             portal->SetVisible(true);
         me->RemoveAllAurasOnDeath();
-        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_REMOVE_CLIENT_CONTROL);
+        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);
         RemoveEncounterFrame();
         SendInitWorldStates();
         _Reset();
@@ -235,7 +235,7 @@ struct boss_yorsahj : public BossAI
         if (events.IsInPhase(PHASE_ADD))
         {
             me->SetReactState(REACT_AGGRESSIVE);
-            me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_REMOVE_CLIENT_CONTROL);
+            me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);
             me->GetMotionMaster()->MoveChase(me->GetVictim());
             events.ScheduleEvent(EVENT_VOID_BOLT, 3000);
             events.SetPhase(PHASE_NORMAL);
@@ -308,7 +308,7 @@ struct boss_yorsahj : public BossAI
         {
             events.CancelEvent(EVENT_VOID_BOLT);
             events.SetPhase(PHASE_ADD);
-            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_REMOVE_CLIENT_CONTROL);
+            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);
             DoCast(RAND(SPELL_SUMMON_GLOBULE_1, SPELL_SUMMON_GLOBULE_2, SPELL_SUMMON_GLOBULE_3, SPELL_SUMMON_GLOBULE_4, SPELL_SUMMON_GLOBULE_5, SPELL_SUMMON_GLOBULE_6));
             events.ScheduleEvent(EVENT_SUMMON_ADDS, 90000);
         }

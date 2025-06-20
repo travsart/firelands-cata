@@ -61,12 +61,17 @@ enum MovementGeneratorType : uint8
     ASSISTANCE_MOTION_TYPE          = 11,                 // PointMovementGenerator.h
     ASSISTANCE_DISTRACT_MOTION_TYPE = 12,                 // IdleMovementGenerator.h
     TIMED_FLEEING_MOTION_TYPE       = 13,                 // FleeingMovementGenerator.h
-    FOLLOW_MOTION_TYPE              = 14,                 // FollowMovementGenerator.h
+    FOLLOW_MOTION_TYPE              = 14,
     ROTATE_MOTION_TYPE              = 15,
     EFFECT_MOTION_TYPE              = 16,
-    SPLINE_CHAIN_MOTION_TYPE        = 17,                 // SplineChainMovementGenerator.h
-    FORMATION_MOTION_TYPE           = 18,                 // FormationMovementGenerator.h
-    MAX_MOTION_TYPE                                       // limit
+    ESCORT_MOTION_TYPE              = 17,                             // xinef: EscortMovementGenerator.h
+    NULL_MOTION_TYPE                = 18
+
+
+
+    // SPLINE_CHAIN_MOTION_TYPE        = 17,                 // SplineChainMovementGenerator.h
+    // FORMATION_MOTION_TYPE           = 18,                 // FormationMovementGenerator.h
+    // MAX_MOTION_TYPE                                       // limit
 };
 
 enum MovementSlot : uint8
@@ -81,13 +86,28 @@ enum MMCleanFlag
 {
     MMCF_NONE   = 0,
     MMCF_UPDATE = 1, // Clear or Expire called from update
-    MMCF_RESET  = 2  // Flag if need top()->Reset()
+    MMCF_RESET  = 2,  // Flag if need top()->Reset()
+    MMCF_INUSE  = 4 // pussywizard: Flag if in MotionMaster::UpdateMotion
+
 };
 
 enum RotateDirection
 {
     ROTATE_DIRECTION_LEFT,
     ROTATE_DIRECTION_RIGHT
+};
+
+struct ChaseRange
+{
+    ChaseRange(float range);
+    ChaseRange(float _minRange, float _maxRange);
+    ChaseRange(float _minRange, float _minTolerance, float _maxTolerance, float _maxRange);
+
+    // this contains info that informs how we should path!
+    float MinRange;     // we have to move if we are within this range...    (min. attack range)
+    float MinTolerance; // ...and if we are, we will move this far away
+    float MaxRange;     // we have to move if we are outside this range...   (max. attack range)
+    float MaxTolerance; // ...and if we are, we will move into this range
 };
 
 struct ChaseAngle
@@ -111,77 +131,151 @@ inline bool IsInvalidMovementSlot(uint8 const slot) { return slot >= MAX_MOTION_
 
 class FC_GAME_API MotionMaster
 {
+    private:
+        typedef std::vector<MovementGenerator*> MovementList;
+        typedef MovementGenerator* _Ty;
+
+        void pop()
+        {
+            if (empty())
+                return;
+
+            Impl[_top] = nullptr;
+            while (!empty() && !top())
+                --_top;
+        }
+
+        [[nodiscard]] bool needInitTop() const
+        {
+            if (empty())
+                return false;
+            return _needInit[_top];
+        }
+        void InitTop();
     public:
-        explicit MotionMaster(Unit* unit) : _owner(unit), _top(-1), _cleanFlag(MMCF_NONE)
+        explicit MotionMaster(Unit* unit) : _expList(nullptr), _top(-1), _owner(unit), _cleanFlag(MMCF_NONE)
         {
             for (uint8 i = 0; i < MAX_MOTION_SLOT; ++i)
             {
-                _slot[i] = nullptr;
-                _initialize[i] = true;
+                Impl[i] = nullptr;
+                _needInit[i] = true;
             }
         }
         ~MotionMaster();
 
-        bool empty() const { return (_top < 0); }
-        int size() const { return _top + 1; }
-        MovementGenerator* topOrNull() const { return empty() ? nullptr : top(); }
-        MovementGenerator* top() const { ASSERT(!empty()); return _slot[_top]; }
-
         void Initialize();
         void InitDefault();
 
-        void UpdateMotion(uint32 diff);
+        [[nodiscard]] bool empty() const { return (_top < 0); }
+        [[nodiscard]] int size() const { return _top + 1; }
 
-        void Clear(bool reset = true);
-        void Clear(MovementSlot slot);
-        void MovementExpired(bool reset = true);
-
-        MovementSlot GetCurrentSlot() const;
-        MovementGeneratorType GetCurrentMovementGeneratorType() const;
-        MovementGeneratorType GetMotionSlotType(MovementSlot slot) const;
-        MovementGenerator* GetMotionSlot(MovementSlot slot) const;
-
-        void PropagateSpeedChange();
-
-        bool GetDestination(float &x, float &y, float &z);
-
-        void MoveIdle();
-        void MoveTargetedHome();
-        void MoveRandom(float spawndist = 0.0f);
-        void MoveFollow(Unit* target, float dist, float angle, bool joinFormation = false, bool catchUpToTarget = false, bool faceTarget = false, MovementSlot slot = MOTION_SLOT_IDLE);
-
-        void MoveChase(Unit* target, float dist = 0.f, Optional<ChaseAngle> angle = {});
-        void MoveChase(Unit* target, float dist, float angle) { MoveChase(target, dist, ChaseAngle(angle)); }
-
-        void MoveConfused();
-        void MoveFleeing(Unit* enemy, uint32 time = 0);
-        void MovePoint(uint32 id, Position const& pos, bool generatePath = true, float speed = 0.f)
+        [[nodiscard]] _Ty topOrNull() const
         {
-            MovePoint(id, pos.m_positionX, pos.m_positionY, pos.m_positionZ, generatePath, speed);
+            return empty() ? nullptr : top();
         }
 
-        void MovePoint(uint32 id, float x, float y, float z, bool generatePath = true, float speed = 0.f);
+        [[nodiscard]] _Ty top() const
+        {
+            ASSERT(!empty());
+            return Impl[_top];
+        }
+        
+        [[nodiscard]] _Ty GetMotionSlot(int slot) const
+        {
+            if (empty() || IsInvalidMovementSlot(slot) || !Impl[slot])
+                return nullptr;
 
-        /*  Makes the unit move toward the target until it is at a certain distance from it. The unit then stops.
-            Only works in 2D.
-            This method doesn't account for any movement done by the target. in other words, it only works if the target is stationary.
-        */
-        void MoveCloserAndStop(uint32 id, Unit* target, float distance);
+            return Impl[slot];
+        }
+
+        [[nodiscard]] uint8 GetCleanFlags() const { return _cleanFlag; }
+
+        void DirectDelete(_Ty curr);
+        void DelayedDelete(_Ty curr);
+
+        void UpdateMotion(uint32 diff);
+
+        void Clear(bool reset = true)
+        {
+            if (_cleanFlag & MMCF_UPDATE)
+            {
+                if (reset)
+                    _cleanFlag |= MMCF_RESET;
+                else
+                    _cleanFlag &= ~MMCF_RESET;
+                DelayedClean();
+            }
+            else
+                DirectClean(reset);
+        }
+        void Clear(MovementSlot slot)
+        {
+            if (empty() || IsInvalidMovementSlot(slot))
+                return;
+
+            if (_cleanFlag & MMCF_UPDATE)
+                DelayedClean(slot);
+            else
+                DirectClean(slot);
+        }
+        void MovementExpired(bool reset = true)
+        {
+            if (_cleanFlag & MMCF_UPDATE)
+            {
+                if (reset)
+                    _cleanFlag |= MMCF_RESET;
+                else
+                    _cleanFlag &= ~MMCF_RESET;
+                DelayedExpire();
+            }
+            else
+                DirectExpire(reset);
+        }
+        void MovementExpiredOnSlot(MovementSlot slot, bool reset = true)
+        {
+            // xinef: cannot be used during motion update!
+            if (!(_cleanFlag & MMCF_UPDATE))
+                DirectExpireSlot(slot, reset);
+        }
+
+        void MoveIdle();
+        void MoveTargetedHome(bool walk = false);
+        void MoveRandom(float wanderDistance = 0.0f);
+        void MoveFollow(Unit* target, float dist, float angle, MovementSlot slot = MOTION_SLOT_ACTIVE, bool inheritWalkState = true, bool inheritSpeed = true);
+        void MoveChase(Unit* target, std::optional<ChaseRange> dist = {}, std::optional<ChaseAngle> angle = {});
+        void MoveChase(Unit* target, float dist, float angle) { MoveChase(target, ChaseRange(dist), ChaseAngle(angle)); }
+        void MoveChase(Unit* target, float dist) { MoveChase(target, ChaseRange(dist)); }
+        void MoveCircleTarget(Unit* target);
+        void MoveBackwards(Unit* target, float dist);
+        void MoveForwards(Unit* target, float dist);
+        void MoveConfused();
+        void MoveFleeing(Unit* enemy, uint32 time = 0);
+        void MovePoint(uint32 id, const Position& pos, bool generatePath = true, bool forceDestination = true)
+        { MovePoint(id, pos.m_positionX, pos.m_positionY, pos.m_positionZ, generatePath, forceDestination, MOTION_SLOT_ACTIVE, pos.GetOrientation()); }
+        void MovePoint(uint32 id, float x, float y, float z, bool generatePath = true, bool forceDestination = true, MovementSlot slot = MOTION_SLOT_ACTIVE, float orientation = 0.0f);
+        void MoveSplinePath(Movement::PointsArray* path);
+        void MoveSplinePath(uint32 path_id);
+
+        // void MoveCloserAndStop(uint32 id, Unit* target, float distance);  TODO replace with MoveFollow(GetCaster(), 0.0f, 0.0f, MOTION_SLOT_CONTROLLED);
 
         // These two movement types should only be used with creatures having landing/takeoff animations
         void MoveLand(uint32 id, Position const& pos, Optional<float> velocity = { });
+        void MoveLand(uint32 id, float x, float y, float z, float speed = 0.0f); // pussywizard: added for easy calling by passing 3 floats x, y, z
         void MoveTakeoff(uint32 id, Position const& pos, Optional<float> velocity = { });
+        void MoveTakeoff(uint32 id, float x, float y, float z, float speed = 0.0f, bool skipAnimation = false); // pussywizard: added for easy calling by passing 3 floats x, y, z
 
-        void MoveCharge(float x, float y, float z, float speed = SPEED_CHARGE, uint32 id = EVENT_CHARGE, bool generatePath = false);
-        void MoveCharge(PathGenerator const& path, float speed = SPEED_CHARGE);
+
+        void MoveCharge(float x, float y, float z, float speed = SPEED_CHARGE, uint32 id = EVENT_CHARGE, const Movement::PointsArray* path = nullptr, bool generatePath = false, float orientation = 0.0f, ObjectGuid targetGUID = ObjectGuid::Empty);
+        void MoveCharge(PathGenerator const& path, float speed = SPEED_CHARGE, ObjectGuid targetGUID = ObjectGuid::Empty);
         void MoveKnockbackFrom(float srcX, float srcY, float speedXY, float speedZ);
         void MoveJumpTo(float angle, float speedXY, float speedZ);
-        void MoveJump(Position const& pos, float speedXY, float speedZ, uint32 id = EVENT_JUMP, bool hasOrientation = false)
-        {
-            MoveJump(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), pos.GetOrientation(), speedXY, speedZ, id, hasOrientation);
-        }
-        void MoveJump(float x, float y, float z, float o, float speedXY, float speedZ, uint32 id = EVENT_JUMP, bool hasOrientation = false);
-        void MoveJumpWithGravity(Position const& pos, float speedXY, float gravity, uint32 id = EVENT_JUMP, bool hasOrientation = false);
+        
+        void MoveJump(Position const& pos, float speedXY, float speedZ, uint32 id = EVENT_JUMP)
+        { MoveJump(pos.m_positionX, pos.m_positionY, pos.m_positionZ, speedXY, speedZ, id); };
+        void MoveJump(float x, float y, float z, float speedXY, float speedZ, uint32 id = 0, Unit const* target = nullptr);
+        void MoveJumpWithGravity(Position const& pos, float speedXY, float gravity, uint32 id = EVENT_JUMP);
+        void MoveFall(uint32 id = 0, bool addFlagForNPC = false);
+
         void MoveCirclePath(float x, float y, float z, float radius, bool clockwise, uint8 stepCount, float velocity = 0.f);
         void MoveCyclicPath(Position const* pathPoints, size_t pathSize, bool walk = false, bool fly = false, float velocity = 0.f);
         void MoveCyclicPath(uint32 pathId);
@@ -190,8 +284,7 @@ class FC_GAME_API MotionMaster
         void MoveAlongSplineChain(uint32 pointId, uint16 dbChainId, bool walk);
         void MoveAlongSplineChain(uint32 pointId, std::vector<SplineChainLink> const& chain, bool walk);
         void ResumeSplineChain(SplineChainResumeInfo const& info);
-        void MoveFall(uint32 id = 0);
-        void MoveFallPlayer(uint32 id = 0);
+
         void MoveSeekAssistance(float x, float y, float z);
         void MoveSeekAssistanceDistract(uint32 timer);
         void MoveTaxiFlight(uint32 path, uint32 pathnode);
@@ -203,35 +296,37 @@ class FC_GAME_API MotionMaster
         void MoveKnockbackFromForPlayer(float srcX, float srcY, float speedXY, float speedZ);
         void MovePointBackwards(uint32 id, float x, float y, float z, bool generatePath = true, bool forceDestination = true, MovementSlot slot = MOTION_SLOT_ACTIVE, float orientation = 0.0f);
 #endif
-        void MoveFormation(Unit* leader, float range, float angle, int32 point1, int32 point2);
+        MovementSlot GetCurrentSlot() const;
+        MovementGeneratorType GetCurrentMovementGeneratorType() const;
+        MovementGeneratorType GetMotionSlotType(MovementSlot slot) const;
+        [[nodiscard]] uint32 GetCurrentSplineId() const; // Xinef: Escort system
+
+        void propagateSpeedChange();
+        void ReinitializeMovement();
+
+        bool GetDestination(float &x, float &y, float &z);
 
         void LaunchMoveSpline(Movement::MoveSplineInit&& init, uint32 id = 0, MovementSlot slot = MOTION_SLOT_ACTIVE, MovementGeneratorType type = EFFECT_MOTION_TYPE);
-    private:
-        typedef std::vector<MovementGenerator*> MovementList;
 
-        void pop();
+private:
+    void Mutate(MovementGenerator* m, MovementSlot slot);                  // use Move* functions instead
 
-        bool NeedInitTop() const;
-        void InitTop();
+    void DirectClean(bool reset);
+    void DirectClean(MovementSlot slot);
+    void DelayedClean();
+    void DelayedClean(MovementSlot slot);
 
-        void Mutate(MovementGenerator* m, MovementSlot slot);
+    void DirectExpire(bool reset);
+    void DirectExpireSlot(MovementSlot slot, bool reset);
+    void DelayedExpire();
 
-        void DirectClean(bool reset);
-        void DelayedClean();
-        void DirectClean(MovementSlot slot);
-        void DelayedClean(MovementSlot slot);
-        void DirectExpire(bool reset);
-        void DelayedExpire();
-        void DirectDelete(MovementGenerator* curr);
-        void DelayedDelete(MovementGenerator* curr);
-        void ClearExpireList();
-
-        MovementGenerator* _slot[MAX_MOTION_SLOT];
-        bool _initialize[MAX_MOTION_SLOT];
-        MovementList _expireList;
-        Unit* _owner;
-        int _top;
-        uint8 _cleanFlag;
+    typedef std::vector<_Ty> ExpireList;
+    ExpireList* _expList;
+    _Ty Impl[MAX_MOTION_SLOT];
+    int _top;
+    Unit* _owner;
+    bool _needInit[MAX_MOTION_SLOT];
+    uint8 _cleanFlag;
 };
 
 #endif // MOTIONMASTER_H

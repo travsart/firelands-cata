@@ -486,7 +486,7 @@ void CreatureGroup::LeaderStartedMoving()
         float dist = itr->second.follow_dist;
 
         MovementGenerator const* moveGen = member->GetMotionMaster()->GetMotionSlot(MOTION_SLOT_IDLE);
-        if (!moveGen || moveGen->GetMovementGeneratorType() != FORMATION_MOTION_TYPE)
+        if (!moveGen || moveGen->GetMovementGeneratorType() != NULL_MOTION_TYPE)
             member->GetMotionMaster()->MoveFormation(m_leader, dist, angle, itr->second.point_1, itr->second.point_2);
     }
 }

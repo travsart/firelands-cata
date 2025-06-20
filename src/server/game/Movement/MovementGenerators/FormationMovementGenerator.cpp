@@ -177,5 +177,5 @@ void FormationMovementGenerator::DoFinalize(Creature* owner)
 void FormationMovementGenerator::MovementInform(Creature* owner)
 {
     if (owner->AI())
-        owner->AI()->MovementInform(FORMATION_MOTION_TYPE, 0);
+        owner->AI()->MovementInform(NULL_MOTION_TYPE, 0);
 }

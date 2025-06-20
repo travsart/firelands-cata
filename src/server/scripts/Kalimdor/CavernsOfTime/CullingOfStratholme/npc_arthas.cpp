@@ -697,7 +697,7 @@ class npc_arthas_stratholme : public CreatureScript
         {
             if (!_progressRP)
                 return;
-            if (type != POINT_MOTION_TYPE && type != EFFECT_MOTION_TYPE && type != SPLINE_CHAIN_MOTION_TYPE)
+            if (type != POINT_MOTION_TYPE && type != EFFECT_MOTION_TYPE && type != ESCORT_MOTION_TYPE)
                 return;
             switch (id)
             {
@@ -1651,7 +1651,7 @@ struct npc_stratholme_rp_dummy : NullCreatureAI
 
     void MovementInform(uint32 type, uint32 id) override
     {
-        if (type == POINT_MOTION_TYPE || type == EFFECT_MOTION_TYPE || type == SPLINE_CHAIN_MOTION_TYPE)
+        if (type == POINT_MOTION_TYPE || type == EFFECT_MOTION_TYPE || type == ESCORT_MOTION_TYPE)
             if (TempSummon* self = me->ToTempSummon())
                 ASSERT_NOTNULL(self->GetSummonerCreatureBase())->AI()->MovementInform(type, id);
     }

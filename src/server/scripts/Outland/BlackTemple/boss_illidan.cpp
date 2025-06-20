@@ -1158,7 +1158,7 @@ struct npc_akama_illidan : public ScriptedAI
 
     void MovementInform(uint32 type, uint32 pointId) override
     {
-        if (type != POINT_MOTION_TYPE && type != SPLINE_CHAIN_MOTION_TYPE)
+        if (type != POINT_MOTION_TYPE && type != ESCORT_MOTION_TYPE)
             return;
 
         switch (pointId)

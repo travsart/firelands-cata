@@ -280,7 +280,7 @@ struct npc_uldum_uldum_camera_bunny_04 : public ScriptedAI
 
     void MovementInform(uint32 motionType, uint32 pointId) override
     {
-        if (motionType != SPLINE_CHAIN_MOTION_TYPE)
+        if (motionType != ESCORT_MOTION_TYPE)
             return;
 
         switch (pointId)

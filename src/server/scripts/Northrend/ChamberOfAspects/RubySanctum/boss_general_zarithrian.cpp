@@ -211,7 +211,7 @@ class npc_onyx_flamecaller : public CreatureScript
 
             void MovementInform(uint32 type, uint32 pointId) override
             {
-                if (type != SPLINE_CHAIN_MOTION_TYPE && pointId != POINT_GENERAL_ROOM)
+                if (type != ESCORT_MOTION_TYPE && pointId != POINT_GENERAL_ROOM)
                     return;
 
                 DoZoneInCombat();

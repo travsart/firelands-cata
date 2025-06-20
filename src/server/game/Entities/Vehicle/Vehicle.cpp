@@ -934,7 +934,7 @@ bool VehicleJoinEvent::Execute(uint64, uint32)
     init.MoveTo(x, y, z, false, true);
     init.SetFacing(o);
     init.SetTransportEnter();
-    Passenger->GetMotionMaster()->LaunchMoveSpline(std::move(init), EVENT_VEHICLE_BOARD, MOTION_SLOT_CONTROLLED);
+    Passenger->GetMotionMaster()->LaunchMoveSpline(std::move(init), EVENT_VEHICLE_BOARD, MOTION_SLOT_ACTIVE);
 
     for (auto const& [guid, threatRef] : Passenger->GetThreatManager().GetThreatenedByMeList())
         threatRef->GetOwner()->GetThreatManager().AddThreat(Target->GetBase(), threatRef->GetThreat(), nullptr, true, true);

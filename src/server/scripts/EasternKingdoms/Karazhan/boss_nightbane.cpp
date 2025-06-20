@@ -206,7 +206,7 @@ public:
 
         void MovementInform(uint32 type, uint32 pointId) override
         {
-            if (type == SPLINE_CHAIN_MOTION_TYPE)
+            if (type == ESCORT_MOTION_TYPE)
             {
                 switch (pointId)
                 {

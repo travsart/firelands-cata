@@ -554,7 +554,7 @@ void AnticheatMgr::JumpHackDetection(Player* player, MovementInfo  movementInfo,
             data << str;
             sWorld->SendGlobalGMMessage(&data);
 
-            player->GetMotionMaster()->MoveFallPlayer();
+            player->GetMotionMaster()->MoveFall();
 
             if (sWorld->getBoolConfig(CONFIG_ANTICHEAT_CM_WRITELOG))
             {
@@ -628,7 +628,7 @@ void AnticheatMgr::JumpHackDetection(Player* player, MovementInfo  movementInfo,
                 data << str;
                 sWorld->SendGlobalGMMessage(&data);
 
-                player->GetMotionMaster()->MoveFallPlayer();
+                player->GetMotionMaster()->MoveFall();
 
                 if (sWorld->getBoolConfig(CONFIG_ANTICHEAT_CM_WRITELOG))
                 {
@@ -1185,7 +1185,7 @@ void AnticheatMgr::ZAxisHackDetection(Player* player, MovementInfo movementInfo)
             data << str;
             sWorld->SendGlobalGMMessage(&data);
 
-            player->GetMotionMaster()->MoveFallPlayer();
+            player->GetMotionMaster()->MoveFall();
 
             if (sWorld->getBoolConfig(CONFIG_ANTICHEAT_CM_WRITELOG))
             {

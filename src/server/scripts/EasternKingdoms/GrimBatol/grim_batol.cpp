@@ -194,7 +194,7 @@ struct npc_grim_batol_battered_red_drake: public VehicleAI
 
     void MovementInform(uint32 type, uint32 pointId) override
     {
-        if (type != SPLINE_CHAIN_MOTION_TYPE)
+        if (type != ESCORT_MOTION_TYPE)
             return;
 
         switch (pointId)
