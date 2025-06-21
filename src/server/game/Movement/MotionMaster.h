@@ -65,13 +65,13 @@ enum MovementGeneratorType : uint8
     ROTATE_MOTION_TYPE              = 15,
     EFFECT_MOTION_TYPE              = 16,
     ESCORT_MOTION_TYPE              = 17,                             // xinef: EscortMovementGenerator.h
-    NULL_MOTION_TYPE                = 18
+    NULL_MOTION_TYPE                = 18,
 
 
 
     // SPLINE_CHAIN_MOTION_TYPE        = 17,                 // SplineChainMovementGenerator.h
     // FORMATION_MOTION_TYPE           = 18,                 // FormationMovementGenerator.h
-    // MAX_MOTION_TYPE                                       // limit
+    MAX_MOTION_TYPE                                       // limit
 };
 
 enum MovementSlot : uint8
@@ -259,9 +259,9 @@ class FC_GAME_API MotionMaster
         // void MoveCloserAndStop(uint32 id, Unit* target, float distance);  TODO replace with MoveFollow(GetCaster(), 0.0f, 0.0f, MOTION_SLOT_CONTROLLED);
 
         // These two movement types should only be used with creatures having landing/takeoff animations
-        void MoveLand(uint32 id, Position const& pos, Optional<float> velocity = { });
+        void MoveLand(uint32 id, Position const& pos, float speed = 0.0f);
         void MoveLand(uint32 id, float x, float y, float z, float speed = 0.0f); // pussywizard: added for easy calling by passing 3 floats x, y, z
-        void MoveTakeoff(uint32 id, Position const& pos, Optional<float> velocity = { });
+        void MoveTakeoff(uint32 id, Position const& pos, float speed = 0.0f, bool skipAnimation = false);
         void MoveTakeoff(uint32 id, float x, float y, float z, float speed = 0.0f, bool skipAnimation = false); // pussywizard: added for easy calling by passing 3 floats x, y, z
 
 
@@ -273,7 +273,7 @@ class FC_GAME_API MotionMaster
         void MoveJump(Position const& pos, float speedXY, float speedZ, uint32 id = EVENT_JUMP)
         { MoveJump(pos.m_positionX, pos.m_positionY, pos.m_positionZ, speedXY, speedZ, id); };
         void MoveJump(float x, float y, float z, float speedXY, float speedZ, uint32 id = 0, Unit const* target = nullptr);
-        void MoveJumpWithGravity(Position const& pos, float speedXY, float gravity, uint32 id = EVENT_JUMP);
+        // void MoveJumpWithGravity(Position const& pos, float speedXY, float gravity, uint32 id = EVENT_JUMP); // TODO is this needed?
         void MoveFall(uint32 id = 0, bool addFlagForNPC = false);
 
         void MoveCirclePath(float x, float y, float z, float radius, bool clockwise, uint8 stepCount, float velocity = 0.f);

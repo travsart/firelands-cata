@@ -2836,7 +2836,7 @@ void WorldObject::DestroyForNearbyPlayers()
     }
 }
 
-void WorldObject::UpdateObjectVisibility(bool /*forced*/)
+void WorldObject::UpdateObjectVisibility(bool /*forced*/, bool /*fromUpdate*/)
 {
     //updates object's visibility for nearby players
     Firelands::VisibleChangesNotifier notifier(*this);

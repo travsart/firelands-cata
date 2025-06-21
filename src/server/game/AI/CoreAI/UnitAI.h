@@ -322,8 +322,17 @@ class FC_GAME_API UnitAI
         static AISpellInfoType* AISpellInfo;
         static void FillAISpellInfo();
 
-        // Called when a game event starts or ends
-        virtual void OnGameEvent(bool /*start*/, uint16 /*eventId*/) { }
+        /// @brief Called when a summon reaches a waypoint or point movement finished.
+        virtual void SummonMovementInform(Creature* /*creature*/, uint32 /*motionType*/, uint32 /*point*/) { }
+
+        virtual void sGossipHello(Player* /*player*/) {}
+        virtual void sGossipSelect(Player* /*player*/, uint32 /*sender*/, uint32 /*action*/) {}
+        virtual void sGossipSelectCode(Player* /*player*/, uint32 /*sender*/, uint32 /*action*/, char const* /*code*/) {}
+        virtual void sQuestAccept(Player* /*player*/, Quest const* /*quest*/) {}
+        virtual void sQuestSelect(Player* /*player*/, Quest const* /*quest*/) {}
+        virtual void sQuestComplete(Player* /*player*/, Quest const* /*quest*/) {}
+        virtual void sQuestReward(Player* /*player*/, Quest const* /*quest*/, uint32 /*opt*/) {}
+        virtual void sOnGameEvent(bool /*start*/, uint16 /*eventId*/) {}
 
         virtual void OnMovementGeneratorFinalized(MovementGeneratorType /*type*/) { }
 

@@ -253,7 +253,7 @@ void ChaseMovementGenerator::LaunchMovement(Unit* owner, float chaseRange, bool 
     init.MovebyPath(path.GetPath());
     init.SetWalk(false);
     if (backward)
-        init.SetBackward();
+        init.SetOrientationInversed();
     else
         init.SetFacing(target);
 

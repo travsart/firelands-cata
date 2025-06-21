@@ -444,7 +444,7 @@ struct npc_murozond_mirror_image : public NullCreatureAI
                     {
                         Movement::MoveSplineInit init(summoner);
                         init.MoveTo(me->GetPositionX(), me->GetPositionY(), me->GetPositionZ());
-                        init.SetBackward();
+                        init.SetOrientationInversed();
                         init.SetVelocity(40.f);
                         _events.ScheduleEvent(EVENT_TELEPORT_SUMMONER, init.Launch());
                     }

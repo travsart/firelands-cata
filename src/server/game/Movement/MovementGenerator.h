@@ -37,7 +37,9 @@ class FC_GAME_API MovementGenerator
         virtual bool Update(Unit*, uint32 diff) = 0;
         virtual MovementGeneratorType GetMovementGeneratorType() const = 0;
 
-        virtual void UnitSpeedChanged() { }
+        virtual uint32 GetSplineId() const { return 0; }  // Xinef: Escort system
+
+        virtual void unitSpeedChanged() { }
         virtual void Pause(uint32/* timer = 0*/) { } // timer in ms
         virtual void Resume(uint32/* overrideTimer = 0*/) { } // timer in ms
 

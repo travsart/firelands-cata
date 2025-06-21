@@ -42,6 +42,8 @@ namespace MMAP
         public:
             static MMapManager* createOrGetMMapManager();
             static void clear();
+            static void InitializeDisabledMaps();
+            static bool forbiddenMaps[1000];
     };
 }
 

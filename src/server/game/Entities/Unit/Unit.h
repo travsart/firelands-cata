@@ -33,7 +33,9 @@
 #include "ThreatMgr.h"
 #include "Timer.h"
 #include "UnitDefines.h"
+#include "UnitUtils.h"
 #include "Util.h"
+
 #include <array>
 #include <map>
 #include <memory>
@@ -1853,8 +1855,6 @@ class FC_GAME_API Unit : public WorldObject
 
     void SendMonsterMove(float NewPosX, float NewPosY, float NewPosZ, uint32 TransitTime, SplineFlags sf = SPLINEFLAG_WALK_MODE); // pussywizard: need to just send packet, with no movement/spline
     void MonsterMoveWithSpeed(float x, float y, float z, float speed);
-    //void SetFacing(float ori, WorldObject* obj = nullptr);
-    //void SendMonsterMove(float NewPosX, float NewPosY, float NewPosZ, uint8 type, uint32 MovementFlags, uint32 Time, Player* player = nullptr);
 
     virtual bool SetWalk(bool enable);
     virtual bool SetDisableGravity(bool disable, bool packetOnly = false, bool updateAnimationTier = true);
@@ -1898,9 +1898,9 @@ class FC_GAME_API Unit : public WorldObject
     DeathState getDeathState() { return m_deathState; };
     virtual void setDeathState(DeathState s, bool despawn = false);           // overwrited in Creature/Player/Pet
 
-    [[nodiscard]] bool IsAlive() const { return (m_deathState == DeathState::Alive); };
-    [[nodiscard]] bool isDying() const { return (m_deathState == DeathState::JustDied); };
-    [[nodiscard]] bool isDead() const { return (m_deathState == DeathState::Dead || m_deathState == DeathState::Corpse); };
+    [[nodiscard]] bool IsAlive() const { return (m_deathState == DeathState::ALIVE); };
+    [[nodiscard]] bool isDying() const { return (m_deathState == DeathState::JUST_DIED); };
+    [[nodiscard]] bool isDead() const { return (m_deathState == DeathState::DEAD || m_deathState == DeathState::CORPSE); };
 
     // Spell Aura helpers
     [[nodiscard]] bool HasGhostAura()               const { return HasAuraType(SPELL_AURA_GHOST); };
@@ -2025,7 +2025,7 @@ class FC_GAME_API Unit : public WorldObject
 
     void UnsummonAllTotems(bool onDeath = false);
 
-    // Vehicules
+    // Veichles 
     [[nodiscard]] TransportBase* GetDirectTransport() const;    /// Returns the transport this unit is on directly (if on vehicle and transport, return vehicle)
 
     bool CreateVehicleKit(uint32 id, uint32 creatureEntry);
@@ -2177,7 +2177,6 @@ class FC_GAME_API Unit : public WorldObject
 
     // Debug
     void OutDebugInfo() const;
-    std::string GetDebugInfo() const override;
     void SetCannotReachTargetUnit(bool target, bool isChase);
     [[nodiscard]] bool CanNotReachTarget() const;
 

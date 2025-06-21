@@ -1435,6 +1435,8 @@ void World::LoadConfigSettings(bool reload)
     }
 
     m_bool_configs[CONFIG_ENABLE_MMAPS] = sConfigMgr->GetBoolDefault("mmap.enablePathFinding", true);
+    MMAP::MMapFactory::InitializeDisabledMaps();
+
     LOG_INFO("server.loading", "WORLD: MMap data directory is: %smmaps", m_dataPath.c_str());
 
     m_bool_configs[CONFIG_VMAP_INDOOR_CHECK] = sConfigMgr->GetBoolDefault("vmap.enableIndoorCheck", 0);
@@ -1881,7 +1883,7 @@ void World::SetInitialWorldSettings()
     LoadRandomEnchantmentsTable();
 
     LOG_INFO("server.loading", "Loading Disables");                         // must be before loading quests and items
-    DisableMgr::LoadDisables();
+    sDisableMgr->LoadDisables(); 
 
     LOG_INFO("server.loading", "Loading Items...");                         // must be after LoadRandomEnchantmentsTable and LoadPageTexts
     sObjectMgr->LoadItemTemplates();
@@ -1974,7 +1976,7 @@ void World::SetInitialWorldSettings()
     sObjectMgr->LoadQuests();                                    // must be loaded after DBCs, creature_template, item_template, gameobject tables
 
     LOG_INFO("server.loading", "Checking Quest Disables");
-    DisableMgr::CheckQuestDisables();                           // must be after loading quests
+    sDisableMgr->CheckQuestDisables();                           // must be after loading quests
 
     LOG_INFO("server.loading", "Loading Quest POI");
     sObjectMgr->LoadQuestPOI();

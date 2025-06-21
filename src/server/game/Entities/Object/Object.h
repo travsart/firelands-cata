@@ -42,6 +42,7 @@ class Corpse;
 class Creature;
 class CreatureAI;
 class DynamicObject;
+class ElunaEventProcessor;
 class GameObject;
 class InstanceScript;
 class Map;
@@ -280,7 +281,7 @@ class FlaggedValuesArray32
         T_FLAGS m_flags;
 };
 
-enum MapObjectCellMoveState
+enum MapObjectCellMoveState: uint32
 {
     MAP_OBJECT_CELL_MOVE_NONE, //not in move list
     MAP_OBJECT_CELL_MOVE_ACTIVE, //in move list
@@ -344,6 +345,10 @@ class FC_GAME_API WorldObject : public Object, public WorldLocation
 
         uint32 GetInstanceId() const { return m_InstanceId; }
 
+        virtual void SetPhaseMask(uint32 newPhaseMask, bool update);
+        [[nodiscard]] uint32 GetPhaseMask() const { return m_phaseMask; }
+        bool InSamePhase(WorldObject const* obj) const { return InSamePhase(obj->GetPhaseMask()); }
+        [[nodiscard]] bool InSamePhase(uint32 phasemask) const { return m_useCombinedPhases ? GetPhaseMask() & phasemask : GetPhaseMask() == phasemask; }
         bool IsInPhase(WorldObject const* obj) const { return obj ? GetPhaseShift().CanSee(obj->GetPhaseShift()) : false; }
 
         PhaseShift& GetPhaseShift() { return _phaseShift; }
@@ -477,7 +482,8 @@ class FC_GAME_API WorldObject : public Object, public WorldLocation
         void GetPlayerListInGrid(Container& playerContainer, float maxSearchRange) const;
 
         void DestroyForNearbyPlayers();
-        virtual void UpdateObjectVisibility(bool forced = true);
+        virtual void UpdateObjectVisibility(bool forced = true, bool fromUpdate = false);
+        virtual void UpdateObjectVisibilityOnCreate() { UpdateObjectVisibility(true); }
         virtual void UpdateObjectVisibilityOnCreate() { UpdateObjectVisibility(true); }
         virtual void UpdateObjectVisibilityOnDestroy() { DestroyForNearbyPlayers(); }
         void UpdatePositionData();
@@ -525,7 +531,10 @@ class FC_GAME_API WorldObject : public Object, public WorldLocation
         virtual float GetStationaryO() const { return GetOrientation(); }
 
         float GetFloorZ() const;
-        virtual float GetCollisionHeight() const { return 0.0f; }
+        [[nodiscard]] virtual float GetCollisionHeight() const { return 0.0f; }
+        [[nodiscard]] virtual float GetCollisionWidth() const { return GetObjectSize(); }
+        [[nodiscard]] virtual float GetCollisionRadius() const { return GetObjectSize() / 2; }
+        
 
         float GetMapWaterOrGroundLevel(float x, float y, float z, float* ground = nullptr) const;
         float GetMapHeight(float x, float y, float z, bool vmap = true, float distanceToSearch = 50.0f) const; // DEFAULT_HEIGHT_SEARCH in map.h
@@ -542,6 +551,17 @@ class FC_GAME_API WorldObject : public Object, public WorldLocation
         ObjectGuid GetPrivateObjectOwner() const { return _privateObjectOwner; }
         void SetPrivateObjectOwner(ObjectGuid const& owner) { _privateObjectOwner = owner; }
         bool CheckPrivateObjectOwnerVisibility(WorldObject const* seer) const;
+
+        void AddAllowedLooter(ObjectGuid guid);
+        void ResetAllowedLooters();
+        void SetAllowedLooters(GuidUnorderedSet const looters);
+        [[nodiscard]] bool HasAllowedLooter(ObjectGuid guid) const;
+        [[nodiscard]] GuidUnorderedSet const& GetAllowedLooters() const;
+        void RemoveAllowedLooter(ObjectGuid guid);
+
+        // Event handler
+        ElunaEventProcessor* elunaEvents;
+        EventProcessor m_Events;
 
     protected:
         std::string m_name;
@@ -575,16 +595,20 @@ class FC_GAME_API WorldObject : public Object, public WorldLocation
         virtual bool IsAlwaysDetectableFor(WorldObject const* /*seer*/) const { return false; }
     private:
         Map* m_currMap;                                   // current object's Map location
-
+        Milliseconds _heartbeatTimer;
         //uint32 m_mapId;                                 // object at map with map_id
         uint32 m_InstanceId;                              // in map copy with instance id
+        uint32 m_phaseMask;                                 // in area phase state
         PhaseShift _phaseShift;
         PhaseShift _suppressedPhaseShift;                 // contains phases for current area but not applied due to conditions
         int32 _dbPhase;
+        bool m_useCombinedPhases;                           // true (default): use phaseMask as bit mask combining up to 32 phases
 
-        uint16 m_notifyflags;
 
         ObjectGuid _privateObjectOwner;
+
+        uint16 m_notifyflags;
+        uint16 m_executed_notifies;
 
         virtual bool _IsWithinDist(WorldObject const* obj, float dist2compare, bool is3D, bool incOwnRadius = true, bool incTargetRadius = true) const;
 
@@ -597,6 +621,7 @@ class FC_GAME_API WorldObject : public Object, public WorldLocation
         uint16 m_aiAnimKitId;
         uint16 m_movementAnimKitId;
         uint16 m_meleeAnimKitId;
+        GuidUnorderedSet _allowedLooters;
 };
 
 namespace Firelands

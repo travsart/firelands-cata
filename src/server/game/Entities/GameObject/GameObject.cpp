@@ -2793,6 +2793,14 @@ void GameObject::SetDisplayId(uint32 displayid)
     UpdateModel();
 }
 
+void GameObject::SetPhaseMask(uint32 newPhaseMask, bool update)
+{
+    WorldObject::SetPhaseMask(newPhaseMask, update);
+
+    if (m_model && m_model->isEnabled())
+        EnableCollision(true);
+}
+
 void GameObject::EnableCollision(bool enable)
 {
     if (!m_model)
@@ -2801,7 +2809,11 @@ void GameObject::EnableCollision(bool enable)
     /*if (enable && !GetMap()->ContainsGameObjectModel(*m_model))
         GetMap()->InsertGameObjectModel(*m_model);*/
 
-    m_model->enableCollision(enable);
+    uint32 phaseMask = 0;
+    if (enable && !sDisableMgr->IsDisabledFor(DISABLE_TYPE_GO_LOS, GetEntry(), nullptr))
+        phaseMask = GetPhaseMask();
+
+    m_model->enable(phaseMask);
 }
 
 void GameObject::UpdateModel()

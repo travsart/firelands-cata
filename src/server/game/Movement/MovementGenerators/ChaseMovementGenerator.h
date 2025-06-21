@@ -38,7 +38,7 @@ class ChaseMovementGenerator : public MovementGenerator, public AbstractPursuer
         bool Update(Unit* owner, uint32 diff) override;
         void Finalize(Unit* owner) override;
 
-        void UnitSpeedChanged() override { _lastTargetPosition.reset(); }
+        void unitSpeedChanged() override { _lastTargetPosition.reset(); }
 
     private:
         void LaunchMovement(Unit* owner, float chaseRange, bool backward = false, bool mutualChase = false);

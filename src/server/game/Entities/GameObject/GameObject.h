@@ -196,6 +196,15 @@ class FC_GAME_API GameObject : public WorldObject, public GridObject<GameObject>
     void SetGoAnimProgress(uint8 animprogress) { SetByteValue(GAMEOBJECT_BYTES_1, 3, animprogress); }
     static void SetGoArtKit(uint8 artkit, GameObject* go, ObjectGuid::LowType lowguid = 0);
 
+    void SetPhaseMask(uint32 newPhaseMask, bool update) override;
+    void EnableCollision(bool enable);
+
+    GameObjectFlags GetGameObjectFlags() const { return GameObjectFlags(GetUInt32Value(GAMEOBJECT_FLAGS)); }
+    bool HasGameObjectFlag(GameObjectFlags flags) const { return HasFlag(GAMEOBJECT_FLAGS, flags) != 0; }
+    void SetGameObjectFlag(GameObjectFlags flags) { SetFlag(GAMEOBJECT_FLAGS, flags); }
+    void RemoveGameObjectFlag(GameObjectFlags flags) { RemoveFlag(GAMEOBJECT_FLAGS, flags); }
+    void ReplaceAllGameObjectFlags(GameObjectFlags flags) { SetUInt32Value(GAMEOBJECT_FLAGS, flags); }
+
     std::vector<uint32> const* GetPauseTimes() const;
     void SetPathProgressForClient(float progress);
 

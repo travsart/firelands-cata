@@ -162,7 +162,7 @@ namespace Movement
         
         /* Inverses unit model orientation. Disabled by default
          */
-        void SetBackward();
+        void SetOrientationInversed();
 
         /* Fixes unit's model rotation. Disabled by default
          */
@@ -192,7 +192,7 @@ namespace Movement
     inline void MoveSplineInit::SetUncompressed() { args.flags.uncompressedPath = true; }
     inline void MoveSplineInit::SetCyclic() { args.flags.cyclic = true; }
     inline void MoveSplineInit::SetVelocity(float vel) { args.velocity = vel; args.HasVelocity = true; }
-    inline void MoveSplineInit::SetBackward() { args.flags.backward = true;}
+    inline void MoveSplineInit::SetOrientationInversed() { args.flags.backward = true;}
     inline void MoveSplineInit::SetTransportEnter() { args.flags.EnableTransportEnter(); }
     inline void MoveSplineInit::SetTransportExit() { args.flags.EnableTransportExit(); }
     inline void MoveSplineInit::SetOrientationFixed(bool enable) { args.flags.orientationFixed = enable; }

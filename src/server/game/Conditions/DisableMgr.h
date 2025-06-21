@@ -31,9 +31,11 @@ enum DisableType
     DISABLE_TYPE_ACHIEVEMENT_CRITERIA   = 4,
     DISABLE_TYPE_OUTDOORPVP             = 5,
     DISABLE_TYPE_VMAP                   = 6,
-    DISABLE_TYPE_MMAP                   = 7,
+    DISABLE_TYPE_GO_LOS                 = 7,
     DISABLE_TYPE_LFG_MAP                = 8,
-    DISABLE_TYPE_ITEM                   = 9
+    DISABLE_TYPE_GAME_EVENT             = 9,
+    DISABLE_TYPE_LOOT                   = 10,
+    MAX_DISABLE_TYPES
 };
 
 enum SpellDisableTypes
@@ -65,13 +67,38 @@ enum MMapDisableTypes
     MMAP_DISABLE_PATHFINDING    = 0x0
 };
 
-namespace DisableMgr
+struct DisableData
 {
-    FC_GAME_API void LoadDisables();
-    FC_GAME_API bool IsDisabledFor(DisableType type, uint32 entry, Unit const* unit, uint8 flags = 0);
-    FC_GAME_API void CheckQuestDisables();
-    FC_GAME_API bool IsVMAPDisabledFor(uint32 entry, uint8 flags);
-    FC_GAME_API bool IsPathfindingEnabled(uint32 mapId);
-}
+    uint8 flags;
+    std::set<uint32> params[2];                             // params0, params1
+};
+
+class DisableMgr
+{
+private:
+    DisableMgr();
+    ~DisableMgr();
+
+public:
+    static DisableMgr* instance();
+
+    void LoadDisables();
+    void AddDisable(DisableType type, uint32 entry, uint8 flags, std::string const& param0, std::string const& param1);
+    bool HandleDisableType(DisableType type, uint32 entry, uint8 flags, std::string const& params_0, std::string const& params_1, DisableData& data);
+    static bool IsDisabledFor(DisableType type, uint32 entry, Unit const* unit, uint8 flags = 0);
+    void CheckQuestDisables();
+    static bool IsVMAPDisabledFor(uint32 entry, uint8 flags);
+    static bool IsPathfindingEnabled(Map const* map);
+
+    // single disables here with optional data
+    typedef std::unordered_map<uint32, DisableData> DisableTypeMap;
+    // global disable map by source
+    typedef std::array<DisableTypeMap, MAX_DISABLE_TYPES> DisableMap;
+
+private:
+    static DisableMap m_DisableMap;
+};
+
+#define sDisableMgr DisableMgr::instance()
 
 #endif //FIRELANDS_DISABLEMGR_H
