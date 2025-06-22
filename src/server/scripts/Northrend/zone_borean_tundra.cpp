@@ -1007,7 +1007,7 @@ class npc_thassarian : public CreatureScript
                 case 8:
                     if (arthas && talbot)
                     {
-                        arthas->SetOrientationTowards(me); // The client doesen't update with the new orientation :l
+                        arthas->SetInFront(me); // The client doesen't update with the new orientation :l
                         talbot->SetStandState(UNIT_STAND_STATE_STAND);
                         arthas->AI()->Talk(SAY_LICH_2);
                     }

@@ -58,7 +58,7 @@ struct Petition
     SignaturesVector signatures;
 
     bool IsPetitionSignedByAccount(uint32 accountId) const;
-    void AddSignature(ObjectGuid petitionGuid, uint32 accountId, ObjectGuid playerGuid, bool isLoading);
+    void AddSignature(ObjectGuid petitionGuid, uint32 accountId, ObjectGuid playerGuid, bool isBeingLoaded);
     void UpdateName(std::string const& newName);
     void RemoveSignatureBySigner(ObjectGuid playerGuid);
 };
@@ -76,7 +76,7 @@ class FC_GAME_API PetitionMgr
         void LoadSignatures();
 
         // Petitions
-        void AddPetition(ObjectGuid petitionGuid, ObjectGuid ownerGuid, std::string const& name, CharterTypes type, bool isLoading);
+        void AddPetition(ObjectGuid petitionGuid, ObjectGuid ownerGuid, std::string const& name, CharterTypes type, bool isBeingLoaded);
         void RemovePetition(ObjectGuid petitionGuid);
         Petition* GetPetition(ObjectGuid petitionGuid);
         Petition* GetPetitionByOwnerWithType(ObjectGuid ownerGuid, CharterTypes type);

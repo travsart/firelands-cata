@@ -97,6 +97,9 @@ void WorldSession::HandleUseItemOpcode(WorldPackets::Spells::UseItem& packet)
     if (user->IsCharming())
         return;
 
+    // if (user->m_mover != user) ?
+    //     return;
+
     SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(packet.Cast.SpellID);
     if (!spellInfo)
         return;

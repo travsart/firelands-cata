@@ -87,7 +87,7 @@ void PetitionMgr::LoadSignatures()
     LOG_INFO("server.loading", ">> Loaded %u Petition signs in %u ms.", count, GetMSTimeDiffToNow(oldMSTime));
 }
 
-void PetitionMgr::AddPetition(ObjectGuid petitionGuid, ObjectGuid ownerGuid, std::string const& name, CharterTypes type, bool isLoading)
+void PetitionMgr::AddPetition(ObjectGuid petitionGuid, ObjectGuid ownerGuid, std::string const& name, CharterTypes type, bool isBeingLoaded)
 {
     Petition& p = _petitionStore[petitionGuid];
     p.petitionGuid = petitionGuid;
@@ -96,7 +96,7 @@ void PetitionMgr::AddPetition(ObjectGuid petitionGuid, ObjectGuid ownerGuid, std
     p.petitionType = type;
     p.signatures.clear();
 
-    if (isLoading)
+    if (isBeingLoaded)
         return;
 
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_INS_PETITION);
@@ -222,11 +222,11 @@ bool Petition::IsPetitionSignedByAccount(uint32 accountId) const
     return false;
 }
 
-void Petition::AddSignature(ObjectGuid petitionGuid, uint32 accountId, ObjectGuid playerGuid, bool isLoading)
+void Petition::AddSignature(ObjectGuid petitionGuid, uint32 accountId, ObjectGuid playerGuid, bool isBeingLoaded)
 {
     signatures.emplace_back(accountId, playerGuid);
 
-    if (isLoading)
+    if (isBeingLoaded)
         return;
 
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_INS_PETITION_SIGNATURE);

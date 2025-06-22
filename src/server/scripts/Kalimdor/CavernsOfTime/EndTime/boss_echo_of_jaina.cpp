@@ -307,7 +307,7 @@ class spell_echo_of_jaina_face_highest_threat_target : public SpellScript
             return;
 
         caster->SetFacingToObject(GetHitUnit());
-        caster->SetOrientationTowards(GetHitUnit()); // we need an updated orientation right now. No time to wait for the spline to update
+        caster->SetInFront(GetHitUnit()); // we need an updated orientation right now. No time to wait for the spline to update
 
         for (uint8 i = 0; i < 3; ++i)
             caster->CastSpell(caster, SPELL_FROST_BLADES);

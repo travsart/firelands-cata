@@ -4955,7 +4955,7 @@ void Player::UpdateDamageDoneMods(WeaponAttackType attackType)
         }
     }
 
-    HandleStatFlatModifier(unitMod, TOTAL_VALUE, amount, true);
+    HandleStatModifier(unitMod, TOTAL_VALUE, amount, true);
 }
 
 void Player::UpdateBaseModGroup(BaseModGroup modGroup)
@@ -5071,7 +5071,7 @@ void Player::GetDodgeFromAgility(float& diminishing, float& nondiminishing) cons
     if (!dodgeRatio || playerClass > MAX_CLASSES)
         return;
 
-    float baseAgility = GetCreateStat(STAT_AGILITY) * GetPctModifierValue(UnitMods(UNIT_MOD_STAT_START + STAT_AGILITY), BASE_PCT);
+    float baseAgility = GetCreateStat(STAT_AGILITY) * GetModifierValue(UnitMods(UNIT_MOD_STAT_START + STAT_AGILITY), BASE_PCT);
     float bonusAgility = GetStat(STAT_AGILITY) - baseAgility;
 
     // calculate diminishing (green in char screen) and non-diminishing (white) contribution
@@ -7620,30 +7620,30 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
         switch (statID)
         {
         case ITEM_MOD_MANA:
-            HandleStatFlatModifier(UNIT_MOD_MANA, BASE_VALUE, float(val), apply);
+            HandleStatModifier(UNIT_MOD_MANA, BASE_VALUE, float(val), apply);
             break;
         case ITEM_MOD_HEALTH: // modify HP
-            HandleStatFlatModifier(UNIT_MOD_HEALTH, BASE_VALUE, float(val), apply);
+            HandleStatModifier(UNIT_MOD_HEALTH, BASE_VALUE, float(val), apply);
             break;
         case ITEM_MOD_AGILITY: // modify agility
-            HandleStatFlatModifier(UNIT_MOD_STAT_AGILITY, BASE_VALUE, float(val), apply);
-            UpdateStatBuffMod(STAT_AGILITY);
+            HandleStatModifier(UNIT_MOD_STAT_AGILITY, BASE_VALUE, float(val), apply);
+            ApplyStatBuffMod(STAT_AGILITY);
             break;
         case ITEM_MOD_STRENGTH: // modify strength
-            HandleStatFlatModifier(UNIT_MOD_STAT_STRENGTH, BASE_VALUE, float(val), apply);
-            UpdateStatBuffMod(STAT_STRENGTH);
+            HandleStatModifier(UNIT_MOD_STAT_STRENGTH, BASE_VALUE, float(val), apply);
+            ApplyStatBuffMod(STAT_STRENGTH);
             break;
         case ITEM_MOD_INTELLECT: // modify intellect
-            HandleStatFlatModifier(UNIT_MOD_STAT_INTELLECT, BASE_VALUE, float(val), apply);
-            UpdateStatBuffMod(STAT_INTELLECT);
+            HandleStatModifier(UNIT_MOD_STAT_INTELLECT, BASE_VALUE, float(val), apply);
+            ApplyStatBuffMod(STAT_INTELLECT);
             break;
         case ITEM_MOD_SPIRIT: // modify spirit
-            HandleStatFlatModifier(UNIT_MOD_STAT_SPIRIT, BASE_VALUE, float(val), apply);
-            UpdateStatBuffMod(STAT_SPIRIT);
+            HandleStatModifier(UNIT_MOD_STAT_SPIRIT, BASE_VALUE, float(val), apply);
+            ApplyStatBuffMod(STAT_SPIRIT);
             break;
         case ITEM_MOD_STAMINA: // modify stamina
-            HandleStatFlatModifier(UNIT_MOD_STAT_STAMINA, BASE_VALUE, float(val), apply);
-            UpdateStatBuffMod(STAT_STAMINA);
+            HandleStatModifier(UNIT_MOD_STAT_STAMINA, BASE_VALUE, float(val), apply);
+            ApplyStatBuffMod(STAT_STAMINA);
             break;
         case ITEM_MOD_DEFENSE_SKILL_RATING:
             ApplyRatingMod(CR_DEFENSE_SKILL, int32(val), apply);
@@ -7734,11 +7734,11 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
             ApplyRatingMod(CR_EXPERTISE, int32(val), apply);
             break;
         case ITEM_MOD_ATTACK_POWER:
-            HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER, TOTAL_VALUE, float(val), apply);
-            HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, float(val), apply);
+            HandleStatModifier(UNIT_MOD_ATTACK_POWER, TOTAL_VALUE, float(val), apply);
+            HandleStatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, float(val), apply);
             break;
         case ITEM_MOD_RANGED_ATTACK_POWER:
-            HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, float(val), apply);
+            HandleStatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, float(val), apply);
             break;
         case ITEM_MOD_MANA_REGENERATION:
             ApplyManaRegenBonus(int32(val), apply);
@@ -7759,25 +7759,25 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
             ApplyRatingMod(CR_MASTERY, int32(val), apply);
             break;
         case ITEM_MOD_FIRE_RESISTANCE:
-            HandleStatFlatModifier(UNIT_MOD_RESISTANCE_FIRE, BASE_VALUE, float(val), apply);
+            HandleStatModifier(UNIT_MOD_RESISTANCE_FIRE, BASE_VALUE, float(val), apply);
             break;
         case ITEM_MOD_FROST_RESISTANCE:
-            HandleStatFlatModifier(UNIT_MOD_RESISTANCE_FROST, BASE_VALUE, float(val), apply);
+            HandleStatModifier(UNIT_MOD_RESISTANCE_FROST, BASE_VALUE, float(val), apply);
             break;
         case ITEM_MOD_HOLY_RESISTANCE:
-            HandleStatFlatModifier(UNIT_MOD_RESISTANCE_HOLY, BASE_VALUE, float(val), apply);
+            HandleStatModifier(UNIT_MOD_RESISTANCE_HOLY, BASE_VALUE, float(val), apply);
             break;
         case ITEM_MOD_SHADOW_RESISTANCE:
-            HandleStatFlatModifier(UNIT_MOD_RESISTANCE_SHADOW, BASE_VALUE, float(val), apply);
+            HandleStatModifier(UNIT_MOD_RESISTANCE_SHADOW, BASE_VALUE, float(val), apply);
             break;
         case ITEM_MOD_NATURE_RESISTANCE:
-            HandleStatFlatModifier(UNIT_MOD_RESISTANCE_NATURE, BASE_VALUE, float(val), apply);
+            HandleStatModifier(UNIT_MOD_RESISTANCE_NATURE, BASE_VALUE, float(val), apply);
             break;
         case ITEM_MOD_ARCANE_RESISTANCE:
-            HandleStatFlatModifier(UNIT_MOD_RESISTANCE_ARCANE, BASE_VALUE, float(val), apply);
+            HandleStatModifier(UNIT_MOD_RESISTANCE_ARCANE, BASE_VALUE, float(val), apply);
             break;
         case ITEM_MOD_EXTRA_ARMOR:
-            HandleStatFlatModifier(UNIT_MOD_ARMOR, BASE_VALUE, float(val), apply);
+            HandleStatModifier(UNIT_MOD_ARMOR, BASE_VALUE, float(val), apply);
             break;
         }
     }
@@ -7808,12 +7808,12 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
                 break;
             }
         }
-        HandleStatFlatModifier(UNIT_MOD_ARMOR, modType, float(armor), apply);
+        HandleStatModifier(UNIT_MOD_ARMOR, modType, float(armor), apply);
     }
 
     // Add armor bonus from ArmorDamageModifier if > 0
     if (proto->GetArmorDamageModifier() > 0)
-        HandleStatFlatModifier(UNIT_MOD_ARMOR, TOTAL_VALUE, float(proto->GetArmorDamageModifier()), apply);
+        HandleStatModifier(UNIT_MOD_ARMOR, TOTAL_VALUE, float(proto->GetArmorDamageModifier()), apply);
 
     WeaponAttackType attType = Player::GetAttackBySlot(slot);
     if (attType != MAX_ATTACK && CanUseAttackType(attType))
@@ -13431,30 +13431,30 @@ void Player::ApplyReforgeEnchantment(Item* item, bool apply)
     switch (reforge->Source_stat)
     {
     case ITEM_MOD_MANA:
-        HandleStatFlatModifier(UNIT_MOD_MANA, BASE_VALUE, -removeValue, apply);
+        HandleStatModifier(UNIT_MOD_MANA, BASE_VALUE, -removeValue, apply);
         break;
     case ITEM_MOD_HEALTH:
-        HandleStatFlatModifier(UNIT_MOD_HEALTH, BASE_VALUE, -removeValue, apply);
+        HandleStatModifier(UNIT_MOD_HEALTH, BASE_VALUE, -removeValue, apply);
         break;
     case ITEM_MOD_AGILITY:
-        HandleStatFlatModifier(UNIT_MOD_STAT_AGILITY, TOTAL_VALUE, -removeValue, apply);
-        UpdateStatBuffMod(STAT_AGILITY);
+        HandleStatModifier(UNIT_MOD_STAT_AGILITY, TOTAL_VALUE, -removeValue, apply);
+        ApplyStatBuffMod(STAT_AGILITY);
         break;
     case ITEM_MOD_STRENGTH:
-        HandleStatFlatModifier(UNIT_MOD_STAT_STRENGTH, TOTAL_VALUE, -removeValue, apply);
-        UpdateStatBuffMod(STAT_STRENGTH);
+        HandleStatModifier(UNIT_MOD_STAT_STRENGTH, TOTAL_VALUE, -removeValue, apply);
+        ApplyStatBuffMod(STAT_STRENGTH);
         break;
     case ITEM_MOD_INTELLECT:
-        HandleStatFlatModifier(UNIT_MOD_STAT_INTELLECT, TOTAL_VALUE, -removeValue, apply);
-        UpdateStatBuffMod(STAT_INTELLECT);
+        HandleStatModifier(UNIT_MOD_STAT_INTELLECT, TOTAL_VALUE, -removeValue, apply);
+        ApplyStatBuffMod(STAT_INTELLECT);
         break;
     case ITEM_MOD_SPIRIT:
-        HandleStatFlatModifier(UNIT_MOD_STAT_SPIRIT, TOTAL_VALUE, -removeValue, apply);
-        UpdateStatBuffMod(STAT_SPIRIT);
+        HandleStatModifier(UNIT_MOD_STAT_SPIRIT, TOTAL_VALUE, -removeValue, apply);
+        ApplyStatBuffMod(STAT_SPIRIT);
         break;
     case ITEM_MOD_STAMINA:
-        HandleStatFlatModifier(UNIT_MOD_STAT_STAMINA, TOTAL_VALUE, -removeValue, apply);
-        UpdateStatBuffMod(STAT_STAMINA);
+        HandleStatModifier(UNIT_MOD_STAT_STAMINA, TOTAL_VALUE, -removeValue, apply);
+        ApplyStatBuffMod(STAT_STAMINA);
         break;
     case ITEM_MOD_DEFENSE_SKILL_RATING:
         ApplyRatingMod(CR_DEFENSE_SKILL, -int32(removeValue), apply);
@@ -13511,11 +13511,11 @@ void Player::ApplyReforgeEnchantment(Item* item, bool apply)
         ApplyRatingMod(CR_EXPERTISE, -int32(removeValue), apply);
         break;
     case ITEM_MOD_ATTACK_POWER:
-        HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER, TOTAL_VALUE, -removeValue, apply);
-        HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, -removeValue, apply);
+        HandleStatModifier(UNIT_MOD_ATTACK_POWER, TOTAL_VALUE, -removeValue, apply);
+        HandleStatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, -removeValue, apply);
         break;
     case ITEM_MOD_RANGED_ATTACK_POWER:
-        HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, -removeValue, apply);
+        HandleStatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, -removeValue, apply);
         break;
     case ITEM_MOD_MANA_REGENERATION:
         ApplyManaRegenBonus(-int32(removeValue), apply);
@@ -13540,37 +13540,37 @@ void Player::ApplyReforgeEnchantment(Item* item, bool apply)
         ApplyRatingMod(CR_MASTERY, -int32(removeValue), apply);
         break;
     case ITEM_MOD_EXTRA_ARMOR:
-        HandleStatFlatModifier(UNIT_MOD_ARMOR, BASE_VALUE, -removeValue, apply);
+        HandleStatModifier(UNIT_MOD_ARMOR, BASE_VALUE, -removeValue, apply);
         break;
     }
 
     switch (reforge->Target_stat)
     {
     case ITEM_MOD_MANA:
-        HandleStatFlatModifier(UNIT_MOD_MANA, BASE_VALUE, addValue, apply);
+        HandleStatModifier(UNIT_MOD_MANA, BASE_VALUE, addValue, apply);
         break;
     case ITEM_MOD_HEALTH:
-        HandleStatFlatModifier(UNIT_MOD_HEALTH, BASE_VALUE, addValue, apply);
+        HandleStatModifier(UNIT_MOD_HEALTH, BASE_VALUE, addValue, apply);
         break;
     case ITEM_MOD_AGILITY:
-        HandleStatFlatModifier(UNIT_MOD_STAT_AGILITY, TOTAL_VALUE, addValue, apply);
-        UpdateStatBuffMod(STAT_AGILITY);
+        HandleStatModifier(UNIT_MOD_STAT_AGILITY, TOTAL_VALUE, addValue, apply);
+        ApplyStatBuffMod(STAT_AGILITY);
         break;
     case ITEM_MOD_STRENGTH:
-        HandleStatFlatModifier(UNIT_MOD_STAT_STRENGTH, TOTAL_VALUE, addValue, apply);
-        UpdateStatBuffMod(STAT_STRENGTH);
+        HandleStatModifier(UNIT_MOD_STAT_STRENGTH, TOTAL_VALUE, addValue, apply);
+        ApplyStatBuffMod(STAT_STRENGTH);
         break;
     case ITEM_MOD_INTELLECT:
-        HandleStatFlatModifier(UNIT_MOD_STAT_INTELLECT, TOTAL_VALUE, addValue, apply);
-        UpdateStatBuffMod(STAT_INTELLECT);
+        HandleStatModifier(UNIT_MOD_STAT_INTELLECT, TOTAL_VALUE, addValue, apply);
+        ApplyStatBuffMod(STAT_INTELLECT);
         break;
     case ITEM_MOD_SPIRIT:
-        HandleStatFlatModifier(UNIT_MOD_STAT_SPIRIT, TOTAL_VALUE, addValue, apply);
-        UpdateStatBuffMod(STAT_SPIRIT);
+        HandleStatModifier(UNIT_MOD_STAT_SPIRIT, TOTAL_VALUE, addValue, apply);
+        ApplyStatBuffMod(STAT_SPIRIT);
         break;
     case ITEM_MOD_STAMINA:
-        HandleStatFlatModifier(UNIT_MOD_STAT_STAMINA, TOTAL_VALUE, addValue, apply);
-        UpdateStatBuffMod(STAT_STAMINA);
+        HandleStatModifier(UNIT_MOD_STAT_STAMINA, TOTAL_VALUE, addValue, apply);
+        ApplyStatBuffMod(STAT_STAMINA);
         break;
     case ITEM_MOD_DEFENSE_SKILL_RATING:
         ApplyRatingMod(CR_DEFENSE_SKILL, int32(addValue), apply);
@@ -13627,11 +13627,11 @@ void Player::ApplyReforgeEnchantment(Item* item, bool apply)
         ApplyRatingMod(CR_EXPERTISE, int32(addValue), apply);
         break;
     case ITEM_MOD_ATTACK_POWER:
-        HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER, TOTAL_VALUE, addValue, apply);
-        HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, addValue, apply);
+        HandleStatModifier(UNIT_MOD_ATTACK_POWER, TOTAL_VALUE, addValue, apply);
+        HandleStatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, addValue, apply);
         break;
     case ITEM_MOD_RANGED_ATTACK_POWER:
-        HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, addValue, apply);
+        HandleStatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, addValue, apply);
         break;
     case ITEM_MOD_MANA_REGENERATION:
         ApplyManaRegenBonus(int32(addValue), apply);
@@ -13656,7 +13656,7 @@ void Player::ApplyReforgeEnchantment(Item* item, bool apply)
         ApplyRatingMod(CR_MASTERY, int32(addValue), apply);
         break;
     case ITEM_MOD_EXTRA_ARMOR:
-        HandleStatFlatModifier(UNIT_MOD_ARMOR, BASE_VALUE, addValue, apply);
+        HandleStatModifier(UNIT_MOD_ARMOR, BASE_VALUE, addValue, apply);
         break;
     }
 }
@@ -13799,7 +13799,7 @@ void Player::ApplyEnchantment(Item* item, EnchantmentSlot slot, bool apply, bool
                     }
                 }
 
-                HandleStatFlatModifier(UnitMods(UNIT_MOD_RESISTANCE_START + enchant_spell_id), TOTAL_VALUE, float(enchant_amount), apply);
+                HandleStatModifier(UnitMods(UNIT_MOD_RESISTANCE_START + enchant_spell_id), TOTAL_VALUE, float(enchant_amount), apply);
                 break;
             case ITEM_ENCHANTMENT_TYPE_STAT:
             {
@@ -13824,36 +13824,36 @@ void Player::ApplyEnchantment(Item* item, EnchantmentSlot slot, bool apply, bool
                 {
                 case ITEM_MOD_MANA:
                     LOG_DEBUG("entities.player.items", "+ %u MANA", enchant_amount);
-                    HandleStatFlatModifier(UNIT_MOD_MANA, BASE_VALUE, float(enchant_amount), apply);
+                    HandleStatModifier(UNIT_MOD_MANA, BASE_VALUE, float(enchant_amount), apply);
                     break;
                 case ITEM_MOD_HEALTH:
                     LOG_DEBUG("entities.player.items", "+ %u HEALTH", enchant_amount);
-                    HandleStatFlatModifier(UNIT_MOD_HEALTH, BASE_VALUE, float(enchant_amount), apply);
+                    HandleStatModifier(UNIT_MOD_HEALTH, BASE_VALUE, float(enchant_amount), apply);
                     break;
                 case ITEM_MOD_AGILITY:
                     LOG_DEBUG("entities.player.items", "+ %u AGILITY", enchant_amount);
-                    HandleStatFlatModifier(UNIT_MOD_STAT_AGILITY, TOTAL_VALUE, float(enchant_amount), apply);
-                    UpdateStatBuffMod(STAT_AGILITY);
+                    HandleStatModifier(UNIT_MOD_STAT_AGILITY, TOTAL_VALUE, float(enchant_amount), apply);
+                    ApplyStatBuffMod(STAT_AGILITY);
                     break;
                 case ITEM_MOD_STRENGTH:
                     LOG_DEBUG("entities.player.items", "+ %u STRENGTH", enchant_amount);
-                    HandleStatFlatModifier(UNIT_MOD_STAT_STRENGTH, TOTAL_VALUE, float(enchant_amount), apply);
-                    UpdateStatBuffMod(STAT_STRENGTH);
+                    HandleStatModifier(UNIT_MOD_STAT_STRENGTH, TOTAL_VALUE, float(enchant_amount), apply);
+                    ApplyStatBuffMod(STAT_STRENGTH);
                     break;
                 case ITEM_MOD_INTELLECT:
                     LOG_DEBUG("entities.player.items", "+ %u INTELLECT", enchant_amount);
-                    HandleStatFlatModifier(UNIT_MOD_STAT_INTELLECT, TOTAL_VALUE, float(enchant_amount), apply);
-                    UpdateStatBuffMod(STAT_INTELLECT);
+                    HandleStatModifier(UNIT_MOD_STAT_INTELLECT, TOTAL_VALUE, float(enchant_amount), apply);
+                    ApplyStatBuffMod(STAT_INTELLECT);
                     break;
                 case ITEM_MOD_SPIRIT:
                     LOG_DEBUG("entities.player.items", "+ %u SPIRIT", enchant_amount);
-                    HandleStatFlatModifier(UNIT_MOD_STAT_SPIRIT, TOTAL_VALUE, float(enchant_amount), apply);
-                    UpdateStatBuffMod(STAT_SPIRIT);
+                    HandleStatModifier(UNIT_MOD_STAT_SPIRIT, TOTAL_VALUE, float(enchant_amount), apply);
+                    ApplyStatBuffMod(STAT_SPIRIT);
                     break;
                 case ITEM_MOD_STAMINA:
                     LOG_DEBUG("entities.player.items", "+ %u STAMINA", enchant_amount);
-                    HandleStatFlatModifier(UNIT_MOD_STAT_STAMINA, TOTAL_VALUE, float(enchant_amount), apply);
-                    UpdateStatBuffMod(STAT_STAMINA);
+                    HandleStatModifier(UNIT_MOD_STAT_STAMINA, TOTAL_VALUE, float(enchant_amount), apply);
+                    ApplyStatBuffMod(STAT_STAMINA);
                     break;
                 case ITEM_MOD_DEFENSE_SKILL_RATING:
                     ApplyRatingMod(CR_DEFENSE_SKILL, enchant_amount, apply);
@@ -13961,12 +13961,12 @@ void Player::ApplyEnchantment(Item* item, EnchantmentSlot slot, bool apply, bool
                     LOG_DEBUG("entities.player.items", "+ %u EXPERTISE", enchant_amount);
                     break;
                 case ITEM_MOD_ATTACK_POWER:
-                    HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER, TOTAL_VALUE, float(enchant_amount), apply);
-                    HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, float(enchant_amount), apply);
+                    HandleStatModifier(UNIT_MOD_ATTACK_POWER, TOTAL_VALUE, float(enchant_amount), apply);
+                    HandleStatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, float(enchant_amount), apply);
                     LOG_DEBUG("entities.player.items", "+ %u ATTACK_POWER", enchant_amount);
                     break;
                 case ITEM_MOD_RANGED_ATTACK_POWER:
-                    HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, float(enchant_amount), apply);
+                    HandleStatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, float(enchant_amount), apply);
                     LOG_DEBUG("entities.player.items", "+ %u RANGED_ATTACK_POWER", enchant_amount);
                     break;
                 case ITEM_MOD_MANA_REGENERATION:
@@ -13998,7 +13998,7 @@ void Player::ApplyEnchantment(Item* item, EnchantmentSlot slot, bool apply, bool
                     LOG_DEBUG("entities.player.items", "+ %u MASTERY", enchant_amount);
                     break;
                 case ITEM_MOD_EXTRA_ARMOR:
-                    HandleStatFlatModifier(UNIT_MOD_ARMOR, BASE_VALUE, float(enchant_amount), apply);
+                    HandleStatModifier(UNIT_MOD_ARMOR, BASE_VALUE, float(enchant_amount), apply);
                     LOG_DEBUG("entities.player.items", "+ %u EXTRA_ARMOR", enchant_amount);
                     break;
                 default:
@@ -17220,7 +17220,7 @@ float Player::GetFloatValueFromArray(Tokenizer const& data, uint16 index)
     return result;
 }
 
-bool Player::IsLoading() const { return GetSession()->PlayerLoading(); }
+bool Player::isBeingLoaded() const { return GetSession()->PlayerLoading(); }
 
 bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& holder)
 {
@@ -21767,7 +21767,7 @@ void Player::AddSpellMod(SpellModifier* mod, bool apply)
         m_spellMods[mod->op][mod->type].erase(mod);
 
     /// Now, send spellmodifier packet
-    if (!IsLoading())
+    if (!isBeingLoaded())
     {
         OpcodeServer opcode = (mod->type == SPELLMOD_FLAT) ? SMSG_SET_FLAT_SPELL_MODIFIER : SMSG_SET_PCT_SPELL_MODIFIER;
 
@@ -23748,7 +23748,7 @@ void Player::SendInitialPacketsAfterAddToMap()
     // manual send package (have code in HandleEffect(this, AURA_EFFECT_HANDLE_SEND_FOR_CLIENT, true); that must not be
     // re-applied.
     if (HasAuraType(SPELL_AURA_MOD_ROOT))
-        SetRooted(true, true);
+        SetRooted(true, false, true);
 
     SendAurasForTarget(this);
     SendEnchantmentDurations(); // must be after add to map
@@ -26198,7 +26198,7 @@ bool Player::SetDisableGravity(bool disable, bool /*packetOnly = false*/, bool /
     if (disable == IsGravityDisabled())
         return false;
 
-    if (IsMovedByClient() && IsInWorld())
+    if (m_movedByPlayer && IsInWorld())
         MovementPacketSender::SendMovementFlagChangeToMover(this, MOVEMENTFLAG_DISABLE_GRAVITY, disable);
 
     Unit::SetDisableGravity(disable, false, false);
@@ -26211,7 +26211,7 @@ bool Player::SetCanFly(bool enable, bool /*packetOnly = false*/)
     if (enable == HasUnitMovementFlag(MOVEMENTFLAG_CAN_FLY))
         return false;
 
-    if (IsMovedByClient() && IsInWorld())
+    if (m_movedByPlayer && IsInWorld())
         MovementPacketSender::SendMovementFlagChangeToMover(this, MOVEMENTFLAG_CAN_FLY, enable);
 
     Unit::SetCanFly(enable);
@@ -26224,7 +26224,7 @@ bool Player::SetCanTransitionBetweenSwimAndFly(bool enable)
     if (enable == HasExtraUnitMovementFlag(MOVEMENTFLAG2_CAN_SWIM_TO_FLY_TRANS))
         return false;
 
-    if (IsMovedByClient() && IsInWorld())
+    if (m_movedByPlayer && IsInWorld())
         MovementPacketSender::SendMovementFlagChangeToMover(this, MOVEMENTFLAG2_CAN_SWIM_TO_FLY_TRANS, enable);
 
     Unit::SetCanTransitionBetweenSwimAndFly(enable);
@@ -26234,7 +26234,7 @@ bool Player::SetCanTransitionBetweenSwimAndFly(bool enable)
 
 void Player::SendMovementSetCollisionHeight(float height, UpdateCollisionHeightReason reason)
 {
-    if (IsMovedByClient() && IsInWorld())
+    if (m_movedByPlayer && IsInWorld())
         MovementPacketSender::SendHeightChangeToMover(this, height, reason);
 }
 

@@ -70,8 +70,8 @@ public:
         void LockRageclaw(Creature* rageclaw)
         {
             // pointer check not needed
-            me->SetOrientationTowards(rageclaw);
-            rageclaw->SetOrientationTowards(me);
+            me->SetInFront(rageclaw);
+            rageclaw->SetInFront(me);
 
             DoCast(rageclaw, SPELL_LEFT_CHAIN, true);
             DoCast(rageclaw, SPELL_RIGHT_CHAIN, true);

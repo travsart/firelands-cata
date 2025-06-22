@@ -995,7 +995,7 @@ void AuraEffect::UpdatePeriodic(Unit* caster)
 
 float AuraEffect::GetCritChanceFor(Unit const* caster, Unit const* target) const
 {
-    return target->SpellCritChanceTaken(caster, GetSpellInfo(), GetSpellInfo()->GetSchoolMask(), GetBase()->GetCritChance(), GetSpellInfo()->GetAttackType(), true);
+    return target->SpellTakenCritChance(caster, GetSpellInfo(), GetSpellInfo()->GetSchoolMask(), GetBase()->GetCritChance(), GetSpellInfo()->GetAttackType(), true);
 }
 
 bool AuraEffect::IsAffectedOnSpell(SpellInfo const* spell) const
@@ -3371,9 +3371,9 @@ void AuraEffect::HandleAuraModResistanceExclusive(AuraApplication const* aurApp,
             if (amount < GetAmount())
             {
                 float value = float(GetAmount() - amount);
-                target->HandleStatFlatModifier(UnitMods(UNIT_MOD_RESISTANCE_START + x), BASE_VALUE, value, apply);
+                target->HandleStatModifier(UnitMods(UNIT_MOD_RESISTANCE_START + x), BASE_VALUE, value, apply);
                 if (target->GetTypeId() == TYPEID_PLAYER || target->IsPet())
-                    target->UpdateResistanceBuffModsMod(SpellSchools(x));
+                    target->ApplyResistanceBuffModsMod(SpellSchools(x));
             }
         }
     }
@@ -3390,9 +3390,9 @@ void AuraEffect::HandleAuraModResistance(AuraApplication const* aurApp, uint8 mo
     {
         if (GetMiscValue() & (1 << x))
         {
-            target->HandleStatFlatModifier(UnitMods(UNIT_MOD_RESISTANCE_START + x), TOTAL_VALUE, float(GetAmount()), apply);
+            target->HandleStatModifier(UnitMods(UNIT_MOD_RESISTANCE_START + x), TOTAL_VALUE, float(GetAmount()), apply);
             if (target->GetTypeId() == TYPEID_PLAYER || target->IsPet())
-                target->UpdateResistanceBuffModsMod(SpellSchools(x));
+                target->ApplyResistanceBuffModsMod(SpellSchools(x));
         }
     }
 }
@@ -3411,11 +3411,11 @@ void AuraEffect::HandleAuraModBaseResistancePCT(AuraApplication const* aurApp, u
         if (target->IsPet() && (GetMiscValue() & SPELL_SCHOOL_MASK_NORMAL))
         {
             if (apply)
-                target->ApplyStatPctModifier(UNIT_MOD_ARMOR, BASE_PCT, float(GetAmount()));
+                target->HandleStatModifier(UNIT_MOD_ARMOR, BASE_PCT, float(GetAmount()));
             else
             {
                 float amount = target->GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_BASE_RESISTANCE_PCT, SPELL_SCHOOL_MASK_NORMAL);
-                target->SetStatPctModifier(UNIT_MOD_ARMOR, BASE_PCT, amount);
+                target->SetModifierValue(UNIT_MOD_ARMOR, BASE_PCT, amount);
             }
         }
     }
@@ -3426,11 +3426,11 @@ void AuraEffect::HandleAuraModBaseResistancePCT(AuraApplication const* aurApp, u
             if (GetMiscValue() & (1 << x))
             {
                 if (apply)
-                    target->ApplyStatPctModifier(UnitMods(UNIT_MOD_RESISTANCE_START + x), BASE_PCT, float(GetAmount()));
+                    target->HandleStatModifier(UnitMods(UNIT_MOD_RESISTANCE_START + x), BASE_PCT, float(GetAmount()));
                 else
                 {
                     float amount = target->GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_BASE_RESISTANCE_PCT, 1 << x);
-                    target->SetStatPctModifier(UnitMods(UNIT_MOD_RESISTANCE_START + x), BASE_PCT, amount);
+                    target->SetModifierValue(UnitMods(UNIT_MOD_RESISTANCE_START + x), BASE_PCT, amount);
                 }
             }
         }
@@ -3449,12 +3449,12 @@ void AuraEffect::HandleModResistancePercent(AuraApplication const* aurApp, uint8
         if (GetMiscValue() & (1 << i))
         {
             float amount = target->GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_RESISTANCE_PCT, 1 << i);
-            if (target->GetPctModifierValue(UnitMods(UNIT_MOD_RESISTANCE_START + i), TOTAL_PCT) == amount)
+            if (target->GetModifierValue(UnitMods(UNIT_MOD_RESISTANCE_START + i), TOTAL_PCT) == amount)
                 continue;
 
-            target->SetStatPctModifier(UnitMods(UNIT_MOD_RESISTANCE_START + i), TOTAL_PCT, amount);
+            target->SetModifierValue(UnitMods(UNIT_MOD_RESISTANCE_START + i), TOTAL_PCT, amount);
             if (target->GetTypeId() == TYPEID_PLAYER || target->IsPet())
-                target->UpdateResistanceBuffModsMod(SpellSchools(i));
+                target->ApplyResistanceBuffModsMod(SpellSchools(i));
         }
     }
 }
@@ -3471,13 +3471,13 @@ void AuraEffect::HandleModBaseResistance(AuraApplication const* aurApp, uint8 mo
     {
         // pets only have base armor
         if (target->IsPet() && (GetMiscValue() & SPELL_SCHOOL_MASK_NORMAL))
-            target->HandleStatFlatModifier(UNIT_MOD_ARMOR, TOTAL_VALUE, float(GetAmount()), apply);
+            target->HandleStatModifier(UNIT_MOD_ARMOR, TOTAL_VALUE, float(GetAmount()), apply);
     }
     else
     {
         for (uint8 i = SPELL_SCHOOL_NORMAL; i < MAX_SPELL_SCHOOL; ++i)
             if (GetMiscValue() & (1 << i))
-                target->HandleStatFlatModifier(UnitMods(UNIT_MOD_RESISTANCE_START + i), TOTAL_VALUE, float(GetAmount()), apply);
+                target->HandleStatModifier(UnitMods(UNIT_MOD_RESISTANCE_START + i), TOTAL_VALUE, float(GetAmount()), apply);
     }
 }
 
@@ -3526,14 +3526,14 @@ void AuraEffect::HandleAuraModStat(AuraApplication const* aurApp, uint8 mode, bo
         {
             if (spellGroupVal)
             {
-                target->HandleStatFlatModifier(UnitMods(UNIT_MOD_STAT_START + i), TOTAL_VALUE, float(spellGroupVal), !apply);
+                target->HandleStatModifier(UnitMods(UNIT_MOD_STAT_START + i), TOTAL_VALUE, float(spellGroupVal), !apply);
                 if (target->GetTypeId() == TYPEID_PLAYER || target->IsPet())
-                    target->UpdateStatBuffMod(Stats(i));
+                    target->ApplyStatBuffMod(Stats(i));
             }
 
-            target->HandleStatFlatModifier(UnitMods(UNIT_MOD_STAT_START + i), TOTAL_VALUE, float(GetAmount()), apply);
+            target->HandleStatModifier(UnitMods(UNIT_MOD_STAT_START + i), TOTAL_VALUE, float(GetAmount()), apply);
             if (target->GetTypeId() == TYPEID_PLAYER || target->IsPet())
-                target->UpdateStatBuffMod(Stats(i));
+                target->ApplyStatBuffMod(Stats(i));
         }
     }
 }
@@ -3560,7 +3560,7 @@ void AuraEffect::HandleModPercentStat(AuraApplication const* aurApp, uint8 mode,
         if (GetMiscValue() == i || GetMiscValue() == -1)
         {
             if (apply)
-                target->ApplyStatPctModifier(UnitMods(UNIT_MOD_STAT_START + i), BASE_PCT, float(GetAmount()));
+                target->HandleStatModifier(UnitMods(UNIT_MOD_STAT_START + i), BASE_PCT, float(GetAmount()));
             else
             {
                 float amount = target->GetTotalAuraMultiplier(SPELL_AURA_MOD_PERCENT_STAT,
@@ -3570,7 +3570,7 @@ void AuraEffect::HandleModPercentStat(AuraApplication const* aurApp, uint8 mode,
                             return true;
                         return false;
                     });
-                target->SetStatPctModifier(UnitMods(UNIT_MOD_STAT_START + i), BASE_PCT, amount);
+                target->SetModifierValue(UnitMods(UNIT_MOD_STAT_START + i), BASE_PCT, amount);
             }
         }
     }
@@ -3685,12 +3685,12 @@ void AuraEffect::HandleModTotalPercentStat(AuraApplication const* aurApp, uint8 
                     return false;
                 });
 
-            if (target->GetPctModifierValue(UnitMods(UNIT_MOD_STAT_START + i), TOTAL_PCT) == amount)
+            if (target->GetModifierValue(UnitMods(UNIT_MOD_STAT_START + i), TOTAL_PCT) == amount)
                 continue;
 
-            target->SetStatPctModifier(UnitMods(UNIT_MOD_STAT_START + i), TOTAL_PCT, amount);
+            target->SetModifierValue(UnitMods(UNIT_MOD_STAT_START + i), TOTAL_PCT, amount);
             if (target->GetTypeId() == TYPEID_PLAYER || target->IsPet())
-                target->UpdateStatBuffMod(Stats(i));
+                target->ApplyStatBuffMod(Stats(i));
         }
     }
 
@@ -3797,7 +3797,7 @@ void AuraEffect::HandleAuraModIncreaseHealth(AuraApplication const* aurApp, uint
 
     if (apply)
     {
-        target->HandleStatFlatModifier(UNIT_MOD_HEALTH, TOTAL_VALUE, float(GetAmount()), apply);
+        target->HandleStatModifier(UNIT_MOD_HEALTH, TOTAL_VALUE, float(GetAmount()), apply);
         target->ModifyHealth(GetAmount());
     }
     else
@@ -3807,7 +3807,7 @@ void AuraEffect::HandleAuraModIncreaseHealth(AuraApplication const* aurApp, uint
             int32 value = std::min<int32>(target->GetHealth() - 1, GetAmount());
             target->ModifyHealth(-value);
         }
-        target->HandleStatFlatModifier(UNIT_MOD_HEALTH, TOTAL_VALUE, float(GetAmount()), apply);
+        target->HandleStatModifier(UNIT_MOD_HEALTH, TOTAL_VALUE, float(GetAmount()), apply);
     }
 }
 
@@ -3820,7 +3820,7 @@ void AuraEffect::HandleAuraModIncreaseMaxHealth(AuraApplication const* aurApp, u
 
     float percent = target->GetHealthPct();
 
-    target->HandleStatFlatModifier(UNIT_MOD_HEALTH, TOTAL_VALUE, float(GetAmount()), apply);
+    target->HandleStatModifier(UNIT_MOD_HEALTH, TOTAL_VALUE, float(GetAmount()), apply);
 
     // refresh percentage
     if (target->GetHealth() > 0)
@@ -3839,7 +3839,7 @@ void AuraEffect::HandleAuraModIncreaseEnergy(AuraApplication const* aurApp, uint
     Powers powerType = Powers(GetMiscValue());
     UnitMods unitMod = UnitMods(UNIT_MOD_POWER_START + powerType);
 
-    target->HandleStatFlatModifier(unitMod, TOTAL_VALUE, float(GetAmount()), apply);
+    target->HandleStatModifier(unitMod, TOTAL_VALUE, float(GetAmount()), apply);
 }
 
 void AuraEffect::HandleAuraModIncreaseEnergyPercent(AuraApplication const* aurApp, uint8 mode, bool apply) const
@@ -3860,12 +3860,12 @@ void AuraEffect::HandleAuraModIncreaseEnergyPercent(AuraApplication const* aurAp
     if (apply)
     {
         float amount = float(GetAmount());
-        target->ApplyStatPctModifier(unitMod, TOTAL_PCT, amount);
+        target->HandleStatModifier(unitMod, TOTAL_PCT, amount);
     }
     else
     {
         float amount = target->GetTotalAuraMultiplierByMiscValue(SPELL_AURA_MOD_INCREASE_ENERGY_PERCENT, GetMiscValue());
-        target->SetStatPctModifier(unitMod, TOTAL_PCT, amount);
+        target->SetModifierValue(unitMod, TOTAL_PCT, amount);
     }
 
     // Calculate the current power change
@@ -3884,11 +3884,11 @@ void AuraEffect::HandleAuraModIncreaseHealthPercent(AuraApplication const* aurAp
     // Unit will keep hp% after MaxHealth being modified if unit is alive.
     float percent = target->GetHealthPct();
     if (apply)
-        target->ApplyStatPctModifier(UNIT_MOD_HEALTH, TOTAL_PCT, float(GetAmount()));
+        target->HandleStatModifier(UNIT_MOD_HEALTH, TOTAL_PCT, float(GetAmount()));
     else
     {
         float amount = target->GetTotalAuraMultiplier(SPELL_AURA_MOD_INCREASE_HEALTH_PERCENT);
-        target->SetStatPctModifier(UNIT_MOD_HEALTH, TOTAL_PCT, amount);
+        target->SetModifierValue(UNIT_MOD_HEALTH, TOTAL_PCT, amount);
     }
 
     if (target->GetHealth() > 0)
@@ -3906,11 +3906,11 @@ void AuraEffect::HandleAuraIncreaseBaseHealthPercent(AuraApplication const* aurA
     Unit* target = aurApp->GetTarget();
 
     if (apply)
-        target->ApplyStatPctModifier(UNIT_MOD_HEALTH, BASE_PCT, float(GetAmount()));
+        target->HandleStatModifier(UNIT_MOD_HEALTH, BASE_PCT, float(GetAmount()));
     else
     {
         float amount = target->GetTotalAuraMultiplier(SPELL_AURA_MOD_BASE_HEALTH_PCT);
-        target->SetStatPctModifier(UNIT_MOD_HEALTH, BASE_PCT, amount);
+        target->SetModifierValue(UNIT_MOD_HEALTH, BASE_PCT, amount);
     }
 }
 
@@ -4233,7 +4233,7 @@ void AuraEffect::HandleAuraModAttackPower(AuraApplication const* aurApp, uint8 m
 
     Unit* target = aurApp->GetTarget();
 
-    target->HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER, TOTAL_VALUE, float(GetAmount()), apply);
+    target->HandleStatModifier(UNIT_MOD_ATTACK_POWER, TOTAL_VALUE, float(GetAmount()), apply);
 }
 
 void AuraEffect::HandleAuraModRangedAttackPower(AuraApplication const* aurApp, uint8 mode, bool apply) const
@@ -4246,7 +4246,7 @@ void AuraEffect::HandleAuraModRangedAttackPower(AuraApplication const* aurApp, u
     if ((target->getClassMask() & CLASSMASK_WAND_USERS) != 0)
         return;
 
-    target->HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, float(GetAmount()), apply);
+    target->HandleStatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, float(GetAmount()), apply);
 }
 
 void AuraEffect::HandleAuraModAttackPowerPercent(AuraApplication const* aurApp, uint8 mode, bool apply) const
@@ -4258,11 +4258,11 @@ void AuraEffect::HandleAuraModAttackPowerPercent(AuraApplication const* aurApp, 
 
     // UNIT_FIELD_ATTACK_POWER_MULTIPLIER = multiplier - 1
     if (apply)
-        target->ApplyStatPctModifier(UNIT_MOD_ATTACK_POWER, TOTAL_PCT, float(GetAmount()));
+        target->HandleStatModifier(UNIT_MOD_ATTACK_POWER, TOTAL_PCT, float(GetAmount()));
     else
     {
         float amount = target->GetTotalAuraMultiplier(SPELL_AURA_MOD_ATTACK_POWER_PCT);
-        target->SetStatPctModifier(UNIT_MOD_ATTACK_POWER, TOTAL_PCT, amount);
+        target->SetModifierValue(UNIT_MOD_ATTACK_POWER, TOTAL_PCT, amount);
     }
 }
 
@@ -4278,11 +4278,11 @@ void AuraEffect::HandleAuraModRangedAttackPowerPercent(AuraApplication const* au
 
     // UNIT_FIELD_RANGED_ATTACK_POWER_MULTIPLIER = multiplier - 1
     if (apply)
-        target->ApplyStatPctModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_PCT, float(GetAmount()));
+        target->HandleStatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_PCT, float(GetAmount()));
     else
     {
         float amount = target->GetTotalAuraMultiplier(SPELL_AURA_MOD_RANGED_ATTACK_POWER_PCT);
-        target->SetStatPctModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_PCT, amount);
+        target->SetModifierValue(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_PCT, amount);
     }
 }
 

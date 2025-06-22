@@ -1770,7 +1770,7 @@ class FC_GAME_API Player : public Unit, public GridObject<Player>
 
     bool LoadFromDB(
         ObjectGuid guid, CharacterDatabaseQueryHolder const& holder);
-    bool IsLoading() const override;
+    bool isBeingLoaded() const override;
 
     void Initialize(ObjectGuid::LowType guid);
     static uint32 GetUInt32ValueFromArray(Tokenizer const& data, uint16 index);

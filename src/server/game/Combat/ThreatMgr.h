@@ -136,8 +136,94 @@ private:
     bool iOnline;
 };
 
-class ThreatMgr;
+typedef HostileReference ThreatReference;
+class ThreatMgr
+{
+public:
+    friend class HostileReference;
 
+    explicit ThreatMgr(Unit* owner);
+
+    ~ThreatMgr() { clearReferences(); }
+
+    Unit* SelectVictim() { return getHostileTarget(); }
+    Unit* GetCurrentVictim() const { if (ThreatReference* ref = getCurrentVictim()) return ref->GetVictim(); else return nullptr; }
+    Unit* GetAnyTarget() const { auto const& list = GetThreatList(); if (!list.empty()) return list.front()->getTarget(); return nullptr; }
+
+    void clearReferences();
+
+    void AddThreat(Unit* victim, float threat, SpellSchoolMask schoolMask = SPELL_SCHOOL_MASK_NORMAL, SpellInfo const* threatSpell = nullptr);
+    void DoAddThreat(Unit* victim, float threat);
+    void ModifyThreatByPercent(Unit* victim, int32 percent);
+    float GetThreat(Unit* victim, bool alsoSearchOfflineList = false);
+    float GetThreatListSize() const { return GetThreatList().size(); }
+    float getThreatWithoutTemp(Unit* victim, bool alsoSearchOfflineList = false);
+
+    [[nodiscard]] bool isThreatListEmpty() const { return iThreatContainer.empty(); }
+    [[nodiscard]] bool areThreatListsEmpty() const { return iThreatContainer.empty() && iThreatOfflineContainer.empty(); }
+
+    Firelands::IteratorPair<std::list<ThreatReference*>::const_iterator> GetSortedThreatList() const { auto& list = iThreatContainer.GetThreatList(); return { list.cbegin(), list.cend() }; }
+    Firelands::IteratorPair<std::list<ThreatReference*>::const_iterator> GetUnsortedThreatList() const { return GetSortedThreatList(); }
+
+    void processThreatEvent(ThreatRefStatusChangeEvent* threatRefStatusChangeEvent);
+
+    bool isNeedUpdateToClient(uint32 time);
+
+    [[nodiscard]] HostileReference* getCurrentVictim() const { return iCurrentVictim; }
+
+    [[nodiscard]] Unit* GetOwner() const { return iOwner; }
+
+    Unit* getHostileTarget();
+
+    void tauntApply(Unit* taunter);
+    void tauntFadeOut(Unit* taunter);
+
+    void setCurrentVictim(HostileReference* hostileRef);
+
+    void setDirty(bool isDirty) { iThreatContainer.setDirty(isDirty); }
+
+    // Reset all aggro without modifying the threadlist.
+    void ResetThreat(Unit const* who) { if (auto* ref = FindReference(who, true)) ref->SetThreat(0.0f); }
+    void ResetAllThreat();
+
+    void ClearThreat(Unit const* who) { if (auto* ref = FindReference(who, true)) ref->removeReference(); }
+    void ClearAllThreat();
+
+    // Reset all aggro of unit in threadlist satisfying the predicate.
+    template<class PREDICATE> void resetAggro(PREDICATE predicate)
+    {
+        ThreatContainer::StorageType& threatList = iThreatContainer.iThreatList;
+        if (threatList.empty())
+            return;
+
+        for (auto& ref : threatList)
+        {
+            if (predicate(ref->getTarget()))
+            {
+                ref->SetThreat(0);
+                setDirty(true);
+            }
+        }
+    }
+
+    // methods to access the lists from the outside to do some dirty manipulation (scriping and such)
+    // I hope they are used as little as possible.
+    [[nodiscard]] ThreatContainer::StorageType const& GetThreatList() const { return iThreatContainer.GetThreatList(); }
+    [[nodiscard]] ThreatContainer::StorageType const& GetOfflineThreatList() const { return iThreatOfflineContainer.GetThreatList(); }
+    ThreatContainer& GetOnlineContainer() { return iThreatContainer; }
+    ThreatContainer& GetOfflineContainer() { return iThreatOfflineContainer; }
+
+private:
+    HostileReference* FindReference(Unit const* who, bool includeOffline) const { if (auto* ref = iThreatContainer.getReferenceByTarget(who)) return ref; if (includeOffline) if (auto* ref = iThreatOfflineContainer.getReferenceByTarget(who)) return ref; return nullptr; }
+
+    void _addThreat(Unit* victim, float threat);
+
+    HostileReference* iCurrentVictim;
+    Unit* iOwner;
+    uint32 iUpdateTimer;
+    ThreatContainer iThreatContainer;
+    ThreatContainer iThreatOfflineContainer;
+};
 class ThreatContainer
 {
     friend class ThreatMgr;

@@ -46,10 +46,10 @@ void UnitAI::InitializeAI()
         Reset();
 }
 
-void UnitAI::OnCharmed(bool isNew)
+//Enable PlayerAI when charmed
+void PlayerAI::OnCharmed(bool apply)
 {
-    if (!isNew)
-        me->ScheduleAIChange();
+    me->IsAIEnabled = apply;
 }
 
 void UnitAI::AttackStartCaster(Unit* victim, float dist)

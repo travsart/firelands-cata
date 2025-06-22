@@ -112,7 +112,7 @@ class FC_GAME_API GameObject : public WorldObject, public GridObject<GameObject>
 {
   public:
     explicit GameObject();
-    ~GameObject();
+    ~GameObject() override;
 
     void BuildValuesUpdate(uint8 updatetype, ByteBuffer* data, Player* target) const override;
 

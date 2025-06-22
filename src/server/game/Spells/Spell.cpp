@@ -3122,7 +3122,7 @@ void Spell::prepare(SpellCastTargets const& targets, AuraEffect const* triggered
     m_powerCost = m_CastItem ? 0 : m_spellInfo->CalcPowerCost(m_caster, m_spellSchoolMask, this);
 
     // Set combo point requirement
-    if ((_triggeredCastFlags & TRIGGERED_IGNORE_COMBO_POINTS) || m_CastItem || !m_caster->IsMovedByClient())
+    if ((_triggeredCastFlags & TRIGGERED_IGNORE_COMBO_POINTS) || m_CastItem || !m_caster->m_movedByPlayer)
         m_needComboPoints = false;
 
     MountResult mountResult = MountResult::Ok;
@@ -3220,7 +3220,7 @@ void Spell::prepare(SpellCastTargets const& targets, AuraEffect const* triggered
         if (!(_triggeredCastFlags & TRIGGERED_IGNORE_AURA_INTERRUPT_FLAGS) && m_spellInfo->IsBreakingStealth() && !m_spellInfo->HasAttribute(SPELL_ATTR2_IGNORE_ACTION_AURA_INTERRUPT_FLAGS))
             m_caster->RemoveAurasWithInterruptFlags(SpellAuraInterruptFlags::Action);
 
-        m_caster->SetCurrentCastSpell(this);
+        m_caster->SetCurrentCastedSpell(this);
         SendSpellStart();
 
         if (!(_triggeredCastFlags & TRIGGERED_IGNORE_GCD))
@@ -3798,7 +3798,7 @@ void Spell::_handle_immediate_phase()
 
 void Spell::_handle_finish_phase()
 {
-    if (m_caster->IsMovedByClient())
+    if (m_caster->m_movedByPlayer)
     {
         Player* mover = m_caster->GetGameClientMovingMe()->GetBasePlayer();
         // Take for real after all targets are processed
@@ -4208,7 +4208,7 @@ void Spell::SendCastResult(SpellCastResult result, uint32* param1 /*= nullptr*/,
     if (m_caster->GetTypeId() != TYPEID_PLAYER)
         return;
 
-    if (m_caster->ToPlayer()->IsLoading()) // don't send cast results at loading time
+    if (m_caster->ToPlayer()->isBeingLoaded()) // don't send cast results at loading time
         return;
 
     SendCastResult(m_caster->ToPlayer(), m_spellInfo, m_cast_count, result, m_customError, param1, param2);
@@ -4242,7 +4242,7 @@ void Spell::SendMountResult(MountResult result)
         return;
 
     Player* caster = m_caster->ToPlayer();
-    if (caster->IsLoading()) // don't send mount results at loading time
+    if (caster->isBeingLoaded()) // don't send mount results at loading time
         return;
 
     WorldPackets::Spells::MountResult packet;
@@ -7726,8 +7726,8 @@ void Spell::DoEffectOnLaunchTarget(TargetInfo& targetInfo, float multiplier, uin
 
     float critChance = m_spellValue->CriticalChance;
     if (!critChance)
-        critChance = m_caster->SpellCritChanceDone(m_spellInfo, m_spellSchoolMask, m_attackType);
-    targetInfo.IsCrit = roll_chance_f(unit->SpellCritChanceTaken(m_caster, m_spellInfo, m_spellSchoolMask, critChance, m_attackType));
+        critChance = m_caster->SpellDoneCritChance(m_spellInfo, m_spellSchoolMask, m_attackType);
+    targetInfo.IsCrit = roll_chance_f(unit->SpellTakenCritChance(m_caster, m_spellInfo, m_spellSchoolMask, critChance, m_attackType));
 }
 
 SpellCastResult Spell::CanOpenLock(uint32 effIndex, uint32 lockId, SkillType& skillId, int32& reqSkillValue, int32& skillValue)

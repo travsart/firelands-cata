@@ -532,8 +532,8 @@ public:
                     return 1000;
                 case 2:
                     Talk(GEEZLE_SAY_1, Spark);
-                    Spark->SetOrientationTowards(me);
-                    me->SetOrientationTowards(Spark);
+                    Spark->SetInFront(me);
+                    me->SetInFront(Spark);
                     return 5000;
                 case 3:
                     Spark->AI()->Talk(SPARK_SAY_2);

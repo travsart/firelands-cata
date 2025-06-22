@@ -419,14 +419,14 @@ void Unit::Update(uint32 p_time)
             ObjectGuid const channelGuid = GetChannelObjectGuid();
             if (!channelGuid.IsEmpty() && channelGuid != GetGUID())
                 if (WorldObject const* objectTarget = ObjectAccessor::GetWorldObject(*this, channelGuid))
-                    SetOrientationTowards(objectTarget);
+                    SetInFront(objectTarget);
         }
         else if (IsCreature() && !HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_POSSESSED))
         {
             ObjectGuid const targetGuid = GetTarget();
             if (!targetGuid.IsEmpty() && targetGuid != GetGUID())
                 if (WorldObject const* objectTarget = ObjectAccessor::GetWorldObject(*this, targetGuid))
-                    SetOrientationTowards(objectTarget);
+                    SetInFront(objectTarget);
         }
     }
 
@@ -3045,7 +3045,7 @@ void Unit::_UpdateAutoRepeatSpell()
     }
 }
 
-void Unit::SetCurrentCastSpell(Spell* pSpell)
+void Unit::SetCurrentCastedSpell(Spell* pSpell)
 {
     ASSERT(pSpell); // nullptr may be never passed here, use InterruptSpell or InterruptNonMeleeSpells
 
@@ -3383,7 +3383,7 @@ void Unit::_AddAura(UnitAura* aura, Unit* caster)
 
     if (aura->IsLimitedTarget())
     {
-        ASSERT((IsInWorld() && !IsDuringRemoveFromWorld()) || (aura->GetCasterGUID() == GetGUID()) || (IsLoading() && aura->HasEffectType(SPELL_AURA_CONTROL_VEHICLE)));
+        ASSERT((IsInWorld() && !IsDuringRemoveFromWorld()) || (aura->GetCasterGUID() == GetGUID()) || (isBeingLoaded() && aura->HasEffectType(SPELL_AURA_CONTROL_VEHICLE)));
         /* @HACK: Player is not in world during loading auras.
          *        Single target auras are not saved or loaded from database
          *        but may be created as a result of aura links (player mounts with passengers)
@@ -5010,7 +5010,7 @@ int32 Unit::GetMaxNegativeAuraModifierByAffectMask(AuraType auraType, SpellInfo 
         });
 }
 
-void Unit::UpdateResistanceBuffModsMod(SpellSchools school)
+void Unit::ApplyResistanceBuffModsMod(SpellSchools school)
 {
     float modPos = 0.0f;
     float modNeg = 0.0f;
@@ -5041,7 +5041,7 @@ void Unit::UpdateResistanceBuffModsMod(SpellSchools school)
     SetFloatValue(UNIT_FIELD_RESISTANCEBUFFMODSNEGATIVE + school, modNeg);
 }
 
-void Unit::UpdateStatBuffMod(Stats stat)
+void Unit::ApplyStatBuffMod(Stats stat)
 {
     float modPos = 0.0f;
     float modNeg = 0.0f;
@@ -5050,7 +5050,7 @@ void Unit::UpdateStatBuffMod(Stats stat)
     UnitMods const unitMod = static_cast<UnitMods>(UNIT_MOD_STAT_START + stat);
 
     // includes value from items and enchantments
-    float modValue = GetFlatModifierValue(unitMod, BASE_VALUE);
+    float modValue = GetModifierValue(unitMod, BASE_VALUE);
     if (modValue > 0.f)
         modPos += modValue;
     else
@@ -5163,15 +5163,6 @@ GameObject* Unit::GetGameObject(uint32 spellId) const
     return gameobjects.empty() ? nullptr : gameobjects.front();
 }
 
-std::vector<GameObject*> Unit::GetGameObjects(uint32 spellId) const
-{
-    std::vector<GameObject*> gameobjects;
-    for (GameObjectList::const_iterator i = m_gameObj.begin(); i != m_gameObj.end(); ++i)
-        if ((*i)->GetSpellId() == spellId)
-            gameobjects.push_back(*i);
-
-    return gameobjects;
-}
 
 void Unit::AddGameObject(GameObject* gameObj)
 {
@@ -5709,10 +5700,6 @@ bool Unit::IsNeutralToAll() const
 
     return my_faction->IsNeutralToAll();
 }
-
-void Unit::_addAttacker(Unit* pAttacker) { m_attackers.insert(pAttacker); }
-
-void Unit::_removeAttacker(Unit* pAttacker) { m_attackers.erase(pAttacker); }
 
 Unit* Unit::getAttackerForHelper() const // If someone wants to help, who to give them
 {
@@ -6422,7 +6409,7 @@ int32 Unit::DealHeal(Unit* healer, Unit* victim, uint32 addhealth)
     return gain;
 }
 
-bool Unit::IsMagnet() const
+bool Unit::HasSpellMagnetAura() const
 {
     // Grounding Totem
     if (GetUInt32Value(UNIT_CREATED_BY_SPELL) == 8177) /// @todo: find a more generic solution
@@ -7171,7 +7158,7 @@ int32 Unit::SpellBaseDamageBonusDone(SpellSchoolMask schoolMask, bool withSpellP
     return DoneAdvertisedBenefit;
 }
 
-float Unit::SpellCritChanceDone(SpellInfo const* spellInfo, SpellSchoolMask schoolMask, WeaponAttackType attackType /*= BASE_ATTACK*/, bool isPeriodic /*false*/) const
+float Unit::SpellDoneCritChance(SpellInfo const* spellInfo, SpellSchoolMask schoolMask, WeaponAttackType attackType /*= BASE_ATTACK*/, bool isPeriodic /*false*/) const
 {
     //! Mobs can't crit with spells. (Except player controlled)
     if (GetTypeId() == TYPEID_UNIT && !GetSpellModOwner())
@@ -7217,7 +7204,7 @@ float Unit::SpellCritChanceDone(SpellInfo const* spellInfo, SpellSchoolMask scho
     return std::max(crit_chance, 0.0f);
 }
 
-float Unit::SpellCritChanceTaken(
+float Unit::SpellTakenCritChance(
     Unit const* caster, SpellInfo const* spellInfo, SpellSchoolMask schoolMask, float doneChance, WeaponAttackType attackType /*= BASE_ATTACK */, bool /* isPeriodic false */) const
 {
     // not critting spell
@@ -9177,12 +9164,12 @@ void Unit::SetSpeedRate(UnitMoveType mtype, float rate)
         return;
 
     float newSpeedFlat = rate * (IsControlledByPlayer() ? playerBaseMoveSpeed[mtype] : baseMoveSpeed[mtype]);
-    if (IsMovedByClient() && IsInWorld())
+    if (m_movedByPlayer && IsInWorld())
     {
         MovementPacketSender::SendSpeedChangeToMover(this, mtype, newSpeedFlat);
         SetSpeedRateReal(mtype, rate);
     }
-    else if (IsMovedByClient() && !IsInWorld()) // (1)
+    else if (m_movedByPlayer && !IsInWorld()) // (1)
         SetSpeedRateReal(mtype, rate);
     else // <=> if(!IsMovedByPlayer())
     {
@@ -9217,48 +9204,20 @@ void Unit::FollowTarget(Unit* target)
     }
 
     // Determine follow configuration
-    bool joinFormation = false;   // unit will follow its target in a generated formation shape and catches up to its target
-    bool catchUpToTarget = false; // unit will allign to the target speed and catches up to the target automatically
-    bool faceTarget = false;      // unit will face its target with every spline
     float distance = PET_FOLLOW_DIST;
 
     if (TempSummon* summon = ToTempSummon())
     {
         if (SummonPropertiesEntry const* properties = summon->m_Properties)
         {
-            // Allied summons, pet summons join a formation unless the following exceptions are being met.
-            if (properties->Control == SUMMON_CATEGORY_ALLY || properties->Control == SUMMON_CATEGORY_PET)
-                joinFormation = true;
-
             // Companion minipets will always be able to catch up to their target
-            if (properties->Slot == SUMMON_SLOT_MINIPET)
+            if (properties->Slot == SUMMON_SLOT_MINIPET || properties->Slot == SUMMON_SLOT_QUEST)
             {
-                joinFormation = false;
-                catchUpToTarget = true;
-                faceTarget = true;
-                distance = DEFAULT_FOLLOW_DISTANCE;
-            }
-
-            // Quest npcs follow their target outside of formations
-            if (properties->Slot == SUMMON_SLOT_QUEST)
-            {
-                joinFormation = false;
                 distance = DEFAULT_FOLLOW_DISTANCE;
             }
         }
-
-        // Pets and minions alwys move in a formation of their target
-        if (summon->IsPet())
-            joinFormation = true;
     }
-    else if (IsCharmed())
-        joinFormation = true;
-
-    // Unit is already following its target
-    if (joinFormation && target->HasFormationFollower(this))
-        return;
-
-    GetMotionMaster()->MoveFollow(target, distance, DEFAULT_FOLLOW_ANGLE, joinFormation, catchUpToTarget, faceTarget);
+    GetMotionMaster()->MoveFollow(target, distance, target->GetFollowAngle());
 }
 
 void Unit::RemoveFormationFollower(Unit* follower)
@@ -9775,149 +9734,7 @@ bool Unit::IsInDisallowedMountForm() const
 ########                         ########
 #######################################*/
 
-void Unit::HandleStatFlatModifier(UnitMods unitMod, UnitModifierType modifierType, float amount, bool apply)
-{
-    if (unitMod >= UNIT_MOD_END || modifierType >= MODIFIER_TYPE_FLAT_END)
-    {
-        LOG_ERROR("entities.unit", "ERROR in HandleStatFlatModifier(): non-existing UnitMods or wrong UnitModifierType!");
-        return;
-    }
 
-    if (!amount)
-        return;
-
-    switch (modifierType)
-    {
-    case BASE_VALUE:
-    case TOTAL_VALUE:
-        m_auraFlatModifiersGroup[unitMod][modifierType] += apply ? amount : -amount;
-        break;
-    default:
-        break;
-    }
-
-    UpdateUnitMod(unitMod);
-}
-
-void Unit::ApplyStatPctModifier(UnitMods unitMod, UnitModifierType modifierType, float pct)
-{
-    if (unitMod >= UNIT_MOD_END || modifierType >= MODIFIER_TYPE_PCT_END)
-    {
-        LOG_ERROR("entities.unit", "ERROR in ApplyStatPctModifier(): non-existing UnitMods or wrong UnitModifierType!");
-        return;
-    }
-
-    if (!pct)
-        return;
-
-    switch (modifierType)
-    {
-    case BASE_PCT:
-    case TOTAL_PCT:
-        AddPct(m_auraPctModifiersGroup[unitMod][modifierType], pct);
-        break;
-    default:
-        break;
-    }
-
-    UpdateUnitMod(unitMod);
-}
-
-void Unit::SetStatFlatModifier(UnitMods unitMod, UnitModifierType modifierType, float val)
-{
-    if (m_auraFlatModifiersGroup[unitMod][modifierType] == val)
-        return;
-
-    m_auraFlatModifiersGroup[unitMod][modifierType] = val;
-    UpdateUnitMod(unitMod);
-}
-
-void Unit::SetStatPctModifier(UnitMods unitMod, UnitModifierType modifierType, float val)
-{
-    if (m_auraPctModifiersGroup[unitMod][modifierType] == val)
-        return;
-
-    m_auraPctModifiersGroup[unitMod][modifierType] = val;
-    UpdateUnitMod(unitMod);
-}
-
-float Unit::GetFlatModifierValue(UnitMods unitMod, UnitModifierType modifierType) const
-{
-    if (unitMod >= UNIT_MOD_END || modifierType >= MODIFIER_TYPE_FLAT_END)
-    {
-        LOG_ERROR("entities.unit", "attempt to access non-existing modifier value from UnitMods!");
-        return 0.0f;
-    }
-
-    return m_auraFlatModifiersGroup[unitMod][modifierType];
-}
-
-float Unit::GetPctModifierValue(UnitMods unitMod, UnitModifierType modifierType) const
-{
-    if (unitMod >= UNIT_MOD_END || modifierType >= MODIFIER_TYPE_PCT_END)
-    {
-        LOG_ERROR("entities.unit", "attempt to access non-existing modifier value from UnitMods!");
-        return 0.0f;
-    }
-
-    return m_auraPctModifiersGroup[unitMod][modifierType];
-}
-
-void Unit::UpdateUnitMod(UnitMods unitMod)
-{
-    if (!CanModifyStats())
-        return;
-
-    switch (unitMod)
-    {
-    case UNIT_MOD_STAT_STRENGTH:
-    case UNIT_MOD_STAT_AGILITY:
-    case UNIT_MOD_STAT_STAMINA:
-    case UNIT_MOD_STAT_INTELLECT:
-    case UNIT_MOD_STAT_SPIRIT:
-        UpdateStats(GetStatByAuraGroup(unitMod));
-        break;
-    case UNIT_MOD_ARMOR:
-        UpdateArmor();
-        break;
-    case UNIT_MOD_HEALTH:
-        UpdateMaxHealth();
-        break;
-    case UNIT_MOD_MANA:
-    case UNIT_MOD_RAGE:
-    case UNIT_MOD_FOCUS:
-    case UNIT_MOD_ENERGY:
-    case UNIT_MOD_RUNE:
-    case UNIT_MOD_RUNIC_POWER:
-        UpdateMaxPower(GetPowerTypeByAuraGroup(unitMod));
-        break;
-    case UNIT_MOD_RESISTANCE_HOLY:
-    case UNIT_MOD_RESISTANCE_FIRE:
-    case UNIT_MOD_RESISTANCE_NATURE:
-    case UNIT_MOD_RESISTANCE_FROST:
-    case UNIT_MOD_RESISTANCE_SHADOW:
-    case UNIT_MOD_RESISTANCE_ARCANE:
-        UpdateResistances(GetSpellSchoolByAuraGroup(unitMod));
-        break;
-    case UNIT_MOD_ATTACK_POWER:
-        UpdateAttackPowerAndDamage();
-        break;
-    case UNIT_MOD_ATTACK_POWER_RANGED:
-        UpdateAttackPowerAndDamage(true);
-        break;
-    case UNIT_MOD_DAMAGE_MAINHAND:
-        UpdateDamagePhysical(BASE_ATTACK);
-        break;
-    case UNIT_MOD_DAMAGE_OFFHAND:
-        UpdateDamagePhysical(OFF_ATTACK);
-        break;
-    case UNIT_MOD_DAMAGE_RANGED:
-        UpdateDamagePhysical(RANGED_ATTACK);
-        break;
-    default:
-        break;
-    }
-}
 
 void Unit::UpdateDamageDoneMods(WeaponAttackType attackType)
 {
@@ -9947,7 +9764,7 @@ void Unit::UpdateDamageDoneMods(WeaponAttackType attackType)
             return CheckAttackFitToAuraRequirement(attackType, aurEff);
         });
 
-    SetStatFlatModifier(unitMod, TOTAL_VALUE, amount);
+    SetModifierValue(unitMod, TOTAL_VALUE, amount);
 }
 
 void Unit::UpdateAllDamageDoneMods()
@@ -9992,7 +9809,7 @@ void Unit::UpdateDamagePctDoneMods(WeaponAttackType attackType)
     if (attackType == OFF_ATTACK)
         factor *= GetTotalAuraMultiplier(SPELL_AURA_MOD_OFFHAND_DAMAGE_PCT, std::bind(&Unit::CheckAttackFitToAuraRequirement, this, attackType, std::placeholders::_1));
 
-    SetStatPctModifier(unitMod, TOTAL_PCT, factor);
+    SetModifierValue(unitMod, TOTAL_PCT, factor);
 }
 
 void Unit::UpdateAllDamagePctDoneMods()
@@ -10006,10 +9823,10 @@ float Unit::GetTotalStatValue(Stats stat) const
     UnitMods unitMod = UnitMods(UNIT_MOD_STAT_START + stat);
 
     // value = ((base_value * base_pct) + total_value) * total_pct
-    float value = GetFlatModifierValue(unitMod, BASE_VALUE) + GetCreateStat(stat);
-    value *= GetPctModifierValue(unitMod, BASE_PCT);
-    value += GetFlatModifierValue(unitMod, TOTAL_VALUE);
-    value *= GetPctModifierValue(unitMod, TOTAL_PCT);
+    float value = GetModifierValue(unitMod, BASE_VALUE) + GetCreateStat(stat);
+    value *= GetModifierValue(unitMod, BASE_PCT);
+    value += GetModifierValue(unitMod, TOTAL_VALUE);
+    value *= GetModifierValue(unitMod, TOTAL_PCT);
 
     return value;
 }
@@ -10022,10 +9839,10 @@ float Unit::GetTotalAuraModValue(UnitMods unitMod) const
         return 0.0f;
     }
 
-    float value = GetFlatModifierValue(unitMod, BASE_VALUE);
-    value *= GetPctModifierValue(unitMod, BASE_PCT);
-    value += GetFlatModifierValue(unitMod, TOTAL_VALUE);
-    value *= GetPctModifierValue(unitMod, TOTAL_PCT);
+    float value = GetModifierValue(unitMod, BASE_VALUE);
+    value *= GetModifierValue(unitMod, BASE_PCT);
+    value += GetModifierValue(unitMod, TOTAL_VALUE);
+    value *= GetModifierValue(unitMod, TOTAL_PCT);
 
     return value;
 }
@@ -11214,8 +11031,6 @@ void Unit::SendPetAIReaction(ObjectGuid guid)
 
 ///----------End of Pet responses methods----------
 
-void Unit::propagateSpeedChange() { GetMotionMaster()->propagateSpeedChange(); }
-
 void Unit::StopMoving()
 {
     ClearUnitState(UNIT_STATE_MOVING);
@@ -12230,21 +12045,6 @@ void Unit::SetControlled(bool apply, UnitState state)
     }
 }
 
-void Unit::ApplyControlStatesIfNeeded()
-{
-    // Unit States might have been already cleared but auras still present. I need to check with HasAuraType
-    if (HasUnitState(UNIT_STATE_STUNNED) || HasAuraType(SPELL_AURA_MOD_STUN))
-        SetStunned(true);
-
-    if (HasUnitState(UNIT_STATE_ROOT) || HasAuraType(SPELL_AURA_MOD_ROOT))
-        SetRooted(true);
-
-    if (HasUnitState(UNIT_STATE_CONFUSED) || HasAuraType(SPELL_AURA_MOD_CONFUSE))
-        SetConfused(true);
-
-    if (HasUnitState(UNIT_STATE_FLEEING) || HasAuraType(SPELL_AURA_MOD_FEAR))
-        SetFeared(true);
-}
 
 void Unit::SetStunned(bool apply)
 {
@@ -12259,7 +12059,7 @@ void Unit::SetStunned(bool apply)
 
         if (GetTypeId() == TYPEID_PLAYER)
             SetStandState(UNIT_STAND_STATE_STAND);
-        SetRooted(true);
+        SetRooted(true, true);
 
         CastStop();
     }
@@ -12274,26 +12074,45 @@ void Unit::SetStunned(bool apply)
             RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_STUNNED);
 
         if (!HasUnitState(UNIT_STATE_ROOT)) // prevent moving if it also has root effect
-            SetRooted(false);
+            SetRooted(false, true);
     }
 }
 
-void Unit::SetRooted(bool apply, bool packetOnly /*= false*/)
+void Unit::SetRooted(bool apply, bool isStun, bool packetOnly /*= false*/)
 {
     if (!packetOnly)
     {
         if (apply)
         {
+            if (m_rootTimes > 0) // blizzard internal check?
+            m_rootTimes++;
+
             // MOVEMENTFLAG_ROOT cannot be used in conjunction with MOVEMENTFLAG_MASK_MOVING (tested 3.3.5a)
             // this will freeze clients. That's why we remove MOVEMENTFLAG_MASK_MOVING before
             // setting MOVEMENTFLAG_ROOT
             RemoveUnitMovementFlag(MOVEMENTFLAG_MASK_MOVING);
-            AddUnitMovementFlag(MOVEMENTFLAG_ROOT);
 
-            // Do not stop movement when the unit is affected by parabolic spline movement (knockbacks, pulls, scripted leaps
-            // etc.)
-            if (!movespline->isParabolic())
-                StopMoving();
+            if (IsFalling())
+            {
+                AddUnitMovementFlag(MOVEMENTFLAG_PENDING_ROOT);
+            }
+            else
+            {
+                AddUnitMovementFlag(MOVEMENTFLAG_ROOT);
+            }
+
+            // Creature specific
+            if (!IsPlayer())
+            {
+                if (isStun && movespline->Finalized())
+                {
+                    StopMovingOnCurrentPos();
+                }
+                else
+                {
+                    StopMoving();
+                }
+            }
         }
         else
             RemoveUnitMovementFlag(MOVEMENTFLAG_ROOT);
@@ -14102,7 +13921,7 @@ void Unit::SendTeleportPacket(Position const& pos)
     }
     // SMSG_MOVE_UPDATE_TELEPORT is sent to nearby players to signal the teleport
     // MSG_MOVE_TELEPORT is sent to self in order to trigger MSG_MOVE_TELEPORT_ACK and update the position server side
-    if (IsMovedByClient())
+    if (m_movedByPlayer)
     {
         Player* playerMover = GetGameClientMovingMe()->GetBasePlayer();
         float x, y, z, o;
@@ -14476,7 +14295,7 @@ void CharmInfo::SetIsReturning(bool val) { _isReturning = val; }
 
 bool CharmInfo::IsReturning() { return _isReturning; }
 
-void Unit::SetOrientationTowards(WorldObject const* target) { SetOrientation(GetAngle(target)); }
+void Unit::SetInFront(WorldObject const* target) { SetOrientation(GetAngle(target)); }
 
 void Unit::SetFacingTo(float ori, bool force)
 {

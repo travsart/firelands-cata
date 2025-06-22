@@ -467,7 +467,7 @@ struct boss_ragnaros_firelands : public BossAI
                 me->AttackStop();
                 me->SetReactState(REACT_PASSIVE);
                 me->SetFacingToObject(summon);
-                me->SetOrientationTowards(summon); // we need an immediately updated orientation for the next cast
+                me->SetInFront(summon); // we need an immediately updated orientation for the next cast
                 DoCastSelf(SPELL_SULFURAS_SMASH_SUMMON);
 
                 // Sulfuras Smash delays the execution of Wrath of Ragnaros by 5,5s
@@ -735,7 +735,7 @@ struct boss_ragnaros_firelands : public BossAI
                         Talk(SAY_SPLITTING_BLOW);
                         DoCastSelf(SPELL_SUBMERGE);
                         me->SetFacingToObject(splittingBlow);
-                        me->SetOrientationTowards(splittingBlow);
+                        me->SetInFront(splittingBlow);
                         DoCastSelf(SPELL_SPLITTING_BLOW);
                     }
                     break;

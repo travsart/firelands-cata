@@ -1838,13 +1838,13 @@ void Spell::EffectProficiency(SpellEffIndex /*effIndex*/)
     if (m_spellInfo->EquippedItemClass == ITEM_CLASS_WEAPON && !(player->GetWeaponProficiency() & subClassMask))
     {
         player->AddWeaponProficiency(subClassMask);
-        if (!player->IsLoading())
+        if (!player->isBeingLoaded())
             player->SendProficiency(ITEM_CLASS_WEAPON, player->GetWeaponProficiency());
     }
     if (m_spellInfo->EquippedItemClass == ITEM_CLASS_ARMOR && !(player->GetArmorProficiency() & subClassMask))
     {
         player->AddArmorProficiency(subClassMask);
-        if (!player->IsLoading())
+        if (!player->isBeingLoaded())
             player->SendProficiency(ITEM_CLASS_ARMOR, player->GetArmorProficiency());
     }
 }
@@ -2845,7 +2845,7 @@ void Spell::EffectWeaponDmg(SpellEffIndex effIndex)
             break;
         }
 
-        float weapon_total_pct = m_caster->GetPctModifierValue(unitMod, TOTAL_PCT);
+        float weapon_total_pct = m_caster->GetModifierValue(unitMod, TOTAL_PCT);
         if (fixed_bonus)
             fixed_bonus = int32(fixed_bonus * weapon_total_pct);
     }
@@ -3589,7 +3589,7 @@ void Spell::EffectAddComboPoints(SpellEffIndex /*effIndex*/)
     if (!unitTarget)
         return;
 
-    if (!m_caster->IsMovedByClient())
+    if (!m_caster->m_movedByPlayer)
         return;
 
     if (damage <= 0)
