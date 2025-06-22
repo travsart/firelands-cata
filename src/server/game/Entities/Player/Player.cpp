@@ -26198,7 +26198,7 @@ bool Player::SetDisableGravity(bool disable, bool /*packetOnly = false*/, bool /
     if (disable == IsGravityDisabled())
         return false;
 
-    if (m_movedByPlayer && IsInWorld())
+    if (IsMovedByClient() && IsInWorld())
         MovementPacketSender::SendMovementFlagChangeToMover(this, MOVEMENTFLAG_DISABLE_GRAVITY, disable);
 
     Unit::SetDisableGravity(disable, false, false);
@@ -26211,7 +26211,7 @@ bool Player::SetCanFly(bool enable, bool /*packetOnly = false*/)
     if (enable == HasUnitMovementFlag(MOVEMENTFLAG_CAN_FLY))
         return false;
 
-    if (m_movedByPlayer && IsInWorld())
+    if (IsMovedByClient() && IsInWorld())
         MovementPacketSender::SendMovementFlagChangeToMover(this, MOVEMENTFLAG_CAN_FLY, enable);
 
     Unit::SetCanFly(enable);
@@ -26224,7 +26224,7 @@ bool Player::SetCanTransitionBetweenSwimAndFly(bool enable)
     if (enable == HasExtraUnitMovementFlag(MOVEMENTFLAG2_CAN_SWIM_TO_FLY_TRANS))
         return false;
 
-    if (m_movedByPlayer && IsInWorld())
+    if (IsMovedByClient() && IsInWorld())
         MovementPacketSender::SendMovementFlagChangeToMover(this, MOVEMENTFLAG2_CAN_SWIM_TO_FLY_TRANS, enable);
 
     Unit::SetCanTransitionBetweenSwimAndFly(enable);
@@ -26234,7 +26234,7 @@ bool Player::SetCanTransitionBetweenSwimAndFly(bool enable)
 
 void Player::SendMovementSetCollisionHeight(float height, UpdateCollisionHeightReason reason)
 {
-    if (m_movedByPlayer && IsInWorld())
+    if (IsMovedByClient() && IsInWorld())
         MovementPacketSender::SendHeightChangeToMover(this, height, reason);
 }
 

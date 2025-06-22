@@ -465,11 +465,11 @@ class FC_GAME_API DamageInfo
     // amalgamation constructor (used for proc)
     DamageInfo(DamageInfo const& dmg1, DamageInfo const& dmg2);
   public:
-    DamageInfo(Unit* attacker, Unit* victim, uint32 damage, SpellInfo const* spellInfo, SpellSchoolMask schoolMask, DamageEffectType damageType, WeaponAttackType attackType, uint32 cleanDamage = 0);
+    explicit DamageInfo(Unit* attacker, Unit* victim, uint32 damage, SpellInfo const* spellInfo, SpellSchoolMask schoolMask, DamageEffectType damageType, WeaponAttackType attackType=BASE_ATTACK, uint32 cleanDamage = 0);
     explicit DamageInfo(CalcDamageInfo const& dmgInfo);
-    explicit DamageInfo(CalcDamageInfo const& dmgInfo, uint8 damageIndex);
+    DamageInfo(CalcDamageInfo const& dmgInfo, uint8 damageIndex);
     DamageInfo(SpellNonMeleeDamage const& spellNonMeleeDamage, DamageEffectType damageType, WeaponAttackType attackType, uint32 hitMask);
-    DamageInfo(SpellNonMeleeDamage const& spellNonMeleeDamage, DamageEffectType damageType);
+
 
     void ModifyDamage(int32 amount);
     void AbsorbDamage(uint32 amount);
@@ -537,7 +537,7 @@ class FC_GAME_API ProcEventInfo
         uint32 _spellPhaseMask;
         uint32 _hitMask;
         uint32 _cooldown;
-        Spell* _spell;
+        Spell const* _spell;
         DamageInfo* _damageInfo;
         HealInfo* _healInfo;
         SpellInfo const* const _triggeredByAuraSpell;
@@ -2265,8 +2265,6 @@ class FC_GAME_API Unit : public WorldObject
     bool m_canDualWield;
 
     ControlSet m_Controlled;
-
-    SafeUnitPointer m_movedByPlayer;
 
     ObjectGuid m_SummonSlot[MAX_SUMMON_SLOT];
     ObjectGuid m_ObjectSlot[MAX_GAMEOBJECT_SLOT];

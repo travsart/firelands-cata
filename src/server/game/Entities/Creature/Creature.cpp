@@ -3031,7 +3031,7 @@ float Creature::GetNativeObjectScale() const
 void Creature::UpdateMovementFlags(bool initializeDBStates)
 {
     // Do not update movement flags if creature is controlled by a player (charm/vehicle)
-    if (m_movedByPlayer)
+    if (IsMovedByClient())
         return;
 
     // Creatures with CREATURE_FLAG_EXTRA_NO_MOVE_FLAGS_UPDATE should control MovementFlags in your own scripts

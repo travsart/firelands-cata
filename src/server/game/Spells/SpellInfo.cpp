@@ -529,7 +529,7 @@ int32 SpellEffectInfo::CalcValue(Unit const* caster, int32 const* bp, Unit const
     if (caster)
     {
         // bonus amount from combo points
-        if (_spellInfo->HasAttribute(SPELL_ATTR1_FINISHING_MOVE_DAMAGE) && caster->m_movedByPlayer && comboDamage)
+        if (_spellInfo->HasAttribute(SPELL_ATTR1_FINISHING_MOVE_DAMAGE) && caster->IsMovedByClient() && comboDamage)
             if (uint8 comboPoints = caster->GetGameClientMovingMe()->GetBasePlayer()->GetComboPoints())
                 value += comboDamage * comboPoints;
 
@@ -3374,7 +3374,7 @@ int32 SpellInfo::CalcDuration(Unit* caster, Spell* spell) const
     // Increase duration based on combo points
     if (HasAttribute(SPELL_ATTR1_FINISHING_MOVE_DURATION))
     {
-        if (uint8 comboPoints = (caster && caster->m_movedByPlayer) ? caster->GetGameClientMovingMe()->GetBasePlayer()->GetComboPoints() : 0)
+        if (uint8 comboPoints = (caster && caster->IsMovedByClient()) ? caster->GetGameClientMovingMe()->GetBasePlayer()->GetComboPoints() : 0)
         {
             if (GetDuration() != GetMaxDuration() && GetDuration() != -1)
                 duration += int32((GetMaxDuration() - GetDuration()) * comboPoints / 5);

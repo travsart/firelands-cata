@@ -3589,7 +3589,7 @@ void Spell::EffectAddComboPoints(SpellEffIndex /*effIndex*/)
     if (!unitTarget)
         return;
 
-    if (!m_caster->m_movedByPlayer)
+    if (!m_caster->IsMovedByClient())
         return;
 
     if (damage <= 0)

@@ -16,7 +16,6 @@
  */
 
 #include "Unit.h"
-#include "AbstractPursuer.h"
 #include "Archaeology.h"
 #include "Battlefield.h"
 #include "BattlefieldMgr.h"
@@ -111,15 +110,19 @@ float playerBaseMoveSpeed[MAX_MOVE_TYPE] = {
     3.14f      // MOVE_PITCH_RATE
 };
 
-DamageInfo::DamageInfo(Unit* attacker, Unit* victim, uint32 damage, SpellInfo const* spellInfo, SpellSchoolMask schoolMask, DamageEffectType damageType, WeaponAttackType attackType)
-    : m_attacker(attacker), m_victim(victim), m_damage(damage), m_spellInfo(spellInfo), m_schoolMask(schoolMask), m_damageType(damageType), m_attackType(attackType), m_absorb(0), m_resist(0),
+DamageInfo::DamageInfo(Unit* attacker, Unit* victim, uint32 damage, SpellInfo const* spellInfo, SpellSchoolMask schoolMask, DamageEffectType damageType, WeaponAttackType attackType, uint32 cleanDamage)
+    : m_attacker(attacker), m_victim(victim), m_damage(damage), m_spellInfo(spellInfo), m_schoolMask(schoolMask), m_damageType(damageType), m_attackType(attackType), m_cleanDamage(cleanDamage), m_absorb(0), m_resist(0),
       m_block(0), m_hitMask(0)
 {
 }
 
-DamageInfo::DamageInfo(CalcDamageInfo const& dmgInfo)
-    : m_attacker(dmgInfo.attacker), m_victim(dmgInfo.target), m_damage(dmgInfo.damage), m_spellInfo(nullptr), m_schoolMask(SpellSchoolMask(dmgInfo.damageSchoolMask)), m_damageType(DIRECT_DAMAGE),
-      m_attackType(dmgInfo.attackType), m_absorb(dmgInfo.absorb), m_resist(dmgInfo.resist), m_block(dmgInfo.blocked_amount), m_hitMask(0)
+DamageInfo::DamageInfo(CalcDamageInfo const& dmgInfo) : DamageInfo(DamageInfo(dmgInfo, 0), DamageInfo(dmgInfo, 1))
+{
+}
+
+DamageInfo::DamageInfo(CalcDamageInfo const& dmgInfo, uint8 damageIndex)
+    : m_attacker(dmgInfo.attacker), m_victim(dmgInfo.target), m_damage(dmgInfo.damages[damageIndex].damage), m_spellInfo(nullptr), m_schoolMask(SpellSchoolMask(dmgInfo.damages[damageIndex].damageSchoolMask)),
+      m_damageType(DIRECT_DAMAGE), m_attackType(dmgInfo.attackType), m_cleanDamage(dmgInfo.cleanDamage), m_absorb(dmgInfo.damages[damageIndex].absorb), m_resist(dmgInfo.damages[damageIndex].resist), m_block(dmgInfo.blocked_amount)
 {
     switch (dmgInfo.TargetState)
     {
@@ -170,9 +173,9 @@ DamageInfo::DamageInfo(CalcDamageInfo const& dmgInfo)
 }
 
 DamageInfo::DamageInfo(SpellNonMeleeDamage const& spellNonMeleeDamage, DamageEffectType damageType, WeaponAttackType attackType, uint32 hitMask)
-    : m_attacker(spellNonMeleeDamage.attacker), m_victim(spellNonMeleeDamage.target), m_damage(spellNonMeleeDamage.damage), m_spellInfo(sSpellMgr->GetSpellInfo(spellNonMeleeDamage.SpellID)),
+    : m_attacker(spellNonMeleeDamage.attacker), m_victim(spellNonMeleeDamage.target), m_damage(spellNonMeleeDamage.damage), m_spellInfo(spellNonMeleeDamage.spellInfo),
       m_schoolMask(SpellSchoolMask(spellNonMeleeDamage.schoolMask)), m_damageType(damageType), m_attackType(attackType), m_absorb(spellNonMeleeDamage.absorb), m_resist(spellNonMeleeDamage.resist),
-      m_block(spellNonMeleeDamage.blocked), m_hitMask(hitMask)
+      m_block(spellNonMeleeDamage.blocked), m_hitMask(hitMask), m_cleanDamage(spellNonMeleeDamage.cleanDamage)
 {
     if (spellNonMeleeDamage.blocked)
         m_hitMask |= PROC_HIT_BLOCK;
@@ -231,11 +234,11 @@ void HealInfo::AbsorbHeal(uint32 amount)
     m_hitMask |= PROC_HIT_ABSORB;
 }
 
-ProcEventInfo::ProcEventInfo(
-    Unit* actor, Unit* actionTarget, Unit* procTarget, uint32 typeMask, uint32 spellTypeMask, uint32 spellPhaseMask, uint32 hitMask, Spell* spell, DamageInfo* damageInfo, HealInfo* healInfo)
-    : _actor(actor), _actionTarget(actionTarget), _procTarget(procTarget), _typeMask(typeMask), _spellTypeMask(spellTypeMask), _spellPhaseMask(spellPhaseMask), _hitMask(hitMask), _spell(spell),
-      _damageInfo(damageInfo), _healInfo(healInfo)
+ProcEventInfo::ProcEventInfo(Unit* actor, Unit* actionTarget, Unit* procTarget, uint32 typeMask, uint32 spellTypeMask, uint32 spellPhaseMask, uint32 hitMask, Spell const* spell, DamageInfo* damageInfo, HealInfo* healInfo, SpellInfo const* triggeredByAuraSpell, int8 procAuraEffectIndex)
+    : _actor(actor), _actionTarget(actionTarget), _procTarget(procTarget), _typeMask(typeMask), _spellTypeMask(spellTypeMask), _spellPhaseMask(spellPhaseMask),
+      _hitMask(hitMask), _spell(spell), _damageInfo(damageInfo), _healInfo(healInfo), _triggeredByAuraSpell(triggeredByAuraSpell), _procAuraEffectIndex(procAuraEffectIndex)
 {
+    _chance.reset();
 }
 
 SpellInfo const* ProcEventInfo::GetSpellInfo() const
@@ -266,11 +269,17 @@ DispelableAura::~DispelableAura() = default;
 
 bool DispelableAura::RollDispel() const { return roll_chance_i(_chance); }
 
+
+// we can disable this warning for this since it only
+// causes undefined behavior when passed to the base class constructor
+#ifdef _MSC_VER
+#pragma warning(disable:4355)
+#endif
 Unit::Unit(bool isWorldObject)
-    : WorldObject(isWorldObject), m_lastSanctuaryTime(0), LastCharmerGUID(), m_ControlledByPlayer(false), movespline(new Movement::MoveSpline()), m_AutoRepeatFirstCast(false), m_procDeep(0),
-      m_removedAurasCount(0), m_interruptMask(SpellAuraInterruptFlags::None), m_interruptMask2(SpellAuraInterruptFlags2::None), m_charmer(nullptr), m_charmed(nullptr),
-      i_motionMaster(new MotionMaster(this)), m_vehicle(nullptr), m_vehicleKit(nullptr), m_unitTypeMask(UNIT_MASK_NONE), m_Diminishing(), m_isEngaged(false), m_combatManager(this),
-      m_threatManager(this), i_AI(nullptr), m_aiLocked(false), m_spellHistory(new SpellHistory(this)), _scheduler(this), _isIgnoringCombat(false)
+    : WorldObject(isWorldObject), m_lastSanctuaryTime(0), m_ControlledByPlayer(false), movespline(new Movement::MoveSpline()), m_AutoRepeatFirstCast(false), m_procDeep(0),
+      m_removedAurasCount(0), m_interruptMask(SpellAuraInterruptFlags::None), m_interruptMask2(SpellAuraInterruptFlags2::None),
+      i_motionMaster(new MotionMaster(this)), m_vehicle(nullptr), m_vehicleKit(nullptr), m_unitTypeMask(UNIT_MASK_NONE), m_Diminishing(), m_combatManager(this),
+      i_AI(nullptr), m_spellHistory(new SpellHistory(this)), _scheduler(this), _isIgnoringCombat(false)
 {
     m_objectType |= TYPEMASK_UNIT;
     m_objectTypeId = TYPEID_UNIT;
@@ -9164,12 +9173,12 @@ void Unit::SetSpeedRate(UnitMoveType mtype, float rate)
         return;
 
     float newSpeedFlat = rate * (IsControlledByPlayer() ? playerBaseMoveSpeed[mtype] : baseMoveSpeed[mtype]);
-    if (m_movedByPlayer && IsInWorld())
+    if (IsMovedByClient() && IsInWorld())
     {
         MovementPacketSender::SendSpeedChangeToMover(this, mtype, newSpeedFlat);
         SetSpeedRateReal(mtype, rate);
     }
-    else if (m_movedByPlayer && !IsInWorld()) // (1)
+    else if (IsMovedByClient() && !IsInWorld()) // (1)
         SetSpeedRateReal(mtype, rate);
     else // <=> if(!IsMovedByPlayer())
     {
@@ -13921,7 +13930,7 @@ void Unit::SendTeleportPacket(Position const& pos)
     }
     // SMSG_MOVE_UPDATE_TELEPORT is sent to nearby players to signal the teleport
     // MSG_MOVE_TELEPORT is sent to self in order to trigger MSG_MOVE_TELEPORT_ACK and update the position server side
-    if (m_movedByPlayer)
+    if (IsMovedByClient())
     {
         Player* playerMover = GetGameClientMovingMe()->GetBasePlayer();
         float x, y, z, o;

@@ -3122,7 +3122,7 @@ void Spell::prepare(SpellCastTargets const& targets, AuraEffect const* triggered
     m_powerCost = m_CastItem ? 0 : m_spellInfo->CalcPowerCost(m_caster, m_spellSchoolMask, this);
 
     // Set combo point requirement
-    if ((_triggeredCastFlags & TRIGGERED_IGNORE_COMBO_POINTS) || m_CastItem || !m_caster->m_movedByPlayer)
+    if ((_triggeredCastFlags & TRIGGERED_IGNORE_COMBO_POINTS) || m_CastItem || !m_caster->IsMovedByClient())
         m_needComboPoints = false;
 
     MountResult mountResult = MountResult::Ok;
@@ -3798,7 +3798,7 @@ void Spell::_handle_immediate_phase()
 
 void Spell::_handle_finish_phase()
 {
-    if (m_caster->m_movedByPlayer)
+    if (m_caster->IsMovedByClient())
     {
         Player* mover = m_caster->GetGameClientMovingMe()->GetBasePlayer();
         // Take for real after all targets are processed
