@@ -2439,7 +2439,6 @@ class FC_GAME_API Unit : public WorldObject
     uint32 _powerBarId;
     float _powerFraction[MAX_POWERS_PER_CLASS];
     int32 _powerUpdateTimer;
-    int32 _healthRegenerationTimer;
     bool m_applyResilience;
     bool _instantCast;
 
@@ -2509,10 +2508,10 @@ class FC_GAME_API Unit : public WorldObject
     typedef std::unordered_map<uint64 /*visibleFlag(uint32) + updateType(uint8)*/, BuildValuesCachedBuffer>  ValuesUpdateCache;
     ValuesUpdateCache _valuesUpdateCache;
 
-    SpellHistory* m_spellHistory;
+    SpellHistory* m_spellHistory; // TODO need???
 
     uint32 m_movementCounter;
-    bool _isIgnoringCombat;
+    bool _isIgnoringCombat; // TODO need???
 
     // TODO need???
     // Manage all Units that are threatened by us

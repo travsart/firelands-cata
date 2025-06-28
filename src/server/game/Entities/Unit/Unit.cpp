@@ -76,6 +76,7 @@
 #include "Totem.h"
 #include "Transport.h"
 #include "UnitAI.h"
+#include "UnitDefines.h"
 #include "UpdateFieldFlags.h"
 #include "Util.h"
 #include "Vehicle.h"
@@ -275,16 +276,46 @@ bool DispelableAura::RollDispel() const { return roll_chance_i(_chance); }
 #ifdef _MSC_VER
 #pragma warning(disable:4355)
 #endif
-Unit::Unit(bool isWorldObject)
-    : WorldObject(isWorldObject), m_lastSanctuaryTime(0), m_ControlledByPlayer(false), movespline(new Movement::MoveSpline()), m_AutoRepeatFirstCast(false), m_procDeep(0),
-      m_removedAurasCount(0), m_interruptMask(SpellAuraInterruptFlags::None), m_interruptMask2(SpellAuraInterruptFlags2::None),
-      i_motionMaster(new MotionMaster(this)), m_vehicle(nullptr), m_vehicleKit(nullptr), m_unitTypeMask(UNIT_MASK_NONE), m_Diminishing(), m_combatManager(this),
-      i_AI(nullptr), m_spellHistory(new SpellHistory(this)), _scheduler(this), _isIgnoringCombat(false)
+Unit::Unit(bool isWorldObject) : WorldObject(isWorldObject), 
+    // m_movedByPlayer(nullptr), Should be handled by GameClient
+    m_lastSanctuaryTime(0),
+    IsAIEnabled(false),
+    NeedChangeAI(false),
+    m_ControlledByPlayer(false),
+    m_CreatedByPlayer(false),
+    movespline(new Movement::MoveSpline()), 
+    i_AI(nullptr),
+    i_disabledAI(nullptr),
+    m_realRace(0),
+    m_race(0),
+    m_AutoRepeatFirstCast(false),
+    m_procDeep(0),
+    m_removedAurasCount(0), 
+    i_motionMaster(new MotionMaster(this)), 
+    m_regenTimer(UNIT_HEALTH_REGENERATION_INTERVAL),
+    m_ThreatMgr(this),
+    m_vehicle(nullptr), 
+    m_vehicleKit(nullptr),
+    m_unitTypeMask(UNIT_MASK_NONE), 
+    m_HostileRefMgr(this),
+    m_comboTarget(nullptr),
+    m_comboPoints(0),
+    m_spellHistory(new SpellHistory(this)),
+    _scheduler(this),
+    _isIgnoringCombat(false),
+    m_interruptMask(SpellAuraInterruptFlags::None),
+    m_interruptMask2(SpellAuraInterruptFlags2::None),
+    m_Diminishing()
 {
+
+#ifdef _MSC_VER
+#pragma warning(default:4355)
+#endif
+
     m_objectType |= TYPEMASK_UNIT;
     m_objectTypeId = TYPEID_UNIT;
 
-    m_updateFlag = UPDATEFLAG_LIVING;
+    m_updateFlag = (UPDATEFLAG_LIVING | UPDATEFLAG_STATIONARY_POSITION);
 
     m_attackTimer[BASE_ATTACK] = 0;
     m_attackTimer[OFF_ATTACK] = 0;
@@ -296,8 +327,8 @@ Unit::Unit(bool isWorldObject)
     m_extraAttacks = 0;
     m_canDualWield = false;
 
-    m_movementCounter = 0;
-
+    m_rootTimes = 0;
+    
     m_state = 0;
     m_deathState = ALIVE;
 
@@ -315,20 +346,26 @@ Unit::Unit(bool isWorldObject)
     m_transform = 0;
     m_canModifyStats = false;
 
+    for (uint8 i = 0; i < MAX_SPELL_IMMUNITY; ++i)
+        m_spellImmune[i].clear();
+
     for (uint8 i = 0; i < UNIT_MOD_END; ++i)
     {
-        m_auraFlatModifiersGroup[i][BASE_VALUE] = 0.0f;
-        m_auraFlatModifiersGroup[i][TOTAL_VALUE] = 0.0f;
-        m_auraPctModifiersGroup[i][BASE_PCT] = 1.0f;
-        m_auraPctModifiersGroup[i][TOTAL_PCT] = 1.0f;
+        m_auraModifiersGroup[i][BASE_VALUE] = 0.0f;
+        m_auraModifiersGroup[i][TOTAL_VALUE] = 0.0f;
+        m_auraModifiersGroup[i][BASE_PCT] = 1.0f;
+        m_auraModifiersGroup[i][TOTAL_PCT] = 1.0f;
     }
     // implement 50% base damage from offhand
-    m_auraPctModifiersGroup[UNIT_MOD_DAMAGE_OFFHAND][TOTAL_PCT] = 0.5f;
+    m_auraModifiersGroup[UNIT_MOD_DAMAGE_OFFHAND][TOTAL_PCT] = 0.5f;
 
     for (uint8 i = 0; i < MAX_ATTACK; ++i)
     {
-        m_weaponDamage[i][MINDAMAGE] = BASE_MINDAMAGE;
-        m_weaponDamage[i][MAXDAMAGE] = BASE_MAXDAMAGE;
+        m_weaponDamage[i][MINDAMAGE][0] = BASE_MINDAMAGE;
+        m_weaponDamage[i][MAXDAMAGE][0] = BASE_MAXDAMAGE;
+
+        m_weaponDamage[i][MINDAMAGE][1] = 0.f;
+        m_weaponDamage[i][MAXDAMAGE][1] = 0.f;
     }
 
     for (uint8 i = 0; i < MAX_STATS; ++i)
@@ -340,11 +377,19 @@ Unit::Unit(bool isWorldObject)
     m_modSpellHitChance = 0.0f;
     m_baseSpellCritChance = 5;
 
+    m_CombatTimer = 0;
+    m_lastManaUse = 0;
+
+    for (uint8 i = 0; i < MAX_SPELL_SCHOOL; ++i)
+        m_threatModifier[i] = 1.0f;
+
     for (uint8 i = 0; i < MAX_MOVE_TYPE; ++i)
         m_speed_rate[i] = 1.0f;
 
     m_charmInfo = nullptr;
     _gameClientMovingMe = nullptr;
+
+    _redirectThreatInfo = RedirectThreatInfo();
 
     // remove aurastates allowing special moves
     for (uint8 i = 0; i < MAX_REACTIVE; ++i)
@@ -355,7 +400,14 @@ Unit::Unit(bool isWorldObject)
 
     m_serverSideVisibility.SetValue(SERVERSIDE_VISIBILITY_GHOST, GHOST_VISIBILITY_ALIVE);
 
-    _lastLiquid = nullptr;
+    m_last_notify_position.Relocate(-5000.0f, -5000.0f, -5000.0f, 0.0f);
+    m_last_notify_mstime = 0;
+    m_delayed_unit_relocation_timer = 0;
+    m_delayed_unit_ai_notify_timer = 0;
+    bRequestForcedVisibilityUpdate = false;
+
+    m_applyResilience = false;
+    _instantCast = false;
 
     _powerBarId = 0;
 
@@ -363,10 +415,13 @@ Unit::Unit(bool isWorldObject)
         _powerFraction[i] = 0;
 
     _powerUpdateTimer = GetPowerUpdateInterval();
-    _healthRegenerationTimer = UNIT_HEALTH_REGENERATION_INTERVAL;
 
     _oldFactionId = 0;
     _isWalkingBeforeCharm = false;
+    _lastExtraAttackSpell = 0;
+
+    // TODO need to verify if need
+    m_movementCounter = 0;
 }
 
 ////////////////////////////////////////////////////////////
@@ -381,8 +436,7 @@ Unit::~Unit()
             m_currentSpells[i] = nullptr;
         }
 
-    m_Events.KillAllEvents(true);
-    _scheduler.CancelAll();
+    
 
     _DeleteRemovedAuras();
 
@@ -394,14 +448,31 @@ Unit::~Unit()
     ASSERT(!m_duringRemoveFromWorld);
     ASSERT(!m_attacking);
     ASSERT(m_attackers.empty());
-    ASSERT(m_sharedVision.empty());
+
+    // pussywizard: clear m_sharedVision along with back references
+    if (!m_sharedVision.empty())
+    {
+        do
+        {
+            Player* p = *(m_sharedVision.begin());
+            p->m_isInSharedVisionOf.erase(this);
+            m_sharedVision.remove(p);
+        } while (!m_sharedVision.empty());
+    }
+
     ASSERT(m_Controlled.empty());
     ASSERT(m_appliedAuras.empty());
     ASSERT(m_ownedAuras.empty());
     ASSERT(m_removedAuras.empty());
     ASSERT(m_gameObj.empty());
     ASSERT(m_dynObj.empty());
-    ASSERT(!_gameClientMovingMe || _gameClientMovingMe->GetBasePlayer() == this);
+    ASSERT(!_gameClientMovingMe || _gameClientMovingMe->GetBasePlayer() == this); // Replaced m_movedByPlayer
+
+    HandleSafeUnitPointersOnDelete(this);
+    
+    // TODO still need???
+    m_Events.KillAllEvents(true);
+    _scheduler.CancelAll();
 }
 
 void Unit::Update(uint32 p_time)
@@ -482,11 +553,11 @@ void Unit::Update(uint32 p_time)
     _positionUpdateInfo.Reset();
 
     // Update Health Regeneration
-    _healthRegenerationTimer -= p_time;
-    if (_healthRegenerationTimer <= 0)
+    m_regenTimer -= p_time;
+    if (m_regenTimer <= 0)
     {
         RegenerateHealth();
-        _healthRegenerationTimer += UNIT_HEALTH_REGENERATION_INTERVAL;
+        m_regenTimer += UNIT_HEALTH_REGENERATION_INTERVAL;
     }
 
     if (HasScheduledAIChange() && (GetTypeId() != TYPEID_PLAYER || (IsCharmed() && GetCharmerGUID().IsCreature())))
