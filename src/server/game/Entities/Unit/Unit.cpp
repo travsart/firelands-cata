@@ -1905,15 +1905,23 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
         int32 const reductionMin = std::max(1, reductionMax - 10);
         float reducePercent = 1.f - irand(reductionMin, reductionMax) / 100.0f;
 
-        damageInfo->cleanDamage += damageInfo->damage - uint32(reducePercent * damageInfo->damage);
-        damageInfo->damage = uint32(reducePercent * damageInfo->damage);
+        for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
+        {
+            uint32 reducedDamage = uint32(reducePercent * damageInfo->damages[i].damage);
+            damageInfo->cleanDamage += damageInfo->damages[i].damage - reducedDamage;
+            damageInfo->damages[i].damage = reducedDamage;
+        }
         break;
     }
     case MELEE_HIT_CRUSHING:
         damageInfo->HitInfo |= HITINFO_CRUSHING;
+        damageInfo->procEx |= PROC_HIT_NORMAL;
         damageInfo->TargetState = VICTIMSTATE_HIT;
         // 150% normal damage
-        damageInfo->damage += (damageInfo->damage / 2);
+        for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
+        {
+            damageInfo->damages[i].damage += (damageInfo->damages[i].damage / 2);
+        }
         break;
     default:
         break;
@@ -1923,33 +1931,50 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
     if (!(damageInfo->HitInfo & HITINFO_MISS))
         damageInfo->HitInfo |= HITINFO_AFFECTS_VICTIM;
 
-    int32 resilienceReduction = damageInfo->damage;
-    if (CanApplyResilience())
-        Unit::ApplyResilience(victim, &resilienceReduction);
-    resilienceReduction = damageInfo->damage - resilienceReduction;
-    damageInfo->damage -= resilienceReduction;
-    damageInfo->cleanDamage += resilienceReduction;
+    uint32 tmpHitInfo[MAX_ITEM_PROTO_DAMAGES] = {};
 
-    // Calculate absorb resist
-    if (int32(damageInfo->damage) > 0)
+    for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
     {
-        damageInfo->procVictim |= PROC_FLAG_TAKE_ANY_DAMAGE;
-        // Calculate absorb & resists
-        DamageInfo dmgInfo(*damageInfo);
-        Unit::CalcAbsorbResist(dmgInfo);
-        damageInfo->absorb = dmgInfo.GetAbsorb();
-        damageInfo->resist = dmgInfo.GetResist();
+        int32 dmg = damageInfo->damages[i].damage;
+        int32 cleanDamage = damageInfo->cleanDamage;
+        // attackType is checked already for BASE_ATTACK or OFF_ATTACK so it can't be RANGED_ATTACK here
+        if (CanApplyResilience())
+        {
+            int32 resilienceReduction = damageInfo->damages[i].damage;
+            Unit::ApplyResilience(victim, nullptr, &resilienceReduction, (damageInfo->hitOutCome == MELEE_HIT_CRIT), CR_CRIT_TAKEN_MELEE);
 
-        if (damageInfo->absorb)
-            damageInfo->HitInfo |= (damageInfo->damage - damageInfo->absorb == 0 ? HITINFO_FULL_ABSORB : HITINFO_PARTIAL_ABSORB);
+            resilienceReduction = damageInfo->damages[i].damage - resilienceReduction;
+            dmg -= resilienceReduction;
+            cleanDamage += resilienceReduction;
+        }
 
-        if (damageInfo->resist)
-            damageInfo->HitInfo |= (damageInfo->damage - damageInfo->resist == 0 ? HITINFO_FULL_RESIST : HITINFO_PARTIAL_RESIST);
+        damageInfo->damages[i].damage = std::max(0, dmg);
+        damageInfo->cleanDamage = std::max(0, cleanDamage);
 
-        damageInfo->damage = dmgInfo.GetDamage();
+        // Calculate absorb resist
+        if (damageInfo->damages[i].damage > 0)
+        {
+            damageInfo->procVictim |= PROC_FLAG_TAKEN_DAMAGE;
+
+            // Calculate absorb & resists
+            DamageInfo dmgInfo(*damageInfo, i);
+            Unit::CalcAbsorbResist(dmgInfo);
+            damageInfo->damages[i].absorb = dmgInfo.GetAbsorb();
+            damageInfo->damages[i].resist = dmgInfo.GetResist();
+
+            if (damageInfo->damages[i].absorb)
+            {
+                tmpHitInfo[i] |= (damageInfo->damages[i].damage - damageInfo->damages[i].absorb == 0 ? HITINFO_FULL_ABSORB : HITINFO_PARTIAL_ABSORB);
+            }
+
+            if (damageInfo->damages[i].resist)
+            {
+                tmpHitInfo[i] |= (damageInfo->damages[i].damage - damageInfo->damages[i].resist == 0 ? HITINFO_FULL_RESIST : HITINFO_PARTIAL_RESIST);
+            }
+
+            damageInfo->damages[i].damage = dmgInfo.GetDamage();
+        }
     }
-    else // Impossible get negative result but....
-        damageInfo->damage = 0;
 }
 
 void Unit::DealMeleeDamage(CalcDamageInfo* damageInfo, bool durabilityLoss)
