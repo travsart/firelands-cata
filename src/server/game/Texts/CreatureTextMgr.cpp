@@ -352,7 +352,7 @@ void CreatureTextMgr::SendNonChatPacket(WorldObject* source, WorldPacket const* 
         {
             if (range == TEXT_RANGE_NORMAL) // ignores team and gmOnly
             {
-                if (!whisperTarget || whisperTarget->GetTypeId() != TYPEID_PLAYER)
+                if (!whisperTarget || whisperTarget->IsPlayer())
                     return;
 
                 whisperTarget->ToPlayer()->SendDirectMessage(data);

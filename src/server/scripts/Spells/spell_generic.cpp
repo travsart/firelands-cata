@@ -354,7 +354,7 @@ class spell_gen_aura_service_uniform : public SpellScriptLoader
             {
                 // Apply model goblin
                 Unit* target = GetTarget();
-                if (target->GetTypeId() == TYPEID_PLAYER)
+                if (target->IsPlayer())
                 {
                     if (target->getGender() == GENDER_MALE)
                         target->SetDisplayId(MODEL_GOBLIN_MALE);
@@ -366,7 +366,7 @@ class spell_gen_aura_service_uniform : public SpellScriptLoader
             void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
                 Unit* target = GetTarget();
-                if (target->GetTypeId() == TYPEID_PLAYER)
+                if (target->IsPlayer())
                     target->RestoreDisplayId();
             }
 
@@ -1510,7 +1510,7 @@ class spell_gen_divine_storm_cd_reset : public SpellScriptLoader
         {
             bool Load() override
             {
-                return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+                return GetCaster()->IsPlayer();
             }
 
             bool Validate(SpellInfo const* /*spellInfo*/) override
@@ -2413,7 +2413,7 @@ class spell_gen_oracle_wolvar_reputation : public SpellScriptLoader
         {
             bool Load() override
             {
-                return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+                return GetCaster()->IsPlayer();
             }
 
             void HandleDummy(SpellEffIndex effIndex)
@@ -2651,7 +2651,7 @@ class spell_gen_pet_summoned : public SpellScriptLoader
         {
             bool Load() override
             {
-                return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+                return GetCaster()->IsPlayer();
             }
 
             void HandleScript(SpellEffIndex /*effIndex*/)
@@ -2706,7 +2706,7 @@ class spell_gen_profession_research : public SpellScriptLoader
         {
             bool Load() override
             {
-                return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+                return GetCaster()->IsPlayer();
             }
 
             SpellCastResult CheckRequirement()
@@ -3053,7 +3053,7 @@ class spell_gen_seaforium_blast : public SpellScriptLoader
             bool Load() override
             {
                 // OriginalCaster is always available in Spell::prepare
-                return GetOriginalCaster()->GetTypeId() == TYPEID_PLAYER;
+                return GetOriginalCaster()->IsPlayer();
             }
 
             void AchievementCredit(SpellEffIndex /*effIndex*/)
@@ -3119,7 +3119,7 @@ class spell_gen_spirit_healer_res : public SpellScriptLoader
         {
             bool Load() override
             {
-                return GetOriginalCaster() && GetOriginalCaster()->GetTypeId() == TYPEID_PLAYER;
+                return GetOriginalCaster() && GetOriginalCaster()->IsPlayer();
             }
 
             void HandleDummy(SpellEffIndex /* effIndex */)
@@ -3177,7 +3177,7 @@ class spell_gen_summon_elemental : public SpellScriptLoader
             {
                 if (GetCaster())
                     if (Unit* owner = GetCaster()->GetOwner())
-                        if (owner->GetTypeId() == TYPEID_PLAYER) /// @todo this check is maybe wrong
+                        if (owner->IsPlayer()) /// @todo this check is maybe wrong
                             owner->ToPlayer()->RemovePet(nullptr, PET_SAVE_DISMISS, true);
             }
 
@@ -3302,7 +3302,7 @@ class spell_gen_tournament_duel : public SpellScriptLoader
                     }
                     else if (Unit* unitTarget = GetHitUnit())
                     {
-                        if (unitTarget->GetCharmer() && unitTarget->GetCharmer()->GetTypeId() == TYPEID_PLAYER && unitTarget->GetCharmer()->HasAura(SPELL_ON_TOURNAMENT_MOUNT))
+                        if (unitTarget->GetCharmer() && unitTarget->GetCharmer()->IsPlayer() && unitTarget->GetCharmer()->HasAura(SPELL_ON_TOURNAMENT_MOUNT))
                             rider->CastSpell(unitTarget->GetCharmer(), SPELL_MOUNTED_DUEL, true);
                     }
                 }
@@ -3329,7 +3329,7 @@ class spell_gen_tournament_pennant : public SpellScriptLoader
         {
             bool Load() override
             {
-                return GetCaster() && GetCaster()->GetTypeId() == TYPEID_PLAYER;
+                return GetCaster() && GetCaster()->IsPlayer();
             }
 
             void HandleApplyEffect(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
@@ -3517,7 +3517,7 @@ class spell_gen_vehicle_scaling : public AuraScript
 {
     bool Load() override
     {
-        return GetCaster() && GetCaster()->GetTypeId() == TYPEID_PLAYER;
+        return GetCaster() && GetCaster()->IsPlayer();
     }
 
     void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
@@ -3956,7 +3956,7 @@ public:
 
         bool Load() override
         {
-            return GetCaster() && GetCaster()->GetTypeId() == TYPEID_PLAYER;
+            return GetCaster() && GetCaster()->IsPlayer();
         }
 
         void SetBonusValueForEffect(SpellEffIndex effIndex, int32 value, AuraEffect const* aurEff)
@@ -4476,7 +4476,7 @@ class spell_gen_pvp_trinket : public SpellScriptLoader
             {
                 if (Unit* caster = GetCaster())
                 {
-                    if (caster->GetTypeId() == TYPEID_PLAYER && GetSpellInfo()->Id != SPELL_EVERY_MAN_FOR_HIMSELF)
+                    if (caster->IsPlayer() && GetSpellInfo()->Id != SPELL_EVERY_MAN_FOR_HIMSELF)
                         caster->CastSpell(caster, caster->ToPlayer()->GetTeam() == ALLIANCE ? SPELL_PVP_TRINKET_ALLIANCE : SPELL_PVP_TRINKET_HORDE, true);
                     else
                         caster->CastSpell(caster, SPELL_PVP_TRINKET_NEUTRAL, true);

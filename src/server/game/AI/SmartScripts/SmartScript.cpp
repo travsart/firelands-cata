@@ -3881,12 +3881,12 @@ WorldObject* SmartScript::GetBaseObject() const
 
 bool SmartScript::IsUnit(WorldObject* obj)
 {
-    return obj && (obj->GetTypeId() == TYPEID_UNIT || obj->GetTypeId() == TYPEID_PLAYER);
+    return obj && (obj->GetTypeId() == TYPEID_UNIT || obj->IsPlayer());
 }
 
 bool SmartScript::IsPlayer(WorldObject* obj)
 {
-    return obj && obj->GetTypeId() == TYPEID_PLAYER;
+    return obj && obj->IsPlayer();
 }
 
 bool SmartScript::IsCreature(WorldObject* obj)

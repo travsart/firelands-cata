@@ -196,7 +196,7 @@ public:
                     }
 
                     // buff the target
-                    if (target->GetTypeId() == TYPEID_PLAYER)
+                    if (target->IsPlayer())
                         target->AddAura(PlayerBuff[j], target);
                     else
                         target->AddAura(NetherBuff[j], target);
@@ -220,7 +220,7 @@ public:
                         }
                     }
                     // aggro target if Red Beam
-                    if (j == RED_PORTAL && me->GetVictim() != target && target->GetTypeId() == TYPEID_PLAYER)
+                    if (j == RED_PORTAL && me->GetVictim() != target && target->IsPlayer())
                         AddThreat(target, 100000.0f);
                 }
         }

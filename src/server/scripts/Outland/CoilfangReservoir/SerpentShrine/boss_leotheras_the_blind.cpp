@@ -417,7 +417,7 @@ class boss_leotheras_the_blind : public CreatureScript
 
         void KilledUnit(Unit* victim) override
         {
-            if (victim->GetTypeId() != TYPEID_PLAYER)
+            if (victim->IsPlayer())
                 return;
 
             Talk(DemonForm ? SAY_DEMON_SLAY : SAY_NIGHTELF_SLAY);
@@ -683,7 +683,7 @@ class boss_leotheras_the_blind_demonform : public CreatureScript
 
         void KilledUnit(Unit* victim) override
         {
-            if (victim->GetTypeId() != TYPEID_PLAYER)
+            if (victim->IsPlayer())
                 return;
 
             Talk(SAY_DEMON_SLAY);

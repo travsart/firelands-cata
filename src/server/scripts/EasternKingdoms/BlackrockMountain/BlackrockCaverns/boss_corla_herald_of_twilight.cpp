@@ -147,7 +147,7 @@ struct boss_corla_herald_of_twilight : public BossAI
 
     void KilledUnit(Unit* who) override
     {
-        if (who->GetTypeId() == TYPEID_PLAYER)
+        if (who->IsPlayer())
             Talk(SAY_SLAY);
     }
 
@@ -489,7 +489,7 @@ class spell_corla_evolution : public SpellScript
                         creature->AI()->DoAction(ACTION_EVOLVE);
                     }
                 }
-                else if (target->GetTypeId() == TYPEID_PLAYER)
+                else if (target->IsPlayer())
                     corla->CastSpell(target, SPELL_TWILIGHT_EVOLUTION, true);
             }
 

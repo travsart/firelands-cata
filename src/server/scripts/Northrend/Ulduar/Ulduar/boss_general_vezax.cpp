@@ -221,13 +221,13 @@ class boss_general_vezax : public CreatureScript
 
             void SpellHitTarget(Unit* who, SpellInfo const* spell) override
             {
-                if (who && who->GetTypeId() == TYPEID_PLAYER && spell->Id == SPELL_SHADOW_CRASH_HIT)
+                if (who && who->IsPlayer() && spell->Id == SPELL_SHADOW_CRASH_HIT)
                     shadowDodger = false;
             }
 
             void KilledUnit(Unit* who) override
             {
-                if (who->GetTypeId() == TYPEID_PLAYER)
+                if (who->IsPlayer())
                     Talk(SAY_SLAY);
             }
 

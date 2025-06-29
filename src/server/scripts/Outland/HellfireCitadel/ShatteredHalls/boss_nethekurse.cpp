@@ -184,7 +184,7 @@ class boss_grand_warlock_nethekurse : public CreatureScript
             {
                 if (!IntroOnce && me->IsWithinDistInMap(who, 30.0f))
                 {
-                    if (who->GetTypeId() != TYPEID_PLAYER)
+                    if (who->IsPlayer())
                         return;
 
                     Talk(SAY_INTRO);

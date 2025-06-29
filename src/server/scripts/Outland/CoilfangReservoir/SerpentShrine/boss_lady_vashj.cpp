@@ -944,7 +944,7 @@ public:
             }
             else if (targets.GetUnitTarget()->GetTypeId() == TYPEID_UNIT)
                 return false;
-            else if (targets.GetUnitTarget()->GetTypeId() == TYPEID_PLAYER)
+            else if (targets.GetUnitTarget()->IsPlayer())
             {
                 player->DestroyItemCount(31088, 1, true);
                 player->CastSpell(targets.GetUnitTarget(), 38134, true);

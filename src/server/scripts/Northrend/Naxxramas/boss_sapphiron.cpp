@@ -100,7 +100,7 @@ public:
 
     bool operator()(Unit* unit) const
     {
-        if (unit->GetTypeId() != TYPEID_PLAYER)
+        if (unit->IsPlayer())
             return false;
 
         // Check if unit is target of some blizzard

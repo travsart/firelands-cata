@@ -208,7 +208,7 @@ struct boss_dw_spine : public BossAI
 
     void MoveInLineOfSight(Unit* victim) override
     {
-        if (victim->GetTypeId() != TYPEID_PLAYER)
+        if (victim->IsPlayer())
             return;
 
         if (init)

@@ -341,7 +341,7 @@ struct boss_essence_of_suffering : public BossAI
 
     void KilledUnit(Unit* victim) override
     {
-        if (victim->GetTypeId() == TYPEID_PLAYER)
+        if (victim->IsPlayer())
             Talk(SUFF_SAY_SLAY);
     }
 
@@ -442,7 +442,7 @@ struct boss_essence_of_desire : public BossAI
 
     void KilledUnit(Unit* victim) override
     {
-        if (victim->GetTypeId() == TYPEID_PLAYER)
+        if (victim->IsPlayer())
             Talk(DESI_SAY_SLAY);
     }
 
@@ -673,7 +673,7 @@ struct npc_reliquary_combat_trigger : public ScriptedAI
 
     void MoveInLineOfSight(Unit* who) override
     {
-        if (!me->IsEngaged() && who->GetTypeId() == TYPEID_PLAYER && !who->ToPlayer()->IsGameMaster() && CheckBoundary(who))
+        if (!me->IsEngaged() && who->IsPlayer() && !who->ToPlayer()->IsGameMaster() && CheckBoundary(who))
         {
             if (Creature* reliquary = _instance->GetCreature(DATA_RELIQUARY_OF_SOULS))
             {

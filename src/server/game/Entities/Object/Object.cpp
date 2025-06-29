@@ -1184,7 +1184,7 @@ void WorldObject::setActive(bool on)
     if (m_isActive == on)
         return;
 
-    if (GetTypeId() == TYPEID_PLAYER)
+    if (IsPlayer())
         return;
 
     m_isActive = on;
@@ -1204,7 +1204,7 @@ void WorldObject::setActive(bool on)
 
 void WorldObject::SetFarVisible(bool on)
 {
-    if (GetTypeId() == TYPEID_PLAYER)
+    if (IsPlayer())
         return;
 
     m_isFarVisible = on;
@@ -1213,7 +1213,7 @@ void WorldObject::SetFarVisible(bool on)
 void WorldObject::SetVisibilityDistanceOverride(VisibilityDistanceType type)
 {
     ASSERT(type < VisibilityDistanceType::Max);
-    if (GetTypeId() == TYPEID_PLAYER)
+    if (IsPlayer())
         return;
 
     m_visibilityDistanceOverride = VisibilityDistances[AsUnderlyingType(type)];
@@ -1391,7 +1391,7 @@ bool WorldObject::IsWithinLOS(float ox, float oy, float oz, LineOfSightChecks ch
     {
         oz += GetCollisionHeight();
         float x, y, z;
-        if (GetTypeId() == TYPEID_PLAYER)
+        if (IsPlayer())
         {
             GetPosition(x, y, z);
             z += GetCollisionHeight();
@@ -1411,7 +1411,7 @@ bool WorldObject::IsWithinLOSInMap(WorldObject const* obj, LineOfSightChecks che
         return false;
 
     float ox, oy, oz;
-    if (obj->GetTypeId() == TYPEID_PLAYER)
+    if (obj->IsPlayer())
     {
         obj->GetPosition(ox, oy, oz);
         oz += GetCollisionHeight();
@@ -1420,7 +1420,7 @@ bool WorldObject::IsWithinLOSInMap(WorldObject const* obj, LineOfSightChecks che
         obj->GetHitSpherePointFor({ GetPositionX(), GetPositionY(), GetPositionZ() + GetCollisionHeight() }, ox, oy, oz);
 
     float x, y, z;
-    if (GetTypeId() == TYPEID_PLAYER)
+    if (IsPlayer())
     {
         GetPosition(x, y, z);
         z += GetCollisionHeight();
@@ -1655,7 +1655,7 @@ float WorldObject::GetGridActivationRange() const
 {
     if (isActiveObject())
     {
-        if (GetTypeId() == TYPEID_PLAYER && ToPlayer()->GetCinematicMgr()->IsOnCinematic())
+        if (IsPlayer() && ToPlayer()->GetCinematicMgr()->IsOnCinematic())
             return std::max(DEFAULT_VISIBILITY_INSTANCE, GetMap()->GetVisibilityRange());
 
         return GetMap()->GetVisibilityRange();
@@ -1917,7 +1917,7 @@ bool WorldObject::CanDetectStealthOf(WorldObject const* obj, bool checkAlert) co
         float visibilityRange = float(detectionValue) * 0.3f + combatReach;
 
         // If this unit is an NPC then player detect range doesn't apply
-        if (unit && unit->GetTypeId() == TYPEID_PLAYER && visibilityRange > MAX_PLAYER_STEALTH_DETECT_RANGE)
+        if (unit && unit->IsPlayer() && visibilityRange > MAX_PLAYER_STEALTH_DETECT_RANGE)
             visibilityRange = MAX_PLAYER_STEALTH_DETECT_RANGE;
 
         // When checking for alert state, look 8% further, and then 1.5 yards more than that.
@@ -2233,7 +2233,7 @@ GameObject* WorldObject::SummonGameObject(uint32 entry, Position const& pos, Qua
     PhasingHandler::InheritPhaseShift(go, this);
 
     go->SetRespawnTime(respawnTime);
-    if (GetTypeId() == TYPEID_PLAYER || (GetTypeId() == TYPEID_UNIT && summonType == GO_SUMMON_TIMED_OR_CORPSE_DESPAWN)) //not sure how to handle this
+    if (IsPlayer() || (GetTypeId() == TYPEID_UNIT && summonType == GO_SUMMON_TIMED_OR_CORPSE_DESPAWN)) //not sure how to handle this
         ToUnit()->AddGameObject(go);
     else
         go->SetSpawnedByDefault(false);
@@ -2262,7 +2262,7 @@ Creature* WorldObject::SummonTrigger(float x, float y, float z, float ang, uint3
         return nullptr;
 
     //summon->SetName(GetName());
-    if (GetTypeId() == TYPEID_PLAYER || GetTypeId() == TYPEID_UNIT)
+    if (IsPlayer() || GetTypeId() == TYPEID_UNIT)
     {
         summon->SetFaction(((Unit*)this)->GetFaction());
         summon->SetLevel(((Unit*)this)->getLevel());

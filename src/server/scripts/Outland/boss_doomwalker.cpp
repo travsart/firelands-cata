@@ -98,7 +98,7 @@ class boss_doomwalker : public CreatureScript
             void MoveInLineOfSight(Unit* who) override
 
             {
-                if (who && who->GetTypeId() == TYPEID_PLAYER && me->IsValidAttackTarget(who))
+                if (who && who->IsPlayer() && me->IsValidAttackTarget(who))
                     if (who->HasAura(SPELL_MARK_DEATH))
                         who->CastSpell(who, SPELL_AURA_DEATH, 1);
             }

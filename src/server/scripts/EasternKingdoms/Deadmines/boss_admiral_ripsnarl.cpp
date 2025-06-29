@@ -363,7 +363,7 @@ class TargetingCheck
         bool operator()(WorldObject* object)
         {
             if (Unit* unit = object->ToUnit())
-                if ((unit->IsCharmedOwnedByPlayerOrPlayer()) || unit->GetTypeId() == TYPEID_PLAYER)
+                if ((unit->IsCharmedOwnedByPlayerOrPlayer()) || unit->IsPlayer())
                     return false;
 
             return true;

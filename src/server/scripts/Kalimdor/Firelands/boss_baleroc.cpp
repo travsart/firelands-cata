@@ -366,7 +366,7 @@ class npc_shard_of_torment : public CreatureScript
 
             void KilledUnit(Unit* who) override
             {
-                if (who->GetTypeId() == TYPEID_PLAYER)
+                if (who->IsPlayer())
                     if (Creature* baleroc = _instance->GetCreature(DATA_BALEROC))
                         baleroc->AI()->KilledUnit(who);
             }
@@ -495,7 +495,7 @@ class spell_countdown_p3 : public SpellScriptLoader
         {
             bool Load() override
             {
-                return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+                return GetCaster()->IsPlayer();
             }
 
             void FilterTargets(std::list<WorldObject*>& targets)
@@ -787,7 +787,7 @@ class spell_baleroc_tormented_heroic : public SpellScriptLoader
         {
             bool Load() override
             {
-                return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+                return GetCaster()->IsPlayer();
             }
 
             void HandleScript(SpellEffIndex effIndex)

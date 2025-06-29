@@ -1226,7 +1226,7 @@ class npc_the_lich_king_escape_hor : public CreatureScript
 
             void KilledUnit(Unit* who) override
             {
-                if (who->GetTypeId() == TYPEID_PLAYER)
+                if (who->IsPlayer())
                     DoPlaySoundToSet(me, RAND(SOUND_LK_SLAY_1, SOUND_LK_SLAY_2));
             }
 

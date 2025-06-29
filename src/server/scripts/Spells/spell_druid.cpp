@@ -708,7 +708,7 @@ class spell_dru_rip : public AuraScript
     bool Load() override
     {
         Unit* caster = GetCaster();
-        return caster && caster->GetTypeId() == TYPEID_PLAYER;
+        return caster && caster->IsPlayer();
     }
 
     void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
@@ -919,7 +919,7 @@ class spell_dru_swift_flight_passive : public AuraScript
 {
     bool Load() override
     {
-        return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+        return GetCaster()->IsPlayer();
     }
 
     void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
@@ -958,7 +958,7 @@ class spell_dru_swift_flight_form : public AuraScript
 {
     bool Load() override
     {
-        return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+        return GetCaster()->IsPlayer();
     }
 
     void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
@@ -1015,7 +1015,7 @@ class spell_dru_t10_restoration_4p_bonus : public SpellScript
 {
     bool Load() override
     {
-        return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+        return GetCaster()->IsPlayer();
     }
 
     void FilterTargets(std::list<WorldObject*>& targets)
@@ -1030,7 +1030,7 @@ class spell_dru_t10_restoration_4p_bonus : public SpellScript
             targets.remove(GetExplTargetUnit());
             std::list<Unit*> tempTargets;
             for (std::list<WorldObject*>::const_iterator itr = targets.begin(); itr != targets.end(); ++itr)
-                if ((*itr)->GetTypeId() == TYPEID_PLAYER && GetCaster()->IsInRaidWith((*itr)->ToUnit()))
+                if ((*itr)->IsPlayer() && GetCaster()->IsInRaidWith((*itr)->ToUnit()))
                     tempTargets.push_back((*itr)->ToUnit());
 
             if (tempTargets.empty())

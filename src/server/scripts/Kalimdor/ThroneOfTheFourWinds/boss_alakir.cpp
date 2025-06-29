@@ -336,7 +336,7 @@ struct boss_alakir : public BossAI
 
     void KilledUnit(Unit* killed) override
     {
-        if (killed->GetTypeId() == TYPEID_PLAYER)
+        if (killed->IsPlayer())
             Talk(SAY_SLAY);
     }
 

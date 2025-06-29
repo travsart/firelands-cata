@@ -330,7 +330,7 @@ class instance_deadmines : public InstanceMapScript
 
             void OnUnitDeath(Unit* unit) override
             {
-                if (unit->GetTypeId() == TYPEID_PLAYER && _vanessaVanCleefEncounterState != NOT_STARTED && _vanessaVanCleefEncounterState != NIGHTMARE_STAGE_DONE)
+                if (unit->IsPlayer() && _vanessaVanCleefEncounterState != NOT_STARTED && _vanessaVanCleefEncounterState != NIGHTMARE_STAGE_DONE)
                     events.ScheduleEvent(EVENT_CHECK_DEAD_PLAYERS, Milliseconds(200));
                 else
                 {

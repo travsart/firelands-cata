@@ -360,7 +360,7 @@ public:
             if (!who || !who->IsAlive() || EventInProgress)
                 return;
 
-            if (who->GetTypeId() == TYPEID_PLAYER && me->IsWithinDistInMap(who, 10.0f))
+            if (who->IsPlayer() && me->IsWithinDistInMap(who, 10.0f))
                 if (Player* player = who->ToPlayer())
                     if (player->GetQuestStatus(1719) == QUEST_STATUS_INCOMPLETE)
                     {

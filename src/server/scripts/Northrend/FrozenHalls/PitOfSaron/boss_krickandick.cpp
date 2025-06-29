@@ -339,7 +339,7 @@ class boss_krick : public CreatureScript
 
             void KilledUnit(Unit* victim) override
             {
-                if (victim->GetTypeId() != TYPEID_PLAYER)
+                if (victim->IsPlayer())
                     return;
 
                 Talk(SAY_KRICK_SLAY);

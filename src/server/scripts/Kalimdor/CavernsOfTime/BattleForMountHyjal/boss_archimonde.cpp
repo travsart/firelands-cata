@@ -234,7 +234,7 @@ class npc_doomfire_targetting : public CreatureScript
         {
             // will update once TargetGUID is 0. In case noone actually moves(not likely) and this is 0
             // when UpdateAI needs it, it will be forced to select randomPoint
-            if (!TargetGUID && who->GetTypeId() == TYPEID_PLAYER)
+            if (!TargetGUID && who->IsPlayer())
                 TargetGUID = who->GetGUID();
         }
 
@@ -447,7 +447,7 @@ class boss_archimonde : public CreatureScript
         {
             Talk(SAY_SLAY);
 
-            if (victim->GetTypeId() == TYPEID_PLAYER)
+            if (victim->IsPlayer())
             {
                 switch (victim->getClass())
                 {

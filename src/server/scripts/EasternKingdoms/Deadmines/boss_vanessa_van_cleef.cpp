@@ -224,7 +224,7 @@ class boss_vanessa_van_cleef : public CreatureScript
 
             void KilledUnit(Unit* who) override
             {
-                if (who->GetTypeId() == TYPEID_PLAYER)
+                if (who->IsPlayer())
                     Talk(SAY_SLAY);
             }
 
@@ -635,7 +635,7 @@ class npc_vanessa_rope : public CreatureScript
                 if (!passenger)
                     return;
 
-                if (apply && passenger->GetTypeId() == TYPEID_PLAYER)
+                if (apply && passenger->IsPlayer())
                 {
                     me->RemoveAurasDueToSpell(SPELL_CLICK_ME);
                     _events.ScheduleEvent(EVENT_START_SWING, Milliseconds(800));

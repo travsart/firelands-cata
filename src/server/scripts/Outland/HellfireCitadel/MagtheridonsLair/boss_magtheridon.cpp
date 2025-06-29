@@ -213,7 +213,7 @@ class boss_magtheridon : public CreatureScript
 
             void KilledUnit(Unit* who) override
             {
-                if (who->GetTypeId() == TYPEID_PLAYER)
+                if (who->IsPlayer())
                     Talk(SAY_SLAY);
             }
 

@@ -149,7 +149,7 @@ class instance_throne_of_the_four_winds : public InstanceMapScript
 
             void OnUnitDeath(Unit* unit) override
             {
-                if (unit->GetTypeId() == TYPEID_PLAYER)
+                if (unit->IsPlayer())
                     unit->SetFlag(PLAYER_FLAGS, PLAYER_FLAGS_IS_OUT_OF_BOUNDS);
             }
 

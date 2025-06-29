@@ -951,7 +951,7 @@ void BattlefieldWG::HandleKill(Player* killer, Unit* victim)
     if (killer == victim)
         return;
 
-    if (victim->GetTypeId() == TYPEID_PLAYER)
+    if (victim->IsPlayer())
     {
         HandlePromotion(killer, victim);
 

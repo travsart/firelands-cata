@@ -193,7 +193,7 @@ public:
 
         void DamageTaken(Unit* done_by, uint32 &damage) override
         {
-            if (done_by && done_by->GetTypeId() == TYPEID_PLAYER)
+            if (done_by && done_by->IsPlayer())
                 if (me->GetHealth() <= damage)
                     if (rand32() % 100 < 75)
                         //Summon Wood Mites
@@ -230,7 +230,7 @@ public:
 
         void DamageTaken(Unit* done_by, uint32 &damage) override
         {
-            if (done_by->GetTypeId() == TYPEID_PLAYER)
+            if (done_by->IsPlayer())
                 if (me->GetHealth() <= damage)
                     if (rand32() % 100 < 75)
                         //Summon Lots of Wood Mites

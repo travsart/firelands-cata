@@ -324,7 +324,7 @@ class boss_freya : public CreatureScript
 
             void KilledUnit(Unit* who) override
             {
-                if (who->GetTypeId() == TYPEID_PLAYER)
+                if (who->IsPlayer())
                     Talk(SAY_SLAY);
             }
 
@@ -714,7 +714,7 @@ class boss_elder_brightleaf : public CreatureScript
 
             void KilledUnit(Unit* who) override
             {
-                if (who->GetTypeId() == TYPEID_PLAYER)
+                if (who->IsPlayer())
                     Talk(SAY_ELDER_SLAY);
             }
 
@@ -815,7 +815,7 @@ class boss_elder_stonebark : public CreatureScript
 
             void KilledUnit(Unit* who) override
             {
-                if (who->GetTypeId() == TYPEID_PLAYER)
+                if (who->IsPlayer())
                     Talk(SAY_ELDER_SLAY);
             }
 
@@ -922,7 +922,7 @@ class boss_elder_ironbranch : public CreatureScript
 
             void KilledUnit(Unit* who) override
             {
-                if (who->GetTypeId() == TYPEID_PLAYER)
+                if (who->IsPlayer())
                     Talk(SAY_ELDER_SLAY);
             }
 

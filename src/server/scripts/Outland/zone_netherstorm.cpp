@@ -404,7 +404,7 @@ public:
 
         void JustEngagedWith(Unit* who) override
         {
-            if (who->GetTypeId() == TYPEID_PLAYER)
+            if (who->IsPlayer())
                 PlayerGUID = who->GetGUID();
         }
 

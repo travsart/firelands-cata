@@ -458,7 +458,7 @@ public:
 
     bool operator()(Unit* unit) const
     {
-        return unit->GetTypeId() == TYPEID_PLAYER
+        return unit->IsPlayer()
             && unit->GetDistance2d(BladesPositions[0].GetPositionX(), BladesPositions[0].GetPositionY()) > 25.0f
             && unit->GetDistance2d(BladesPositions[1].GetPositionX(), BladesPositions[1].GetPositionY()) > 25.0f;
     }
@@ -516,7 +516,7 @@ struct boss_illidan_stormrage : public BossAI
 
     void KilledUnit(Unit* victim) override
     {
-        if (victim->GetTypeId() == TYPEID_PLAYER)
+        if (victim->IsPlayer())
             Talk(SAY_ILLIDAN_KILL);
     }
 
@@ -2026,7 +2026,7 @@ class spell_illidan_flame_blast : public SpellScript
     void HandleBlaze(SpellEffIndex /*effIndex*/)
     {
         Unit* target = GetHitUnit();
-        if (target->GetTypeId() == TYPEID_PLAYER)
+        if (target->IsPlayer())
             target->CastSpell(target, SPELL_BLAZE_SUMMON, true);
     }
 

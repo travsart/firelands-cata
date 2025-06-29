@@ -147,7 +147,7 @@ class npc_andorhal_tower : public CreatureScript
 
         void MoveInLineOfSight(Unit* who) override
         {
-            if (!who || who->GetTypeId() != TYPEID_PLAYER)
+            if (!who || who->IsPlayer())
                 return;
 
             if (me->FindNearestGameObject(GO_BEACON_TORCH, 10.0f))

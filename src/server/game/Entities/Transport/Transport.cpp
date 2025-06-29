@@ -610,7 +610,7 @@ bool Transport::TeleportTransport(uint32 oldMapId, uint32 newMapId, float x, flo
         // Teleport players, they need to know it
         for (PassengerSet::iterator itr = _passengers.begin(); itr != _passengers.end(); ++itr)
         {
-            if ((*itr)->GetTypeId() == TYPEID_PLAYER)
+            if ((*itr)->IsPlayer())
             {
                 // will be relocated in UpdatePosition of the vehicle
                 if (Unit* veh = (*itr)->ToUnit()->GetVehicleBase())

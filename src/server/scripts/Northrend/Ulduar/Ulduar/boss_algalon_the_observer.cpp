@@ -326,7 +326,7 @@ class boss_algalon_the_observer : public CreatureScript
 
         void KilledUnit(Unit* victim) override
         {
-            if (victim->GetTypeId() == TYPEID_PLAYER)
+            if (victim->IsPlayer())
             {
                 _fedOnTears = true;
                 if (!_hasYelled)

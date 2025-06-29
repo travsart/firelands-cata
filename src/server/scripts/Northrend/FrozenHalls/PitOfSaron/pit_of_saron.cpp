@@ -198,7 +198,7 @@ class npc_geist_ambusher : public CreatureScript
 
             void JustEngagedWith(Unit* who) override
             {
-                if (who->GetTypeId() != TYPEID_PLAYER)
+                if (who->IsPlayer())
                     return;
 
                 // the max range is determined by aggro range

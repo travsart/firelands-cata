@@ -192,6 +192,16 @@ enum SpellImmuneBlockType
     SPELL_BLOCK_TYPE_POSITIVE   = 1,
 };
 
+typedef std::pair<SpellValueMod, int32> CustomSpellValueMod;
+class CustomSpellValues : public std::vector<CustomSpellValueMod>
+{
+public:
+    void AddSpellMod(SpellValueMod mod, int32 value)
+    {
+        push_back(std::make_pair(mod, value));
+    } 
+};
+
 struct FC_GAME_API CastSpellExtraArgs
 {
     CastSpellExtraArgs()
@@ -217,7 +227,7 @@ struct FC_GAME_API CastSpellExtraArgs
     }
     CastSpellExtraArgs(SpellValueMod mod, int32 val)
     {
-        SpellValueOverrides.AddMod(mod, val);
+        mods.AddSpellMod(mod, val);
     }
 
     CastSpellExtraArgs& SetTriggerFlags(TriggerCastFlags flag)
@@ -242,7 +252,7 @@ struct FC_GAME_API CastSpellExtraArgs
     }
     CastSpellExtraArgs& AddSpellMod(SpellValueMod mod, int32 val)
     {
-        SpellValueOverrides.AddMod(mod, val);
+        mods.AddSpellMod(mod, val);
         return *this;
     }
     CastSpellExtraArgs& AddSpellBP0(int32 val)
@@ -254,28 +264,7 @@ struct FC_GAME_API CastSpellExtraArgs
     Item* CastItem = nullptr;
     AuraEffect const* TriggeringAura = nullptr;
     ObjectGuid OriginalCaster = ObjectGuid::Empty;
-    struct
-    {
-        friend struct CastSpellExtraArgs;
-        friend class Unit;
-
-      private:
-        void AddMod(SpellValueMod mod, int32 val)
-        {
-            data.push_back({mod, val});
-        }
-
-        auto begin() const
-        {
-            return data.cbegin();
-        }
-        auto end() const
-        {
-            return data.cend();
-        }
-
-        std::vector<std::pair<SpellValueMod, int32>> data;
-    } SpellValueOverrides;
+    CustomSpellValues mods;
 };
 
 enum class SummonPropertiesParamType : uint8
@@ -290,15 +279,7 @@ enum class SummonPropertiesParamType : uint8
     NumUnitsMax = 7 // Fail if less than 1
 };
 
-typedef std::pair<SpellValueMod, int32> CustomSpellValueMod;
-class CustomSpellValues : public std::vector<CustomSpellValueMod>
-{
-public:
-    void AddSpellMod(SpellValueMod mod, int32 value)
-    {
-        push_back(std::make_pair(mod, value));
-    }
-};
+
 
 struct SpellImmune
 {

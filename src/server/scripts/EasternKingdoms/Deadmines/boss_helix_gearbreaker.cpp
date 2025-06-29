@@ -213,7 +213,7 @@ struct boss_helix_gearbreaker : public BossAI
 
     void KilledUnit(Unit* who) override
     {
-        if (who->GetTypeId() == TYPEID_PLAYER)
+        if (who->IsPlayer())
             Talk(SAY_SLAY);
     }
 
@@ -371,7 +371,7 @@ struct npc_helix_lumbering_oaf : public ScriptedAI
         if (!passenger)
             return;
 
-        if (apply && passenger->GetTypeId() == TYPEID_PLAYER)
+        if (apply && passenger->IsPlayer())
         {
             Talk(SAY_OAF_SMASH_1);
             me->AttackStop();

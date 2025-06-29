@@ -145,7 +145,7 @@ void CombatManager::Update(uint32 tdiff)
 bool CombatManager::HasPvECombatWithPlayers() const
 {
     for (std::pair<ObjectGuid const, CombatReference*> const& reference : _pveRefs)
-        if (reference.second->GetOther(_owner)->GetTypeId() == TYPEID_PLAYER)
+        if (reference.second->GetOther(_owner)->IsPlayer())
             return true;
 
     return false;

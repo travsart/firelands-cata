@@ -653,7 +653,7 @@ struct boss_faction_championsAI : public BossAI
 
     void KilledUnit(Unit* who) override
     {
-        if (who->GetTypeId() == TYPEID_PLAYER)
+        if (who->IsPlayer())
         {
             Map::PlayerList const& players = me->GetMap()->GetPlayers();
             uint32 TeamInInstance = 0;

@@ -539,7 +539,7 @@ class boss_thorim : public CreatureScript
 
             void KilledUnit(Unit* who) override
             {
-                if (who->GetTypeId() == TYPEID_PLAYER)
+                if (who->IsPlayer())
                     Talk(SAY_SLAY);
             }
 
@@ -558,7 +558,7 @@ class boss_thorim : public CreatureScript
 
             void SpellHitTarget(Unit* who, SpellInfo const* spellInfo) override
             {
-                if (who->GetTypeId() == TYPEID_PLAYER && spellInfo->Id == SPELL_LIGHTNING_RELEASE)
+                if (who->IsPlayer() && spellInfo->Id == SPELL_LIGHTNING_RELEASE)
                     _dontStandInTheLightning = false;
             }
 
@@ -1300,7 +1300,7 @@ class npc_thorim_arena_phase : public CreatureScript
                     case EVENT_ABILITY_CHARGE:
                     {
                         Unit* referer = me;
-                        if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, [referer](Unit* unit){ return unit->GetTypeId() == TYPEID_PLAYER && unit->IsInRange(referer, 8.0f, 25.0f); }))
+                        if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, [referer](Unit* unit){ return unit->IsPlayer() && unit->IsInRange(referer, 8.0f, 25.0f); }))
                             DoCast(target, SPELL_CHARGE);
                         _events.ScheduleEvent(eventId, 12000);
                         break;
@@ -1457,7 +1457,7 @@ class npc_runic_colossus : public CreatureScript
                         case EVENT_RUNIC_CHARGE:
                         {
                             Unit* referer = me;
-                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, [referer](Unit* unit){ return unit->GetTypeId() == TYPEID_PLAYER && unit->IsInRange(referer, 8.0f, 40.0f); }))
+                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, [referer](Unit* unit){ return unit->IsPlayer() && unit->IsInRange(referer, 8.0f, 40.0f); }))
                                 DoCast(target, SPELL_RUNIC_CHARGE);
                             _events.Repeat(20000);
                             break;

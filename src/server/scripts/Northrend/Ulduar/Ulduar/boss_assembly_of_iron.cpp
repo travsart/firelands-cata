@@ -389,7 +389,7 @@ struct boss_runemaster_molgeim : public ScriptedAI
 
     void KilledUnit(Unit* who) override
     {
-        if (who->GetTypeId() == TYPEID_PLAYER)
+        if (who->IsPlayer())
             Talk(SAY_MOLGEIM_SLAY);
     }
 

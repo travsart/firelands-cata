@@ -150,7 +150,7 @@ public:
 
         void SpellHitTarget(Unit* who, SpellInfo const* spell) override
         {
-            if (who && who->GetTypeId() == TYPEID_PLAYER && spell->Id == SPELL_BANE_HIT)
+            if (who && who->IsPlayer() && spell->Id == SPELL_BANE_HIT)
                 kingsBane = false;
         }
 
@@ -282,7 +282,7 @@ public:
 
         void KilledUnit(Unit* who) override
         {
-            if (who->GetTypeId() == TYPEID_PLAYER)
+            if (who->IsPlayer())
                 Talk(SAY_SLAY);
         }
 

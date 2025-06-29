@@ -239,7 +239,7 @@ class npc_flash_freeze : public CreatureScript
                     DoCast(target, SPELL_BLOCK_OF_ICE, true);
                     // Prevents to have Ice Block on other place than target is
                     me->NearTeleportTo(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), target->GetOrientation());
-                    if (target->GetTypeId() == TYPEID_PLAYER)
+                    if (target->IsPlayer())
                         if (Creature* hodir = instance->GetCreature(DATA_HODIR))
                             hodir->AI()->DoAction(ACTION_CHEESE_THE_FREEZE);
                 }
@@ -378,7 +378,7 @@ class boss_hodir : public CreatureScript
 
             void KilledUnit(Unit* who) override
             {
-                if (who->GetTypeId() == TYPEID_PLAYER)
+                if (who->IsPlayer())
                     Talk(SAY_SLAY);
             }
 

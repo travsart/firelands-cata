@@ -143,7 +143,7 @@ class spell_rog_cheat_death : public SpellScriptLoader
             bool Load() override
             {
                 absorbChance = GetSpellInfo()->Effects[EFFECT_0].CalcValue();
-                return GetUnitOwner()->GetTypeId() == TYPEID_PLAYER;
+                return GetUnitOwner()->IsPlayer();
             }
 
             void CalculateAmount(AuraEffect const* /*aurEff*/, int32 & amount, bool & /*canBeRecalculated*/)
@@ -253,7 +253,7 @@ class spell_rog_deadly_poison : public SpellScriptLoader
             bool Load() override
             {
                 // at this point CastItem must already be initialized
-                return GetCaster()->GetTypeId() == TYPEID_PLAYER && GetCastItem();
+                return GetCaster()->IsPlayer() && GetCastItem();
             }
 
             void HandleBeforeHit()
@@ -558,7 +558,7 @@ class spell_rog_preparation : public SpellScriptLoader
         {
             bool Load() override
             {
-                return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+                return GetCaster()->IsPlayer();
             }
 
             bool Validate(SpellInfo const* /*spellInfo*/) override
@@ -641,7 +641,7 @@ class spell_rog_recuperate : public AuraScript
 {
     bool Load() override
     {
-        return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+        return GetCaster()->IsPlayer();
     }
 
     void OnPeriodic(AuraEffect const* /*aurEff*/)
@@ -691,7 +691,7 @@ class spell_rog_rupture : public AuraScript
     bool Load() override
     {
         Unit* caster = GetCaster();
-        return caster && caster->GetTypeId() == TYPEID_PLAYER;
+        return caster && caster->IsPlayer();
     }
 
     void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
@@ -805,7 +805,7 @@ class spell_rog_shiv : public SpellScriptLoader
         {
             bool Load() override
             {
-                return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+                return GetCaster()->IsPlayer();
             }
 
             bool Validate(SpellInfo const* /*spellInfo*/) override

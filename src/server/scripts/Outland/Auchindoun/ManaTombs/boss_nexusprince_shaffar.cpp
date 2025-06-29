@@ -98,7 +98,7 @@ class boss_nexusprince_shaffar : public CreatureScript
 
             void MoveInLineOfSight(Unit* who) override
             {
-                if (!_hasTaunted && who->GetTypeId() == TYPEID_PLAYER && me->IsWithinDistInMap(who, 100.0f))
+                if (!_hasTaunted && who->IsPlayer() && me->IsWithinDistInMap(who, 100.0f))
                 {
                     Talk(SAY_INTRO);
                     _hasTaunted = true;
@@ -131,7 +131,7 @@ class boss_nexusprince_shaffar : public CreatureScript
 
             void KilledUnit(Unit* victim) override
             {
-                if (victim->GetTypeId() == TYPEID_PLAYER)
+                if (victim->IsPlayer())
                     Talk(SAY_SLAY);
             }
 

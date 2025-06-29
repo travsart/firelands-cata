@@ -128,7 +128,7 @@ class boss_wrath_scryer_soccothrates : public CreatureScript
 
             void MoveInLineOfSight(Unit* who) override
             {
-                if (instance->GetData(DATA_CONVERSATION) == NOT_STARTED && who->GetTypeId() == TYPEID_PLAYER && me->IsWithinDistInMap(who, 70.0f))
+                if (instance->GetData(DATA_CONVERSATION) == NOT_STARTED && who->IsPlayer() && me->IsWithinDistInMap(who, 70.0f))
                 {
                     Talk(SAY_SOCCOTHRATES_CONVO_1);
                     instance->SetData(DATA_CONVERSATION, DONE);

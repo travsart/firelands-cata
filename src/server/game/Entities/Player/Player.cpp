@@ -1849,7 +1849,7 @@ void Player::SetObjectScale(float scale)
 {
     Unit::SetObjectScale(scale);
     SetFloatValue(UNIT_FIELD_BOUNDINGRADIUS, scale * DEFAULT_PLAYER_BOUNDING_RADIUS);
-    SetFloatValue(UNIT_FIELD_COMBATREACH, scale * DEFAULT_PLAYER_COMBAT_REACH);
+    SetFloatValue(UNIT_FIELD_COMBATREACH, scale * DEFAULT_COMBAT_REACH);
     if (IsInWorld())
         SendMovementSetCollisionHeight(GetCollisionHeight(), UPDATE_COLLISION_HEIGHT_SCALE);
 }
@@ -6390,7 +6390,7 @@ int32 Player::CalculateReputationGain(ReputationSource source, uint32 creatureOr
 // Calculates how many reputation and currency the player gets uppon killing an creature
 void Player::RewardOnKill(Unit* victim, float rate)
 {
-    if (!victim || victim->GetTypeId() == TYPEID_PLAYER)
+    if (!victim || victim->IsPlayer())
         return;
 
     if (victim->ToCreature()->IsReputationGainDisabled())
@@ -6734,7 +6734,7 @@ bool Player::RewardHonor(Unit* victim, uint32 groupsize, int32 honor, bool pvpto
         if (!victim || victim == this || victim->HasAuraType(SPELL_AURA_NO_PVP_CREDIT))
             return true;
 
-        if (victim->GetTypeId() == TYPEID_PLAYER)
+        if (victim->IsPlayer())
         {
             // Check if allowed to receive it in current map
             uint8 MapType = sWorld->getIntConfig(CONFIG_PVP_TOKEN_MAP_TYPE);
@@ -15027,7 +15027,7 @@ void Player::AddQuest(Quest const* quest, Object* questGiver)
         uint32 timeAllowed = quest->GetTimeAllowed();
 
         // shared timed quest
-        if (questGiver && questGiver->GetTypeId() == TYPEID_PLAYER)
+        if (questGiver && questGiver->IsPlayer())
             timeAllowed = questGiver->ToPlayer()->getQuestStatusMap()[quest_id].Timer / IN_MILLISECONDS;
 
         AddTimedQuest(quest_id);

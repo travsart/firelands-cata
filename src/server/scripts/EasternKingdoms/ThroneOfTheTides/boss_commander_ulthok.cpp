@@ -98,7 +98,7 @@ struct boss_commander_ulthok : public BossAI
 
     void KilledUnit(Unit* killed) override
     {
-        if (killed->GetTypeId() == TYPEID_PLAYER)
+        if (killed->IsPlayer())
         {
             Talk(SAY_SLAY);
             DoCastAOE(SPELL_ULTHOK_VO_SLAY, true);

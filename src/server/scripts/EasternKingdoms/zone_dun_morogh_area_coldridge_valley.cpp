@@ -63,7 +63,7 @@ public:
 
             if (spell->Id == SPELL_HEAL_WOUNDED_MOUNTAINEER)
             {
-                if (caster->GetTypeId() == TYPEID_PLAYER)
+                if (caster->IsPlayer())
                 {
                     _tapped = true;
                     _playerGUID = caster->GetGUID();
@@ -268,7 +268,7 @@ public:
 
         void PassengerBoarded(Unit* passenger, int8 /*seatId*/, bool apply) override
         {
-            if (apply && passenger->GetTypeId() == TYPEID_PLAYER)
+            if (apply && passenger->IsPlayer())
             {
                 if (Creature* milo = passenger->SummonCreature(NPC_MILO, me->GetPosition(), TEMPSUMMON_CORPSE_DESPAWN, 0))
                 {

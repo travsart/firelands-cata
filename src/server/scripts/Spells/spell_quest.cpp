@@ -140,7 +140,7 @@ class spell_q5206_test_fetid_skull : public SpellScriptLoader
         {
             bool Load() override
             {
-                return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+                return GetCaster()->IsPlayer();
             }
 
             bool Validate(SpellInfo const* /*spellEntry*/) override
@@ -188,7 +188,7 @@ class spell_q6124_6129_apply_salve : public SpellScriptLoader
         {
             bool Load() override
             {
-                return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+                return GetCaster()->IsPlayer();
             }
 
             void HandleDummy(SpellEffIndex /*effIndex*/)
@@ -448,7 +448,7 @@ class spell_q11730_ultrasonic_screwdriver : public SpellScriptLoader
         {
             bool Load() override
             {
-                return GetCaster()->GetTypeId() == TYPEID_PLAYER && GetCastItem();
+                return GetCaster()->IsPlayer() && GetCastItem();
             }
 
             bool Validate(SpellInfo const* /*spellEntry*/) override
@@ -712,7 +712,7 @@ class spell_q12937_relief_for_the_fallen : public SpellScriptLoader
         {
             bool Load() override
             {
-                return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+                return GetCaster()->IsPlayer();
             }
 
             bool Validate(SpellInfo const* /*spellEntry*/) override
@@ -840,7 +840,7 @@ class spell_q12659_ahunaes_knife : public SpellScriptLoader
         {
             bool Load() override
             {
-                return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+                return GetCaster()->IsPlayer();
             }
 
             void HandleDummy(SpellEffIndex /*effIndex*/)
@@ -882,7 +882,7 @@ class spell_q9874_liquid_fire : public SpellScriptLoader
         {
             bool Load() override
             {
-                return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+                return GetCaster()->IsPlayer();
             }
 
             void HandleDummy(SpellEffIndex /*effIndex*/)
@@ -925,7 +925,7 @@ class spell_q12805_lifeblood_dummy : public SpellScriptLoader
         {
             bool Load() override
             {
-                return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+                return GetCaster()->IsPlayer();
             }
 
             void HandleScript(SpellEffIndex /*effIndex*/)
@@ -1063,7 +1063,7 @@ class spell_q9452_cast_net: public SpellScriptLoader
         {
             bool Load() override
             {
-                return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+                return GetCaster()->IsPlayer();
             }
 
             void HandleDummy(SpellEffIndex /*effIndex*/)

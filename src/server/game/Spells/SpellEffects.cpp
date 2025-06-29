@@ -308,7 +308,7 @@ void Spell::EffectInstaKill(SpellEffIndex /*effIndex*/)
     if (!unitTarget || !unitTarget->IsAlive())
         return;
 
-    if (unitTarget->GetTypeId() == TYPEID_PLAYER)
+    if (unitTarget->IsPlayer())
         if (unitTarget->ToPlayer()->GetCommandStatus(CHEAT_GOD))
             return;
 
@@ -333,7 +333,7 @@ void Spell::EffectEnvironmentalDMG(SpellEffIndex /*effIndex*/)
         return;
 
     // CalcAbsorbResist already in Player::EnvironmentalDamage
-    if (unitTarget->GetTypeId() == TYPEID_PLAYER)
+    if (unitTarget->IsPlayer())
         unitTarget->ToPlayer()->EnvironmentalDamage(DAMAGE_FIRE, damage);
     else
     {
@@ -447,7 +447,7 @@ void Spell::EffectDummy(SpellEffIndex effIndex)
         return;
 
     // pet auras
-    if (m_caster->GetTypeId() == TYPEID_PLAYER)
+    if (m_caster->IsPlayer())
     {
         if (PetAura const* petSpell = sSpellMgr->GetPetAura(m_spellInfo->Id, effIndex))
         {
@@ -809,7 +809,7 @@ void Spell::EffectTeleportUnits(SpellEffIndex /*effIndex*/)
 
     if (targetDest.GetMapId() == unitTarget->GetMapId())
         unitTarget->NearTeleportTo(targetDest, unitTarget == m_caster);
-    else if (unitTarget->GetTypeId() == TYPEID_PLAYER)
+    else if (unitTarget->IsPlayer())
         unitTarget->ToPlayer()->TeleportTo(targetDest, unitTarget == m_caster ? TELE_TO_SPELL : 0);
     else
     {
@@ -2173,7 +2173,7 @@ void Spell::EffectUntrainTalents(SpellEffIndex /*effIndex*/)
     if (effectHandleMode != SPELL_EFFECT_HANDLE_HIT_TARGET)
         return;
 
-    if (!unitTarget || m_caster->GetTypeId() == TYPEID_PLAYER)
+    if (!unitTarget || m_caster->IsPlayer())
         return;
 
     if (ObjectGuid guid = m_caster->GetGUID()) // the trainer is the caster
@@ -2495,7 +2495,7 @@ void Spell::EffectTameCreature(SpellEffIndex /*effIndex*/)
     m_caster->SetMinion(pet, true);
 
     pet->InitTalentForLevel();
-    if (m_caster->GetTypeId() == TYPEID_PLAYER)
+    if (m_caster->IsPlayer())
     {
         pet->SavePetToDB(PET_SAVE_NEW_PET);
         if (pet->GetSlot() <= PET_SLOT_LAST_ACTIVE_SLOT)
@@ -2580,13 +2580,13 @@ void Spell::EffectSummonPet(SpellEffIndex effIndex)
                 OldSummon->SetPower(OldSummon->GetPowerType(), OldSummon->GetMaxPower(OldSummon->GetPowerType()));
             }
 
-            if (owner->GetTypeId() == TYPEID_PLAYER && OldSummon->isControlled())
+            if (owner->IsPlayer() && OldSummon->isControlled())
                 owner->ToPlayer()->PetSpellInitialize();
 
             return;
         }
 
-        if (owner->GetTypeId() == TYPEID_PLAYER)
+        if (owner->IsPlayer())
             owner->ToPlayer()->RemovePet(OldSummon, (OldSummon->getPetType() == HUNTER_PET ? PET_SAVE_AS_DELETED : PET_SAVE_DISMISS), false);
         else
             return;
@@ -2729,10 +2729,10 @@ void Spell::EffectWeaponDmg(SpellEffIndex effIndex)
             // Hemorrhage
             if (m_spellInfo->SpellFamilyFlags[0] & 0x2000000)
             {
-                if (m_caster->GetTypeId() == TYPEID_PLAYER)
+                if (m_caster->IsPlayer())
                     m_caster->ToPlayer()->AddComboPoints(unitTarget, 1, this);
                 // 45% more damage with daggers
-                if (m_caster->GetTypeId() == TYPEID_PLAYER)
+                if (m_caster->IsPlayer())
                     if (Item* item = m_caster->ToPlayer()->GetWeaponForAttack(m_attackType, true))
                         if (item->GetTemplate()->GetSubClass() == ITEM_SUBCLASS_WEAPON_DAGGER)
                             totalDamagePercentMod *= 1.45f;
@@ -3205,7 +3205,7 @@ void Spell::EffectScriptEffect(SpellEffIndex effIndex)
         {
             // Workaround for Range ... should be global for every ScriptEffect
             float radius = m_spellInfo->Effects[effIndex].CalcRadius();
-            if (unitTarget && unitTarget->GetTypeId() == TYPEID_PLAYER && unitTarget->GetDistance(m_caster) >= radius && !unitTarget->HasAura(46394) && unitTarget != m_caster)
+            if (unitTarget && unitTarget->IsPlayer() && unitTarget->GetDistance(m_caster) >= radius && !unitTarget->HasAura(46394) && unitTarget != m_caster)
                 unitTarget->CastSpell(unitTarget, 46394, true);
 
             break;
@@ -3565,7 +3565,7 @@ void Spell::EffectSanctuary(SpellEffIndex /*effIndex*/)
     if (!unitTarget)
         return;
 
-    if (unitTarget->GetTypeId() == TYPEID_PLAYER && !unitTarget->GetMap()->IsDungeon())
+    if (unitTarget->IsPlayer() && !unitTarget->GetMap()->IsDungeon())
     {
         // stop all pve combat for players outside dungeons, suppress pvp combat
         unitTarget->CombatStop(false, false);
@@ -4231,7 +4231,7 @@ void Spell::EffectParry(SpellEffIndex /*effIndex*/)
     if (effectHandleMode != SPELL_EFFECT_HANDLE_HIT)
         return;
 
-    if (m_caster->GetTypeId() == TYPEID_PLAYER)
+    if (m_caster->IsPlayer())
         m_caster->ToPlayer()->SetCanParry(true);
 }
 
@@ -4240,7 +4240,7 @@ void Spell::EffectBlock(SpellEffIndex /*effIndex*/)
     if (effectHandleMode != SPELL_EFFECT_HANDLE_HIT)
         return;
 
-    if (m_caster->GetTypeId() == TYPEID_PLAYER)
+    if (m_caster->IsPlayer())
         m_caster->ToPlayer()->SetCanBlock(true);
 }
 
@@ -4423,7 +4423,7 @@ void Spell::EffectCharge(SpellEffIndex effIndex)
     if (effectHandleMode == SPELL_EFFECT_HANDLE_LAUNCH_TARGET)
     {
         // charge changes fall time
-        if (m_caster->GetTypeId() == TYPEID_PLAYER)
+        if (m_caster->IsPlayer())
             m_caster->ToPlayer()->SetFallInformation(0, m_caster->GetPositionZ());
 
         float speed = G3D::fuzzyGt(m_spellInfo->Speed, 0.0f) ? m_spellInfo->Speed : SPEED_CHARGE;
@@ -4440,7 +4440,7 @@ void Spell::EffectCharge(SpellEffIndex effIndex)
     else if (effectHandleMode == SPELL_EFFECT_HANDLE_HIT_TARGET)
     {
         // not all charge effects used in negative spells
-        if (!m_spellInfo->IsPositive() && m_caster->GetTypeId() == TYPEID_PLAYER)
+        if (!m_spellInfo->IsPositive() && m_caster->IsPlayer())
             m_caster->Attack(unitTarget, true);
 
         if (int32 spellId = GetSpellInfo()->Effects[effIndex].TriggerSpell)
@@ -4480,7 +4480,7 @@ void Spell::EffectKnockBack(SpellEffIndex effIndex)
     if (!unitTarget)
         return;
 
-    if (m_caster->GetTypeId() == TYPEID_PLAYER || m_caster->GetOwnerOrCreatorGUID().IsPlayer() || m_caster->IsHunterPet())
+    if (m_caster->IsPlayer() || m_caster->GetOwnerOrCreatorGUID().IsPlayer() || m_caster->IsHunterPet())
         if (Creature* creatureTarget = unitTarget->ToCreature())
             if (creatureTarget->isWorldBoss() || creatureTarget->IsDungeonBoss())
                 return;
@@ -4542,7 +4542,7 @@ void Spell::EffectLeapBack(SpellEffIndex effIndex)
     unitTarget->JumpTo(speedxy, speedz, forward);
 
     // changes fall time
-    if (m_caster->GetTypeId() == TYPEID_PLAYER)
+    if (m_caster->IsPlayer())
         m_caster->ToPlayer()->SetFallInformation(0, m_caster->GetPositionZ());
 }
 
@@ -4944,7 +4944,7 @@ void Spell::EffectTransmitted(SpellEffIndex effIndex)
     }
     case GAMEOBJECT_TYPE_SUMMONING_RITUAL:
     {
-        if (m_caster->GetTypeId() == TYPEID_PLAYER)
+        if (m_caster->IsPlayer())
         {
             pGameObj->AddUniqueUse(m_caster->ToPlayer());
             m_caster->AddGameObject(pGameObj); // will be removed at spell cancel
@@ -5340,7 +5340,7 @@ void Spell::EffectCreateTamedPet(SpellEffIndex effIndex)
 
     pet->InitTalentForLevel();
 
-    if (unitTarget->GetTypeId() == TYPEID_PLAYER)
+    if (unitTarget->IsPlayer())
     {
         pet->SavePetToDB(PET_SAVE_NEW_PET);
         unitTarget->ToPlayer()->PetSpellInitialize();
@@ -5364,7 +5364,7 @@ void Spell::EffectTitanGrip(SpellEffIndex effIndex)
     if (effectHandleMode != SPELL_EFFECT_HANDLE_HIT)
         return;
 
-    if (m_caster->GetTypeId() == TYPEID_PLAYER)
+    if (m_caster->IsPlayer())
         m_caster->ToPlayer()->SetCanTitanGrip(true, m_spellInfo->Effects[effIndex].MiscValue);
 }
 

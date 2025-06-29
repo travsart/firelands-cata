@@ -101,7 +101,7 @@ void WorldSession::HandlePetAction(WorldPacket& recvData)
     }
 
     /// @todo allow control charmed player?
-    if (pet->GetTypeId() == TYPEID_PLAYER && !(flag == ACT_COMMAND && spellid == COMMAND_ATTACK))
+    if (pet->IsPlayer() && !(flag == ACT_COMMAND && spellid == COMMAND_ATTACK))
         return;
 
     if (GetPlayer()->m_Controlled.size() == 1)

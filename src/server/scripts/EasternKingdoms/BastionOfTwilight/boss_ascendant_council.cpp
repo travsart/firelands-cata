@@ -552,7 +552,7 @@ struct npc_feludius final : public ScriptedAI
 
     void KilledUnit(Unit* who) override
     {
-        if (who->GetTypeId() == TYPEID_PLAYER)
+        if (who->IsPlayer())
             Talk(SAY_SLAY);
     }
 
@@ -717,7 +717,7 @@ struct npc_ignacious final : public ScriptedAI
 
     void KilledUnit(Unit* who) override
     {
-        if (who->GetTypeId() == TYPEID_PLAYER)
+        if (who->IsPlayer())
             Talk(SAY_SLAY);
     }
 
@@ -960,7 +960,7 @@ struct npc_arion final : public ScriptedAI
 
     void KilledUnit(Unit* who) override
     {
-        if (who->GetTypeId() == TYPEID_PLAYER)
+        if (who->IsPlayer())
             Talk(SAY_SLAY);
     }
 
@@ -1136,7 +1136,7 @@ struct npc_terrastra final : public ScriptedAI
 
     void KilledUnit(Unit* who) override
     {
-        if (who->GetTypeId() == TYPEID_PLAYER)
+        if (who->IsPlayer())
             Talk(SAY_SLAY);
     }
 
@@ -1313,7 +1313,7 @@ struct npc_elementium_monstrosity final : public ScriptedAI
 
     void KilledUnit(Unit* who) override
     {
-        if (who->GetTypeId() == TYPEID_PLAYER)
+        if (who->IsPlayer())
             Talk(SAY_SLAY);
     }
 

@@ -493,7 +493,7 @@ int32 AuraEffect::CalculateAmount(Unit* caster)
 
     if (!m_spellInfo->HasAttribute(SPELL_ATTR8_MASTERY_SPECIALIZATION) || G3D::fuzzyEq(m_spellInfo->Effects[m_effIndex].BonusMultiplier, 0.0f))
         amount = m_spellInfo->Effects[m_effIndex].CalcValue(caster, &m_baseAmount, GetBase()->GetOwner()->ToUnit());
-    else if (caster && caster->GetTypeId() == TYPEID_PLAYER)
+    else if (caster && caster->IsPlayer())
         amount = int32(caster->GetFloatValue(PLAYER_MASTERY) * m_spellInfo->Effects[m_effIndex].BonusMultiplier);
 
     // check item enchant aura cast
@@ -1270,7 +1270,7 @@ void AuraEffect::HandleShapeshiftBoosts(Unit* target, bool apply) const
         if (spellId2)
             target->CastSpell(target, spellId2, this);
 
-        if (target->GetTypeId() == TYPEID_PLAYER)
+        if (target->IsPlayer())
         {
             Player* plrTarget = target->ToPlayer();
 
@@ -1493,7 +1493,7 @@ void AuraEffect::HandleModInvisibility(AuraApplication const* aurApp, uint8 mode
     if (apply)
     {
         // apply glow vision
-        if (target->GetTypeId() == TYPEID_PLAYER && type == INVISIBILITY_GENERAL)
+        if (target->IsPlayer() && type == INVISIBILITY_GENERAL)
             target->SetByteFlag(PLAYER_FIELD_BYTES2, PLAYER_FIELD_BYTES_2_OFFSET_AURA_VISION, PLAYER_FIELD_BYTE2_INVISIBILITY_GLOW);
 
         target->m_invisibility.AddFlag(type);
@@ -1505,7 +1505,7 @@ void AuraEffect::HandleModInvisibility(AuraApplication const* aurApp, uint8 mode
         {
             // if not have different invisibility auras.
             // remove glow vision
-            if (target->GetTypeId() == TYPEID_PLAYER)
+            if (target->IsPlayer())
                 target->RemoveByteFlag(PLAYER_FIELD_BYTES2, PLAYER_FIELD_BYTES_2_OFFSET_AURA_VISION, PLAYER_FIELD_BYTE2_INVISIBILITY_GLOW);
 
             target->m_invisibility.DelFlag(type);
@@ -1526,7 +1526,7 @@ void AuraEffect::HandleModInvisibility(AuraApplication const* aurApp, uint8 mode
             {
                 // if not have invisibility auras of type INVISIBILITY_GENERAL
                 // remove glow vision
-                if (target->GetTypeId() == TYPEID_PLAYER && type == INVISIBILITY_GENERAL)
+                if (target->IsPlayer() && type == INVISIBILITY_GENERAL)
                     target->RemoveByteFlag(PLAYER_FIELD_BYTES2, PLAYER_FIELD_BYTES_2_OFFSET_AURA_VISION, PLAYER_FIELD_BYTE2_INVISIBILITY_GLOW);
 
                 target->m_invisibility.DelFlag(type);
@@ -1586,7 +1586,7 @@ void AuraEffect::HandleModStealth(AuraApplication const* aurApp, uint8 mode, boo
         target->m_stealth.AddValue(type, GetAmount());
 
         target->SetStandFlags(UNIT_STAND_FLAGS_CREEP);
-        if (target->GetTypeId() == TYPEID_PLAYER)
+        if (target->IsPlayer())
             target->SetByteFlag(PLAYER_FIELD_BYTES2, PLAYER_FIELD_BYTES_2_OFFSET_AURA_VISION, PLAYER_FIELD_BYTE2_STEALTH);
     }
     else
@@ -1598,7 +1598,7 @@ void AuraEffect::HandleModStealth(AuraApplication const* aurApp, uint8 mode, boo
             target->m_stealth.DelFlag(type);
 
             target->RemoveStandFlags(UNIT_STAND_FLAGS_CREEP);
-            if (target->GetTypeId() == TYPEID_PLAYER)
+            if (target->IsPlayer())
                 target->RemoveByteFlag(PLAYER_FIELD_BYTES2, PLAYER_FIELD_BYTES_2_OFFSET_AURA_VISION, PLAYER_FIELD_BYTE2_STEALTH);
         }
     }
@@ -1926,7 +1926,7 @@ void AuraEffect::HandleAuraModShapeshift(AuraApplication const* aurApp, uint8 mo
                     Rage_val += aurEff->GetAmount() * 10;
             }
             // Stance mastery + Tactical mastery (both passive, and last have aura only in defense stance, but need apply at any stance switch)
-            if (target->GetTypeId() == TYPEID_PLAYER)
+            if (target->IsPlayer())
             {
                 PlayerSpellMap const& sp_list = target->ToPlayer()->GetSpellMap();
                 for (PlayerSpellMap::const_iterator itr = sp_list.begin(); itr != sp_list.end(); ++itr)
@@ -1951,7 +1951,7 @@ void AuraEffect::HandleAuraModShapeshift(AuraApplication const* aurApp, uint8 mo
         HandleShapeshiftBoosts(target, false);
     }
 
-    if (target->GetTypeId() == TYPEID_PLAYER)
+    if (target->IsPlayer())
     {
         target->ToPlayer()->InitDataForForm();
         target->ToPlayer()->UpdateArmorSpecialization();
@@ -1979,7 +1979,7 @@ void AuraEffect::HandleAuraModShapeshift(AuraApplication const* aurApp, uint8 mo
     if (apply && aurApp->GetRemoveMode().HasAnyFlag())
         return;
 
-    if (target->GetTypeId() == TYPEID_PLAYER)
+    if (target->IsPlayer())
     {
         SpellShapeshiftFormEntry const* shapeInfo = sSpellShapeshiftFormStore.LookupEntry(form);
         ASSERT(shapeInfo);
@@ -2186,7 +2186,7 @@ void AuraEffect::HandleAuraTransform(AuraApplication const* aurApp, uint8 mode, 
         }
 
         // polymorph case
-        if ((mode & AURA_EFFECT_HANDLE_REAL) && target->GetTypeId() == TYPEID_PLAYER && target->IsPolymorphed())
+        if ((mode & AURA_EFFECT_HANDLE_REAL) && target->IsPlayer() && target->IsPolymorphed())
         {
             // for players, start regeneration after 1s (in polymorph fast regeneration case)
             // only if caster is Player (after patch 2.4.2)
@@ -2395,7 +2395,7 @@ void AuraEffect::HandleAuraModDisarm(AuraApplication const* aurApp, uint8 mode, 
         target->RemoveFlag(field, flag);
 
     // Handle damage modification, shapeshifted druids are not affected
-    if (target->GetTypeId() == TYPEID_PLAYER && !target->IsInFeralForm())
+    if (target->IsPlayer() && !target->IsInFeralForm())
     {
         Player* player = target->ToPlayer();
         if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
@@ -2820,7 +2820,7 @@ void AuraEffect::HandleAuraFeatherFall(AuraApplication const* aurApp, uint8 mode
     target->SetFeatherFall(apply);
 
     // start fall from current height
-    if (!apply && target->GetTypeId() == TYPEID_PLAYER)
+    if (!apply && target->IsPlayer())
         target->ToPlayer()->SetFallInformation(0, target->GetPositionZ());
 }
 
@@ -2849,7 +2849,7 @@ void AuraEffect::HandleWaterBreathing(AuraApplication const* aurApp, uint8 mode,
     Unit* target = aurApp->GetTarget();
 
     // update timers in client
-    if (target->GetTypeId() == TYPEID_PLAYER)
+    if (target->IsPlayer())
         target->ToPlayer()->UpdateMirrorTimers();
 }
 
@@ -3170,7 +3170,7 @@ void AuraEffect::HandleAuraModIncreaseFlightSpeed(AuraApplication const* aurApp,
         if (mode & AURA_EFFECT_HANDLE_REAL)
         {
             // Players on flying mounts must be immune to polymorph
-            if (target->GetTypeId() == TYPEID_PLAYER)
+            if (target->IsPlayer())
                 target->ApplySpellImmune(GetId(), IMMUNITY_MECHANIC, MECHANIC_POLYMORPH, apply);
 
             // Dragonmaw Illusion (overwrite mount model, mounted aura already applied)
@@ -3372,7 +3372,7 @@ void AuraEffect::HandleAuraModResistanceExclusive(AuraApplication const* aurApp,
             {
                 float value = float(GetAmount() - amount);
                 target->HandleStatModifier(UnitMods(UNIT_MOD_RESISTANCE_START + x), BASE_VALUE, value, apply);
-                if (target->GetTypeId() == TYPEID_PLAYER || target->IsPet())
+                if (target->IsPlayer() || target->IsPet())
                     target->ApplyResistanceBuffModsMod(SpellSchools(x));
             }
         }
@@ -3391,7 +3391,7 @@ void AuraEffect::HandleAuraModResistance(AuraApplication const* aurApp, uint8 mo
         if (GetMiscValue() & (1 << x))
         {
             target->HandleStatModifier(UnitMods(UNIT_MOD_RESISTANCE_START + x), TOTAL_VALUE, float(GetAmount()), apply);
-            if (target->GetTypeId() == TYPEID_PLAYER || target->IsPet())
+            if (target->IsPlayer() || target->IsPet())
                 target->ApplyResistanceBuffModsMod(SpellSchools(x));
         }
     }
@@ -3453,7 +3453,7 @@ void AuraEffect::HandleModResistancePercent(AuraApplication const* aurApp, uint8
                 continue;
 
             target->SetModifierValue(UnitMods(UNIT_MOD_RESISTANCE_START + i), TOTAL_PCT, amount);
-            if (target->GetTypeId() == TYPEID_PLAYER || target->IsPet())
+            if (target->IsPlayer() || target->IsPet())
                 target->ApplyResistanceBuffModsMod(SpellSchools(i));
         }
     }
@@ -3491,11 +3491,11 @@ void AuraEffect::HandleModTargetResistance(AuraApplication const* aurApp, uint8 
     // applied to damage as HandleNoImmediateEffect in Unit::CalcAbsorbResist and Unit::CalcArmorReducedDamage
 
     // show armor penetration
-    if (target->GetTypeId() == TYPEID_PLAYER && (GetMiscValue() & SPELL_SCHOOL_MASK_NORMAL))
+    if (target->IsPlayer() && (GetMiscValue() & SPELL_SCHOOL_MASK_NORMAL))
         target->ApplyModInt32Value(PLAYER_FIELD_MOD_TARGET_PHYSICAL_RESISTANCE, GetAmount(), apply);
 
     // show as spell penetration only full spell penetration bonuses (all resistances except armor and holy
-    if (target->GetTypeId() == TYPEID_PLAYER && (GetMiscValue() & SPELL_SCHOOL_MASK_SPELL) == SPELL_SCHOOL_MASK_SPELL)
+    if (target->IsPlayer() && (GetMiscValue() & SPELL_SCHOOL_MASK_SPELL) == SPELL_SCHOOL_MASK_SPELL)
         target->ApplyModInt32Value(PLAYER_FIELD_MOD_TARGET_RESISTANCE, GetAmount(), apply);
 }
 
@@ -3527,12 +3527,12 @@ void AuraEffect::HandleAuraModStat(AuraApplication const* aurApp, uint8 mode, bo
             if (spellGroupVal)
             {
                 target->HandleStatModifier(UnitMods(UNIT_MOD_STAT_START + i), TOTAL_VALUE, float(spellGroupVal), !apply);
-                if (target->GetTypeId() == TYPEID_PLAYER || target->IsPet())
+                if (target->IsPlayer() || target->IsPet())
                     target->ApplyStatBuffMod(Stats(i));
             }
 
             target->HandleStatModifier(UnitMods(UNIT_MOD_STAT_START + i), TOTAL_VALUE, float(GetAmount()), apply);
-            if (target->GetTypeId() == TYPEID_PLAYER || target->IsPet())
+            if (target->IsPlayer() || target->IsPet())
                 target->ApplyStatBuffMod(Stats(i));
         }
     }
@@ -3689,7 +3689,7 @@ void AuraEffect::HandleModTotalPercentStat(AuraApplication const* aurApp, uint8 
                 continue;
 
             target->SetModifierValue(UnitMods(UNIT_MOD_STAT_START + i), TOTAL_PCT, amount);
-            if (target->GetTypeId() == TYPEID_PLAYER || target->IsPet())
+            if (target->IsPlayer() || target->IsPet())
                 target->ApplyStatBuffMod(Stats(i));
         }
     }
@@ -3979,7 +3979,7 @@ void AuraEffect::HandleModHitChance(AuraApplication const* aurApp, uint8 mode, b
 
     Unit* target = aurApp->GetTarget();
 
-    if (target->GetTypeId() == TYPEID_PLAYER)
+    if (target->IsPlayer())
         target->ToPlayer()->UpdateHitChances();
 }
 
@@ -3990,7 +3990,7 @@ void AuraEffect::HandleModSpellHitChance(AuraApplication const* aurApp, uint8 mo
 
     Unit* target = aurApp->GetTarget();
 
-    if (target->GetTypeId() == TYPEID_PLAYER)
+    if (target->IsPlayer())
         target->ToPlayer()->UpdateSpellHitChances();
     else
         target->m_modSpellHitChance += (apply) ? GetAmount() : (-GetAmount());
@@ -4003,7 +4003,7 @@ void AuraEffect::HandleModSpellCritChance(AuraApplication const* aurApp, uint8 m
 
     Unit* target = aurApp->GetTarget();
 
-    if (target->GetTypeId() == TYPEID_PLAYER)
+    if (target->IsPlayer())
         target->ToPlayer()->UpdateAllSpellCritChances();
     else
         target->m_baseSpellCritChance += (apply) ? GetAmount() : -GetAmount();
@@ -4142,7 +4142,7 @@ void AuraEffect::HandleModMeleeSpeedPct(AuraApplication const* aurApp, uint8 mod
 
     if (spellGroupVal)
     {
-        if (target->GetTypeId() == TYPEID_PLAYER && applyRegenPct && GetBase()->HasEffectType(SPELL_AURA_MOD_MELEE_HASTE_3))
+        if (target->IsPlayer() && applyRegenPct && GetBase()->HasEffectType(SPELL_AURA_MOD_MELEE_HASTE_3))
             target->ApplyHasteRegenMod(BASE_ATTACK, (float)GetAmount(), !apply);
         else
         {
@@ -4154,7 +4154,7 @@ void AuraEffect::HandleModMeleeSpeedPct(AuraApplication const* aurApp, uint8 mod
     }
 
     // Auras that only increase regeneration
-    if (target->GetTypeId() == TYPEID_PLAYER && applyRegenPct && GetBase()->HasEffectType(SPELL_AURA_MOD_MELEE_HASTE_3))
+    if (target->IsPlayer() && applyRegenPct && GetBase()->HasEffectType(SPELL_AURA_MOD_MELEE_HASTE_3))
         target->ApplyHasteRegenMod(BASE_ATTACK, (float)GetAmount(), apply);
     else
     {
@@ -4294,7 +4294,7 @@ void AuraEffect::HandleAuraModAttackPowerOfArmor(AuraApplication const* aurApp, 
     Unit* target = aurApp->GetTarget();
 
     // Recalculate bonus
-    if (target->GetTypeId() == TYPEID_PLAYER)
+    if (target->IsPlayer())
         target->ToPlayer()->UpdateAttackPowerAndDamage(false);
 }
 
@@ -4326,7 +4326,7 @@ void AuraEffect::HandleModDamageDone(AuraApplication const* aurApp, uint8 mode, 
 
     // Magic damage modifiers implemented in Unit::SpellBaseDamageBonusDone
     // This information for client side use only
-    if (target->GetTypeId() == TYPEID_PLAYER)
+    if (target->IsPlayer())
     {
         uint16 baseField = GetAmount() >= 0 ? PLAYER_FIELD_MOD_DAMAGE_DONE_POS : PLAYER_FIELD_MOD_DAMAGE_DONE_NEG;
         for (uint16 i = 0; i < MAX_SPELL_SCHOOL; ++i)
@@ -4349,7 +4349,7 @@ void AuraEffect::HandleModDamagePercentDone(AuraApplication const* aurApp, uint8
     if (GetMiscValue() & SPELL_SCHOOL_MASK_NORMAL)
         target->UpdateAllDamagePctDoneMods();
 
-    if (target->GetTypeId() == TYPEID_PLAYER)
+    if (target->IsPlayer())
     {
         for (uint8 i = 0; i < MAX_SPELL_SCHOOL; ++i)
         {
@@ -4502,7 +4502,7 @@ void AuraEffect::HandleAuraDummy(AuraApplication const* aurApp, uint8 mode, bool
     Unit* caster = GetCaster();
 
     // pet auras
-    if (target->GetTypeId() == TYPEID_PLAYER && (mode & AURA_EFFECT_HANDLE_REAL))
+    if (target->IsPlayer() && (mode & AURA_EFFECT_HANDLE_REAL))
     {
         if (PetAura const* petSpell = sSpellMgr->GetPetAura(GetId(), m_effIndex))
         {
@@ -4660,7 +4660,7 @@ void AuraEffect::HandleAuraDummy(AuraApplication const* aurApp, uint8 mode, bool
                 {
                 case 2584: // Waiting to Resurrect
                     // Waiting to resurrect spell cancel, we must remove player from resurrect queue
-                    if (target->GetTypeId() == TYPEID_PLAYER)
+                    if (target->IsPlayer())
                     {
                         if (Battleground* bg = target->ToPlayer()->GetBattleground())
                             bg->RemovePlayerFromResurrectQueue(target->GetGUID());
@@ -4862,7 +4862,7 @@ void AuraEffect::HandleAuraDummy(AuraApplication const* aurApp, uint8 mode, bool
         }
         // LK Intro VO (1)
         case 58204:
-            if (target->GetTypeId() == TYPEID_PLAYER)
+            if (target->IsPlayer())
             {
                 // Play part 1
                 if (apply)
@@ -4874,7 +4874,7 @@ void AuraEffect::HandleAuraDummy(AuraApplication const* aurApp, uint8 mode, bool
             break;
         // LK Intro VO (2)
         case 58205:
-            if (target->GetTypeId() == TYPEID_PLAYER)
+            if (target->IsPlayer())
             {
                 // Play part 2
                 if (apply)
@@ -5209,7 +5209,7 @@ void AuraEffect::HandleAuraModFakeInebriation(AuraApplication const* aurApp, uin
         target->m_invisibilityDetect.AddFlag(INVISIBILITY_DRUNK);
         target->m_invisibilityDetect.AddValue(INVISIBILITY_DRUNK, GetAmount());
 
-        if (target->GetTypeId() == TYPEID_PLAYER)
+        if (target->IsPlayer())
         {
             int32 oldval = target->ToPlayer()->GetInt32Value(PLAYER_FAKE_INEBRIATION);
             target->ToPlayer()->SetInt32Value(PLAYER_FAKE_INEBRIATION, oldval + GetAmount());
@@ -5221,7 +5221,7 @@ void AuraEffect::HandleAuraModFakeInebriation(AuraApplication const* aurApp, uin
 
         target->m_invisibilityDetect.AddValue(INVISIBILITY_DRUNK, -GetAmount());
 
-        if (target->GetTypeId() == TYPEID_PLAYER)
+        if (target->IsPlayer())
         {
             int32 oldval = target->ToPlayer()->GetInt32Value(PLAYER_FAKE_INEBRIATION);
             target->ToPlayer()->SetInt32Value(PLAYER_FAKE_INEBRIATION, oldval - GetAmount());
@@ -5517,7 +5517,7 @@ void AuraEffect::HandlePeriodicTriggerSpellAuraTick(Unit* target, Unit* caster) 
             case 30427:
             {
                 // move loot to player inventory and despawn target
-                if (caster && caster->GetTypeId() == TYPEID_PLAYER && target->GetTypeId() == TYPEID_UNIT && target->ToCreature()->GetCreatureTemplate()->type == CREATURE_TYPE_GAS_CLOUD)
+                if (caster && caster->IsPlayer() && target->GetTypeId() == TYPEID_UNIT && target->ToCreature()->GetCreatureTemplate()->type == CREATURE_TYPE_GAS_CLOUD)
                 {
                     Player* player = caster->ToPlayer();
                     Creature* creature = target->ToCreature();

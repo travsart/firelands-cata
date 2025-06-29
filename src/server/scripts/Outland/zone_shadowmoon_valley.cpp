@@ -264,7 +264,7 @@ class npc_mature_netherwing_drake : public CreatureScript
             if (bCanEat || bIsEating)
                 return;
 
-            if (pCaster->GetTypeId() == TYPEID_PLAYER && spell->Id == SPELL_PLACE_CARCASS && !me->HasAura(SPELL_JUST_EATEN))
+            if (pCaster->IsPlayer() && spell->Id == SPELL_PLACE_CARCASS && !me->HasAura(SPELL_JUST_EATEN))
             {
                 uiPlayerGUID = pCaster->GetGUID();
                 bCanEat = true;
@@ -399,7 +399,7 @@ class npc_enslaved_netherwing_drake : public CreatureScript
             if (!caster)
                 return;
 
-            if (caster->GetTypeId() == TYPEID_PLAYER && spell->Id == SPELL_HIT_FORCE_OF_NELTHARAKU && !Tapped)
+            if (caster->IsPlayer() && spell->Id == SPELL_HIT_FORCE_OF_NELTHARAKU && !Tapped)
             {
                 Tapped = true;
                 PlayerGUID = caster->GetGUID();
@@ -529,7 +529,7 @@ class npc_dragonmaw_peon : public CreatureScript
             if (!caster)
                 return;
 
-            if (caster->GetTypeId() == TYPEID_PLAYER && spell->Id == 40468 && !Tapped)
+            if (caster->IsPlayer() && spell->Id == 40468 && !Tapped)
             {
                 PlayerGUID = caster->GetGUID();
 
@@ -1268,7 +1268,7 @@ class npc_illidari_spawn : public CreatureScript
                 {
                     if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0))
                     {
-                        if (target->GetTypeId() == TYPEID_PLAYER)
+                        if (target->IsPlayer())
                         {
                             DoCast(target, SpawnCast[1].SpellId); // Focused Bursts
                             SpellTimer1 = SpawnCast[1].Timer2 + (rand32() % 5 * 1000);

@@ -50,7 +50,7 @@ inline PhaseFlags GetPhaseFlags(uint32 phaseId)
 template <typename Func> inline void ForAllControlled(Unit* unit, Func&& func)
 {
     for (Unit* controlled : unit->m_Controlled)
-        if (controlled->GetTypeId() != TYPEID_PLAYER)
+        if (controlled->IsPlayer())
             func(controlled);
 
     for (uint8 i = 0; i < MAX_SUMMON_SLOT; ++i)

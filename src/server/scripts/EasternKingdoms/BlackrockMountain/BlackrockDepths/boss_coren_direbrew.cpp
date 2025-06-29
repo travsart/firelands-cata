@@ -152,7 +152,7 @@ public:
 
         void MoveInLineOfSight(Unit* who) override
         {
-            if (!events.IsInPhase(PHASE_ALL) || who->GetTypeId() != TYPEID_PLAYER)
+            if (!events.IsInPhase(PHASE_ALL) || who->IsPlayer())
                 return;
 
             events.SetPhase(PHASE_INTRO);

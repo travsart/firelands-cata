@@ -1105,7 +1105,7 @@ namespace Firelands
                 Unit const* owner = i_funit->GetOwner();
                 if (owner)
                     check = owner;
-                i_targetForPlayer = (check->GetTypeId() == TYPEID_PLAYER);
+                i_targetForPlayer = (check->IsPlayer());
             }
             bool operator()(Unit* u)
             {
@@ -1116,7 +1116,7 @@ namespace Firelands
                 if (_spellInfo && _spellInfo->HasAttribute(SPELL_ATTR3_ONLY_TARGET_PLAYERS) && u->GetTypeId() != TYPEID_PLAYER)
                     return false;
 
-                if (_spellInfo && _spellInfo->HasAttribute(SPELL_ATTR5_DONT_TARGET_PLAYERS) && u->GetTypeId() == TYPEID_PLAYER)
+                if (_spellInfo && _spellInfo->HasAttribute(SPELL_ATTR5_DONT_TARGET_PLAYERS) && u->IsPlayer())
                     return false;
 
                 if (!i_funit->IsValidAttackTarget(u, _spellInfo))

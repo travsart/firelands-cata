@@ -597,7 +597,7 @@ public:
                         EnterEvadeMode();
                     return;
                 }
-                else if (me->GetVictim() && me->EnsureVictim()->GetTypeId() == TYPEID_PLAYER && me->EnsureVictim()->HealthBelowPct(10))
+                else if (me->GetVictim() && me->EnsureVictim()->IsPlayer() && me->EnsureVictim()->HealthBelowPct(10))
                 {
                     me->EnsureVictim()->CastSpell(me->GetVictim(), SPELL_GROVEL, true); // beg
                     me->EnsureVictim()->RemoveGameObject(SPELL_DUEL_FLAG, true);
@@ -895,7 +895,7 @@ public:
             if (!deathcharger || !killer)
                 return;
 
-            if (killer->GetTypeId() == TYPEID_PLAYER && deathcharger->GetTypeId() == TYPEID_UNIT && deathcharger->IsVehicle())
+            if (killer->IsPlayer() && deathcharger->GetTypeId() == TYPEID_UNIT && deathcharger->IsVehicle())
             {
                 deathcharger->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_SPELLCLICK);
                 deathcharger->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);

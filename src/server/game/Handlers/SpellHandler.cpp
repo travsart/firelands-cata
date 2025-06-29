@@ -511,7 +511,7 @@ void WorldSession::HandleMirrorImageDataRequest(WorldPacket& recvData)
     data << uint8(creator->getGender());
     data << uint8(creator->getClass());
 
-    if (creator->GetTypeId() == TYPEID_PLAYER)
+    if (creator->IsPlayer())
     {
         Player* player = creator->ToPlayer();
         Guild* guild = nullptr;

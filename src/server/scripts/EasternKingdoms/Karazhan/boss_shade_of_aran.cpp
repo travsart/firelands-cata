@@ -183,7 +183,7 @@ public:
             for (auto* ref : me->GetThreatManager().GetUnsortedThreatList())
             {
                 Unit* target = ref->GetVictim();
-                if (ref->GetVictim()->GetTypeId() == TYPEID_PLAYER && ref->GetVictim()->IsAlive())
+                if (ref->GetVictim()->IsPlayer() && ref->GetVictim()->IsAlive())
                     targets.push_back(target);
             }
 

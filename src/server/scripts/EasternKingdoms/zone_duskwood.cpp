@@ -80,7 +80,7 @@ public:
 
         void KilledUnit(Unit* victim) override
         {
-            if (victim->GetTypeId() == TYPEID_PLAYER)
+            if (victim->IsPlayer())
             {
                 ++KillCount;
                 Talk(YELL_TWILIGHT_CORRUPTOR_KILL, victim);

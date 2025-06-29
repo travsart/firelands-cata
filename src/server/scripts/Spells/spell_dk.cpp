@@ -188,7 +188,7 @@ class spell_dk_blood_boil : public SpellScript
     bool Load() override
     {
         _executed = false;
-        return GetCaster()->GetTypeId() == TYPEID_PLAYER && GetCaster()->getClass() == CLASS_DEATH_KNIGHT;
+        return GetCaster()->IsPlayer() && GetCaster()->getClass() == CLASS_DEATH_KNIGHT;
     }
 
     void HandleAfterHit()
@@ -582,7 +582,7 @@ class spell_dk_icebound_fortitude : public AuraScript
     bool Load() override
     {
         Unit* caster = GetCaster();
-        return caster && caster->GetTypeId() == TYPEID_PLAYER;
+        return caster && caster->IsPlayer();
     }
 
     void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
@@ -832,7 +832,7 @@ class spell_dk_raise_dead : public SpellScript
 
     bool Load() override
     {
-        return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+        return GetCaster()->IsPlayer();
     }
 
     uint32 GetGhoulSpellId()
@@ -981,7 +981,7 @@ class spell_dk_death_grip_initial : public SpellScript
 
         // Patch 3.3.3 (2010-03-23): Minimum range has been changed to 8 yards in PvP.
         Unit* target = GetExplTargetUnit();
-        if (target && target->GetTypeId() == TYPEID_PLAYER)
+        if (target && target->IsPlayer())
             if (caster->GetExactDist(target) < 8.f)
                 return SPELL_FAILED_TOO_CLOSE;
 

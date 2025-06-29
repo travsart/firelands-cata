@@ -129,7 +129,7 @@ void CreatureAI::_OnOwnerCombatInteraction(Unit* target)
 void CreatureAI::TriggerAlert(Unit const* who) const
 {
     // If there's no target, or target isn't a player do nothing
-    if (!who || who->GetTypeId() != TYPEID_PLAYER)
+    if (!who || who->IsPlayer())
         return;
 
     // If this unit isn't an NPC, is already distracted, is fighting, is confused, stunned or fleeing, do nothing

@@ -115,7 +115,7 @@ class boss_void_reaver : public CreatureScript
                             for (auto* ref : me->GetThreatManager().GetUnsortedThreatList())
                             {
                                 Unit* target = ref->GetVictim();
-                                if (target->GetTypeId() == TYPEID_PLAYER && target->IsAlive() && !target->IsWithinDist(me, 18, false))
+                                if (target->IsPlayer() && target->IsAlive() && !target->IsWithinDist(me, 18, false))
                                     target_list.push_back(target);
                             }
 

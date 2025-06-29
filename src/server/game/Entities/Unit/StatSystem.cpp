@@ -1227,7 +1227,7 @@ void Guardian::UpdateDamagePhysical(WeaponAttackType attType)
         return;
 
     float bonusDamage = 0.0f;
-    if (m_owner->GetTypeId() == TYPEID_PLAYER)
+    if (m_owner->IsPlayer())
     {
         //force of nature
         if (GetEntry() == ENTRY_TREANT)
@@ -1283,6 +1283,6 @@ void Guardian::UpdateDamagePhysical(WeaponAttackType attType)
 void Guardian::SetBonusDamage(int32 damage)
 {
     //m_bonusSpellDamage = damage;
-    if (GetOwner()->GetTypeId() == TYPEID_PLAYER)
+    if (GetOwner()->IsPlayer())
         GetOwner()->SetUInt32Value(PLAYER_PET_SPELL_POWER, damage);
 }

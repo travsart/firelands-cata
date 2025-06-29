@@ -1862,7 +1862,7 @@ class spell_igb_rocket_pack_useable : public SpellScriptLoader
 
             bool CheckAreaTarget(Unit* target)
             {
-                return target->GetTypeId() == TYPEID_PLAYER && GetOwner()->GetInstanceScript()->GetBossState(DATA_ICECROWN_GUNSHIP_BATTLE) != DONE;
+                return target->IsPlayer() && GetOwner()->GetInstanceScript()->GetBossState(DATA_ICECROWN_GUNSHIP_BATTLE) != DONE;
             }
 
             void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
@@ -1913,7 +1913,7 @@ class spell_igb_on_gunship_deck : public SpellScriptLoader
 
             bool CheckAreaTarget(Unit* unit)
             {
-                return unit->GetTypeId() == TYPEID_PLAYER;
+                return unit->IsPlayer();
             }
 
             void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)

@@ -84,7 +84,7 @@ void SmartAI::StartPath(bool run/* = false*/, uint32 pathId/* = 0*/, bool repeat
     // Do not use AddEscortState, removing everything from previous
     _escortState = SMART_ESCORT_ESCORTING;
 
-    if (invoker && invoker->GetTypeId() == TYPEID_PLAYER)
+    if (invoker && invoker->IsPlayer())
     {
         _escortNPCFlags = me->GetUInt32Value(UNIT_NPC_FLAGS);
         me->SetFlag(UNIT_NPC_FLAGS, 0);

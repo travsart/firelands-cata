@@ -59,7 +59,8 @@ namespace Movement
             Result_None         = 0x01,
             Result_Arrived      = 0x02,
             Result_NextCycle    = 0x04,
-            Result_NextSegment  = 0x08
+            Result_NextSegment  = 0x08,
+            Result_JustArrived  = 0x10
         };
         friend class PacketBuilder;
 

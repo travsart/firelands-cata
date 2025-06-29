@@ -781,7 +781,7 @@ class boss_leviathan_mk_ii : public CreatureScript
 
         void KilledUnit(Unit* victim) override
         {
-            if (victim->GetTypeId() == TYPEID_PLAYER)
+            if (victim->IsPlayer())
                 if (Creature* mimiron = instance->GetCreature(DATA_MIMIRON))
                     mimiron->AI()->Talk(events.IsInPhase(PHASE_LEVIATHAN_MK_II) ? SAY_MKII_SLAY : SAY_V07TRON_SLAY);
         }
@@ -1024,7 +1024,7 @@ class boss_vx_001 : public CreatureScript
 
         void KilledUnit(Unit* victim) override
         {
-            if (victim->GetTypeId() == TYPEID_PLAYER)
+            if (victim->IsPlayer())
                 if (Creature* mimiron = instance->GetCreature(DATA_MIMIRON))
                     mimiron->AI()->Talk(events.IsInPhase(PHASE_VX_001) ? SAY_VX001_SLAY : SAY_V07TRON_SLAY);
         }
@@ -1207,7 +1207,7 @@ class boss_aerial_command_unit : public CreatureScript
 
         void KilledUnit(Unit* victim) override
         {
-            if (victim->GetTypeId() == TYPEID_PLAYER)
+            if (victim->IsPlayer())
                 if (Creature* mimiron = instance->GetCreature(DATA_MIMIRON))
                     mimiron->AI()->Talk(events.IsInPhase(PHASE_AERIAL_COMMAND_UNIT) ? SAY_AERIAL_SLAY : SAY_V07TRON_SLAY);
         }

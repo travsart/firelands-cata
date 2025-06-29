@@ -1754,7 +1754,7 @@ struct npc_training_dummy : NullCreatureAI
             case SPELL_PRIMAL_STRIKE:   // Primal Strike - Shaman
             case SPELL_IMMOLATE:        // Immolate - Warlock
             case SPELL_ARCANE_MISSILES: // Arcane Missiles - Mage
-                if (caster->GetTypeId() == TYPEID_PLAYER)
+                if (caster->IsPlayer())
                     caster->ToPlayer()->KilledMonsterCredit(NPC_SPELL_PRACTICE_CREDIT);
                 break;
             default:
@@ -2403,7 +2403,7 @@ public:
 
         void IsSummonedBy(Unit* summoner) override
         {
-            if (summoner->GetTypeId() == TYPEID_PLAYER)
+            if (summoner->IsPlayer())
             {
                 summonerGUID = summoner->GetGUID();
                 events.ScheduleEvent(EVENT_TALK, 3000);

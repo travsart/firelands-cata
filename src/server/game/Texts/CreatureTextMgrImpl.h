@@ -94,7 +94,7 @@ void CreatureTextMgr::SendChatPacket(WorldObject* source, Builder const& builder
         {
             if (range == TEXT_RANGE_NORMAL) // ignores team and gmOnly
             {
-                if (!whisperTarget || whisperTarget->GetTypeId() != TYPEID_PLAYER)
+                if (!whisperTarget || whisperTarget->IsPlayer())
                     return;
 
                 localizer(const_cast<Player*>(whisperTarget->ToPlayer()));

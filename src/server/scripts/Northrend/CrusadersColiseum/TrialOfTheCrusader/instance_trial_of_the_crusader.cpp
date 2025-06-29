@@ -206,7 +206,7 @@ class instance_trial_of_the_crusader : public InstanceMapScript
 
             void OnUnitDeath(Unit* unit) override
             {
-                if (unit->GetTypeId() == TYPEID_PLAYER && IsEncounterInProgress())
+                if (unit->IsPlayer() && IsEncounterInProgress())
                     TributeToImmortalityEligible = false;
 
             }

@@ -439,7 +439,7 @@ class boss_twilight_halion : public CreatureScript
 
             void KilledUnit(Unit* victim) override
             {
-                if (victim->GetTypeId() == TYPEID_PLAYER)
+                if (victim->IsPlayer())
                     Talk(SAY_KILL);
 
                 // Victims should not be in the Twilight Realm

@@ -793,7 +793,7 @@ class spell_pilgrims_bounty_on_plate : public SpellScriptLoader
 
                 Vehicle* GetTable(Unit* target)
                 {
-                    if (target->GetTypeId() == TYPEID_PLAYER)
+                    if (target->IsPlayer())
                     {
                         if (Unit* vehBase = target->GetVehicleBase())
                             if (Vehicle* table = vehBase->GetVehicle())
@@ -837,12 +837,12 @@ class spell_pilgrims_bounty_on_plate : public SpellScriptLoader
                             casterPlr->CastSpell(casterPlr, _triggeredSpellId2, true); //Credit for Sharing is Caring(always)
 
                             uint8 seat = target->GetTransSeat();
-                            if (target->GetTypeId() == TYPEID_PLAYER && target->GetVehicleBase())
+                            if (target->IsPlayer() && target->GetVehicleBase())
                                 seat = target->GetVehicleBase()->GetTransSeat();
 
                             if (Unit* plate = GetPlateInSeat(table, seat))
                             {
-                                if (target->GetTypeId() == TYPEID_PLAYER) //Food Fight case
+                                if (target->IsPlayer()) //Food Fight case
                                 {
                                     casterPlr->CastSpell(target, _triggeredSpellId1, true);
                                     caster->CastSpell(target->GetVehicleBase(), _triggeredSpellId4, true); //CanEat-chair(always)
@@ -1400,7 +1400,7 @@ class spell_brewfest_barker_bunny : public SpellScriptLoader
         {
             bool Load() override
             {
-                return GetUnitOwner()->GetTypeId() == TYPEID_PLAYER;
+                return GetUnitOwner()->IsPlayer();
             }
 
             void OnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)

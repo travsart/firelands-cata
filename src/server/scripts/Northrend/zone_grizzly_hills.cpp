@@ -521,7 +521,7 @@ class npc_wounded_skirmisher : public CreatureScript
 
         void SpellHit(Unit* caster, SpellInfo const* spell) override
         {
-            if (spell->Id == SPELL_RENEW_SKIRMISHER && caster->GetTypeId() == TYPEID_PLAYER && caster->ToPlayer()->GetQuestStatus(QUEST_OVERWHELMED) == QUEST_STATUS_INCOMPLETE)
+            if (spell->Id == SPELL_RENEW_SKIRMISHER && caster->IsPlayer() && caster->ToPlayer()->GetQuestStatus(QUEST_OVERWHELMED) == QUEST_STATUS_INCOMPLETE)
             {
                 DoCast(caster, SPELL_KILL_CREDIT);
                 Talk(SAY_RANDOM);
@@ -646,7 +646,7 @@ class npc_venture_co_straggler : public CreatureScript
 
         void SpellHit(Unit* caster, SpellInfo const* spell) override
         {
-            if (spell->Id == SPELL_SMOKE_BOMB && caster->GetTypeId() == TYPEID_PLAYER)
+            if (spell->Id == SPELL_SMOKE_BOMB && caster->IsPlayer())
             {
                 me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
                 me->SetImmuneToPC(true);
@@ -870,7 +870,7 @@ class spell_infected_worgen_bite : public SpellScriptLoader
         void HandleAfterEffectApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             Unit* target = GetTarget();
-            if (target->GetTypeId() == TYPEID_PLAYER)
+            if (target->IsPlayer())
                 if (GetStackAmount() == GetSpellInfo()->StackAmount)
                 {
                     Remove();

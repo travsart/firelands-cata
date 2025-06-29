@@ -200,7 +200,7 @@ struct ManaUserTargetSelector
 {
     bool operator()(Unit const* target) const
     {
-        return target->GetTypeId() == TYPEID_PLAYER && target->GetPowerType() == POWER_MANA;
+        return target->IsPlayer() && target->GetPowerType() == POWER_MANA;
     }
 };
 
@@ -253,7 +253,7 @@ public:
 
             void KilledUnit(Unit* victim) override
             {
-                if (victim->GetTypeId() == TYPEID_PLAYER)
+                if (victim->IsPlayer())
                     Talk(SAY_SLAY);
             }
 

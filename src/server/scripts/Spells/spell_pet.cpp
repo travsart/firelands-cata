@@ -374,7 +374,7 @@ class spell_warl_pet_passive : public AuraScript
 {
     bool Load() override
     {
-        if (!GetCaster() || !GetCaster()->GetOwner() || GetCaster()->GetOwner()->GetTypeId() != TYPEID_PLAYER)
+        if (!GetCaster() || !GetCaster()->GetOwner() || GetCaster()->GetOwner()->IsPlayer())
             return false;
         return true;
     }
@@ -435,7 +435,7 @@ public:
     {
         bool Load() override
         {
-            if (!GetCaster() || !GetCaster()->GetOwner() || GetCaster()->GetOwner()->GetTypeId() != TYPEID_PLAYER)
+            if (!GetCaster() || !GetCaster()->GetOwner() || GetCaster()->GetOwner()->IsPlayer())
                 return false;
             return true;
         }
@@ -685,7 +685,7 @@ class spell_hun_pet_passive_crit : public AuraScript
 {
     bool Load() override
     {
-        if (!GetCaster() || !GetCaster()->GetOwner() || GetCaster()->GetOwner()->GetTypeId() != TYPEID_PLAYER)
+        if (!GetCaster() || !GetCaster()->GetOwner() || GetCaster()->GetOwner()->IsPlayer())
             return false;
         return true;
     }
@@ -745,7 +745,7 @@ class spell_dk_avoidance_passive : public AuraScript
 {
     bool Load() override
     {
-        if (!GetCaster() || !GetCaster()->GetOwner() || GetCaster()->GetOwner()->GetTypeId() != TYPEID_PLAYER)
+        if (!GetCaster() || !GetCaster()->GetOwner() || GetCaster()->GetOwner()->IsPlayer())
             return false;
         return true;
     }
@@ -777,7 +777,7 @@ class spell_dk_pet_scaling_01 : public AuraScript
 {
     bool Load() override
     {
-        if (!GetCaster() || !GetCaster()->GetOwner() || GetCaster()->GetOwner()->GetTypeId() != TYPEID_PLAYER)
+        if (!GetCaster() || !GetCaster()->GetOwner() || GetCaster()->GetOwner()->IsPlayer())
             return false;
         return true;
     }
@@ -834,7 +834,7 @@ class spell_dk_pet_scaling_02 : public AuraScript
 {
     bool Load() override
     {
-        if (!GetCaster() || !GetCaster()->GetOwner() || GetCaster()->GetOwner()->GetTypeId() != TYPEID_PLAYER)
+        if (!GetCaster() || !GetCaster()->GetOwner() || GetCaster()->GetOwner()->IsPlayer())
             return false;
         return true;
     }
@@ -863,7 +863,7 @@ class spell_dk_pet_scaling_03 : public AuraScript
 {
     bool Load() override
     {
-        if (!GetCaster() || !GetCaster()->GetOwner() || GetCaster()->GetOwner()->GetTypeId() != TYPEID_PLAYER)
+        if (!GetCaster() || !GetCaster()->GetOwner() || GetCaster()->GetOwner()->IsPlayer())
             return false;
         return true;
     }
@@ -911,7 +911,7 @@ class spell_dk_pet_scaling_05 : public AuraScript
 {
     bool Load() override
     {
-        if (!GetCaster() || !GetCaster()->GetOwner() || GetCaster()->GetOwner()->GetTypeId() != TYPEID_PLAYER)
+        if (!GetCaster() || !GetCaster()->GetOwner() || GetCaster()->GetOwner()->IsPlayer())
             return false;
         return true;
     }
@@ -945,7 +945,7 @@ class spell_dk_rune_weapon_scaling_02 : public AuraScript
 {
     bool Load() override
     {
-        if (!GetCaster() || !GetCaster()->GetOwner() || GetCaster()->GetOwner()->GetTypeId() != TYPEID_PLAYER)
+        if (!GetCaster() || !GetCaster()->GetOwner() || GetCaster()->GetOwner()->IsPlayer())
             return false;
         return true;
     }
@@ -990,7 +990,7 @@ class spell_mage_water_elemental_scaling_01 : public AuraScript
 {
     bool Load() override
     {
-        if (!GetCaster() || !GetCaster()->GetOwner() || GetCaster()->GetOwner()->GetTypeId() != TYPEID_PLAYER)
+        if (!GetCaster() || !GetCaster()->GetOwner() || GetCaster()->GetOwner()->IsPlayer())
             return false;
         return true;
     }
@@ -1049,7 +1049,7 @@ class spell_mage_water_elemental_scaling_02 : public AuraScript
 {
     bool Load() override
     {
-        if (!GetCaster() || !GetCaster()->GetOwner() || GetCaster()->GetOwner()->GetTypeId() != TYPEID_PLAYER)
+        if (!GetCaster() || !GetCaster()->GetOwner() || GetCaster()->GetOwner()->IsPlayer())
             return false;
         return true;
     }

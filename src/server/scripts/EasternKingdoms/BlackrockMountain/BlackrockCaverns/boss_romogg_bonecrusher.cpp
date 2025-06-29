@@ -108,7 +108,7 @@ struct boss_romogg_bonecrusher : public BossAI
 
     void KilledUnit(Unit* who) override
     {
-        if (who->GetTypeId() == TYPEID_PLAYER)
+        if (who->IsPlayer())
             Talk(SAY_SLAY);
 
         if (who->GetEntry() == NPC_ANGERED_EARTH)

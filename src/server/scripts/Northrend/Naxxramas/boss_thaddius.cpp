@@ -178,7 +178,7 @@ public:
 
             void KilledUnit(Unit* victim) override
             {
-                if (victim->GetTypeId() == TYPEID_PLAYER)
+                if (victim->IsPlayer())
                     Talk(SAY_SLAY);
             }
 
@@ -557,7 +557,7 @@ public:
 
             void KilledUnit(Unit* victim) override
             {
-                if (victim->GetTypeId() == TYPEID_PLAYER)
+                if (victim->IsPlayer())
                     Talk(SAY_STALAGG_SLAY);
             }
 
@@ -806,7 +806,7 @@ public:
 
             void KilledUnit(Unit* victim) override
             {
-                if (victim->GetTypeId() == TYPEID_PLAYER)
+                if (victim->IsPlayer())
                     Talk(SAY_FEUGEN_SLAY);
             }
 
@@ -1102,7 +1102,7 @@ class spell_thaddius_polarity_shift : public SpellScriptLoader
             void HandleDummy(SpellEffIndex /*effIndex*/)
             {
                 if (Unit* target = GetHitUnit())
-                    if (target->GetTypeId() == TYPEID_PLAYER)
+                    if (target->IsPlayer())
                     {
                         if (roll_chance_i(50))
                         { // positive

@@ -455,7 +455,7 @@ class boss_voice_of_yogg_saron : public CreatureScript
         void MoveInLineOfSight(Unit* who) override
         {
             // TODO: MoveInLineOfSight doesn't work for such a big distance
-            if (who->GetTypeId() == TYPEID_PLAYER && !who->ToPlayer()->IsGameMaster() && me->GetDistance2d(who) < 99.0f && !me->IsInCombat())
+            if (who->IsPlayer() && !who->ToPlayer()->IsGameMaster() && me->GetDistance2d(who) < 99.0f && !me->IsInCombat())
                 DoZoneInCombat();
         }
 
@@ -754,7 +754,7 @@ class boss_sara : public CreatureScript
 
         void KilledUnit(Unit* victim) override
         {
-            if (victim->GetTypeId() == TYPEID_PLAYER && !me->IsInEvadeMode())
+            if (victim->IsPlayer() && !me->IsInEvadeMode())
                 Talk(SAY_SARA_KILL);
         }
 

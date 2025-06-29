@@ -533,7 +533,7 @@ class instance_ulduar : public InstanceMapScript
             void OnUnitDeath(Unit* unit) override
             {
                 // Champion/Conqueror of Ulduar
-                if (unit->GetTypeId() == TYPEID_PLAYER)
+                if (unit->IsPlayer())
                 {
                     for (uint8 i = 0; i < DATA_ALGALON; ++i)
                     {

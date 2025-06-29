@@ -128,7 +128,7 @@ Object* ObjectAccessor::GetObjectByTypeMask(WorldObject const& p, ObjectGuid con
     switch (guid.GetHigh())
     {
         case HighGuid::Item:
-            if (typemask & TYPEMASK_ITEM && p.GetTypeId() == TYPEID_PLAYER)
+            if (typemask & TYPEMASK_ITEM && p.IsPlayer())
                 return ((Player const&)p).GetItemByGuid(guid);
             break;
         case HighGuid::Player:

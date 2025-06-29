@@ -325,7 +325,7 @@ class spell_mage_cold_snap : public SpellScriptLoader
         {
             bool Load() override
             {
-                return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+                return GetCaster()->IsPlayer();
             }
 
             void HandleDummy(SpellEffIndex /*effIndex*/)
@@ -638,7 +638,7 @@ class spell_mage_glyph_of_ice_block : public SpellScriptLoader
 
             bool CheckProc(ProcEventInfo& /*eventInfo*/)
             {
-                return GetTarget()->GetTypeId() == TYPEID_PLAYER;
+                return GetTarget()->IsPlayer();
             }
 
             void HandleEffectProc(AuraEffect const* /*aurEff*/, ProcEventInfo& /*eventInfo*/)
@@ -1415,7 +1415,7 @@ class spell_mage_arcane_missiles_trigger : public AuraScript
 {
     bool Load() override
     {
-        return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+        return GetCaster()->IsPlayer();
     }
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
@@ -1451,7 +1451,7 @@ class spell_mage_offensive_state_dnd : public AuraScript
 {
     bool Load() override
     {
-        return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+        return GetCaster()->IsPlayer();
     }
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
@@ -1671,7 +1671,7 @@ class spell_mage_hot_streak : public SpellScriptLoader
         {
             bool Load() override
             {
-                return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+                return GetCaster()->IsPlayer();
             }
 
             bool Validate(SpellInfo const* /*spellInfo*/) override
@@ -1742,7 +1742,7 @@ class spell_mage_improved_hot_streak : public SpellScriptLoader
             bool Load() override
             {
                 criticalStrikesCounter = 0;
-                return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+                return GetCaster()->IsPlayer();
             }
 
             bool Validate(SpellInfo const* /*spellInfo*/) override

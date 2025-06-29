@@ -267,7 +267,7 @@ struct boss_anshal : public BossAI
 
     void KilledUnit(Unit* killed) override
     {
-        if (killed->GetTypeId() == TYPEID_PLAYER)
+        if (killed->IsPlayer())
             Talk(SAY_SLAY);
     }
 
@@ -515,7 +515,7 @@ struct boss_nezir : public BossAI
 
     void KilledUnit(Unit* killed) override
     {
-        if (killed->GetTypeId() == TYPEID_PLAYER)
+        if (killed->IsPlayer())
             Talk(SAY_SLAY);
     }
 
@@ -758,7 +758,7 @@ struct boss_rohash : public BossAI
 
     void KilledUnit(Unit* killed) override
     {
-        if (killed->GetTypeId() == TYPEID_PLAYER)
+        if (killed->IsPlayer())
             Talk(SAY_SLAY);
     }
 

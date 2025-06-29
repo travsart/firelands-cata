@@ -53,7 +53,7 @@ void Totem::Update(uint32 time)
 void Totem::InitStats(uint32 duration)
 {
     // client requires SMSG_TOTEM_CREATED to be sent before adding to world and before removing old totem
-    if (GetOwner()->GetTypeId() == TYPEID_PLAYER
+    if (GetOwner()->IsPlayer()
             && m_Properties->Slot >= SUMMON_SLOT_TOTEM_FIRE
             && m_Properties->Slot < MAX_TOTEM_SLOT)
     {

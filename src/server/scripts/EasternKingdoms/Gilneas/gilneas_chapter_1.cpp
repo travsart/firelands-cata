@@ -411,7 +411,7 @@ struct npc_greymanes_horse : public VehicleAI
 
     void PassengerBoarded(Unit* passenger, int8 /*seatId*/, bool apply) override
     {
-        if (apply && passenger->GetTypeId() == TYPEID_PLAYER)
+        if (apply && passenger->IsPlayer())
         {
             me->SetControlled(true, UNIT_STATE_ROOT);
             _events.ScheduleEvent(EVENT_START_PATH_1, 1s);
@@ -529,12 +529,12 @@ struct npc_crowleys_horse : public VehicleAI
 
     void PassengerBoarded(Unit* passenger, int8 /*seatId*/, bool apply) override
     {
-        if (apply && passenger->GetTypeId() == TYPEID_PLAYER && me->GetEntry() != NPC_CROWLEYS_HORSE_2)
+        if (apply && passenger->IsPlayer() && me->GetEntry() != NPC_CROWLEYS_HORSE_2)
         {
             me->SetControlled(true, UNIT_STATE_ROOT);
             _events.ScheduleEvent(EVENT_JUMP_OVER_BARRICADES_1, 2s);
         }
-        else if (apply && passenger->GetTypeId() == TYPEID_PLAYER)
+        else if (apply && passenger->IsPlayer())
         {
             me->SetControlled(true, UNIT_STATE_ROOT);
             _events.ScheduleEvent(EVENT_MOVE_OFF_PATH, 2s);

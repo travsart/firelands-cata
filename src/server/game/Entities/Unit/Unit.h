@@ -768,11 +768,6 @@ class FC_GAME_API Unit : public WorldObject
     typedef std::list<Aura*> AuraList;
     typedef std::list<AuraApplication*> AuraApplicationList;
     typedef std::list<DiminishingReturn> Diminishing;
-    typedef GuidUnorderedSet ComboPointHolderSet;
-
-    typedef std::vector<std::pair<uint8 /*procEffectMask*/, AuraApplication*>> AuraApplicationProcContainer;
-    typedef std::vector<ObjectGuid> FormationFollowerGUIDContainer;
-
     typedef std::map<uint8, AuraApplication*> VisibleAuraMap;
 
     virtual ~Unit();
@@ -995,8 +990,10 @@ class FC_GAME_API Unit : public WorldObject
     [[nodiscard]] float GetCombatReach() const override { return m_floatValues[UNIT_FIELD_COMBATREACH]; }
     [[nodiscard]] float GetMeleeReach() const { float reach = m_floatValues[UNIT_FIELD_COMBATREACH]; return reach > MIN_MELEE_REACH ? reach : MIN_MELEE_REACH; }
     [[nodiscard]] bool IsWithinRange(Unit const* obj, float dist) const;
+    float GetBoundaryRadius() const { return m_floatValues[UNIT_FIELD_BOUNDINGRADIUS]; }
     bool IsWithinCombatRange(Unit const* obj, float dist2compare) const;
     bool IsWithinMeleeRange(Unit const* obj, float dist = 0.f) const;
+    bool IsWithinBoundaryRadius(const Unit* obj) const;
     float GetMeleeRange(Unit const* target) const;
 
     void setAttackTimer(WeaponAttackType type, int32 time) { m_attackTimer[type] = time; }  /// @todo - Look to convert to std::chrono
@@ -1829,6 +1826,8 @@ class FC_GAME_API Unit : public WorldObject
     SpellCastResult CastSpell(Unit* victim, SpellInfo const* spellInfo, TriggerCastFlags triggerFlags = TRIGGERED_NONE, Item* castItem = nullptr, AuraEffect const* triggeredByAura = nullptr, ObjectGuid originalCaster = ObjectGuid::Empty);
     SpellCastResult CastSpell(float x, float y, float z, uint32 spellId, bool triggered, Item* castItem = nullptr, AuraEffect const* triggeredByAura = nullptr, ObjectGuid originalCaster = ObjectGuid::Empty);
     SpellCastResult CastSpell(GameObject* go, uint32 spellId, bool triggered, Item* castItem = nullptr, AuraEffect* triggeredByAura = nullptr, ObjectGuid originalCaster = ObjectGuid::Empty);
+    SpellCastResult CastSpell(Position const& dest, uint32 spellId, CastSpellExtraArgs const& args);
+    SpellCastResult CastSpell(WorldObject* target, uint32 spellId, CastSpellExtraArgs const& args);
     SpellCastResult CastCustomSpell(Unit* victim, uint32 spellId, int32 const* bp0, int32 const* bp1, int32 const* bp2, bool triggered, Item* castItem = nullptr, AuraEffect const* triggeredByAura = nullptr, ObjectGuid originalCaster = ObjectGuid::Empty);
     SpellCastResult CastCustomSpell(uint32 spellId, SpellValueMod mod, int32 value, Unit* victim, bool triggered, Item* castItem = nullptr, AuraEffect const* triggeredByAura = nullptr, ObjectGuid originalCaster = ObjectGuid::Empty);
     SpellCastResult CastCustomSpell(uint32 spellId, SpellValueMod mod, int32 value, Unit* victim = nullptr, TriggerCastFlags triggerFlags = TRIGGERED_NONE, Item* castItem = nullptr, AuraEffect const* triggeredByAura = nullptr, ObjectGuid originalCaster = ObjectGuid::Empty);
@@ -2367,7 +2366,7 @@ class FC_GAME_API Unit : public WorldObject
     // virtual void AtDisengage() {}
 
     // void InterruptMovementBasedAuras();
-    // void CheckPendingMovementAcks();
+    void CheckPendingMovementAcks();
 
     //----------- Protected variables ----------//
     UnitAI* i_AI;
@@ -2523,9 +2522,6 @@ class FC_GAME_API Unit : public WorldObject
     TaskScheduler _scheduler;
 
     Optional<PendingSpellCastRequest> _pendingSpellCastRequest;
-
-    // TODO need???
-    // PositionUpdateInfo _positionUpdateInfo;
 };
 
 namespace Firelands

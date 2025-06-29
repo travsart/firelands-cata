@@ -294,13 +294,20 @@ class FC_GAME_API UnitAI
 
         // Called at any Damage from any attacker (before damage apply)
         // Note: it for recalculation damage or special reaction at damage
-        virtual void DamageTaken(Unit* /*attacker*/, uint32& /*damage*/) { }
+        virtual void DamageTaken(Unit* /*attacker*/, uint32& /*damage*/, DamageEffectType /*damagetype*/, SpellSchoolMask /*damageSchoolMask*/) {}
 
         // Called when the creature receives heal
         virtual void HealReceived(Unit* /*done_by*/, uint32& /*addhealth*/) { }
 
         // Called when the unit heals
         virtual void HealDone(Unit* /*done_to*/, uint32& /*addhealth*/) { }
+
+        /// @brief Called during damage calculations
+        virtual void OnCalculateMeleeDamageReceived(uint32& /*damage*/, Unit* /*attacker*/) {}
+        virtual void OnCalculateSpellDamageReceived(int32& /*damage*/, Unit* /*attacker*/) {}
+
+        /// @brief Called during calculation when receiving periodic healing or damage (DoT or HoT)
+        virtual void OnCalculatePeriodicTickReceived(uint32& /*damage*/, Unit* /*attacker*/) {}
 
         /// Called when a spell is interrupted by Spell::EffectInterruptCast
         /// Use to reschedule next planned cast of spell.

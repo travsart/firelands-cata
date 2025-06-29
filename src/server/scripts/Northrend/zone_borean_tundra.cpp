@@ -217,7 +217,7 @@ class npc_khunok_the_behemoth : public CreatureScript
             {
                 if (Unit* owner = who->GetOwner())
                 {
-                    if (owner->GetTypeId() == TYPEID_PLAYER)
+                    if (owner->IsPlayer())
                     {
                         owner->CastSpell(owner, SPELL_MAMMOTH_CALF_ESCORT_CREDIT, true);
                         who->ToCreature()->DespawnOrUnsummon();
@@ -1338,7 +1338,7 @@ class npc_counselor_talbot : public CreatureScript
             leryssa->SetWalk(false);
             leryssa->GetMotionMaster()->MovePoint(0, 3722.114502f, 3564.201660f, 477.441437f);
 
-            if (killer && killer->GetTypeId() == TYPEID_PLAYER)
+            if (killer && killer->IsPlayer())
                 killer->ToPlayer()->RewardPlayerAndGroupAtEvent(NPC_PRINCE_VALANAR, 0);
         }
     };
@@ -1624,7 +1624,7 @@ class npc_imprisoned_beryl_sorcerer : public CreatureScript
 
         void SpellHit(Unit* unit, SpellInfo const* spell) override
         {
-            if (spell->Id == SPELL_NEURAL_NEEDLE && unit->GetTypeId() == TYPEID_PLAYER)
+            if (spell->Id == SPELL_NEURAL_NEEDLE && unit->IsPlayer())
                 if (Player* player = unit->ToPlayer())
                     GotStinged(player->GetGUID());
         }

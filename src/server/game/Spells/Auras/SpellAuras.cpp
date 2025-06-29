@@ -560,7 +560,7 @@ void Aura::_ApplyForTarget(Unit* target, Unit* caster, AuraApplication* auraApp)
     m_applications[target->GetGUID()] = auraApp;
 
     // set infinity cooldown state for spells
-    if (caster && caster->GetTypeId() == TYPEID_PLAYER)
+    if (caster && caster->IsPlayer())
     {
         if (m_spellInfo->IsCooldownStartedOnEvent())
         {
@@ -1388,7 +1388,7 @@ void Aura::HandleAuraSpecificMods(AuraApplication const* aurApp, Unit* caster, b
             switch (GetId())
             {
             case 32474: // Buffeting Winds of Susurrus
-                if (target->GetTypeId() == TYPEID_PLAYER)
+                if (target->IsPlayer())
                     target->ToPlayer()->ActivateTaxiPathTo(506, GetId());
                 break;
             case 33572: // Gronn Lord's Grasp, becomes stoned
@@ -1400,7 +1400,7 @@ void Aura::HandleAuraSpecificMods(AuraApplication const* aurApp, Unit* caster, b
                     target->CastSpell(target, 50812, true);
                 break;
             case 60970: // Heroic Fury (remove Intercept cooldown)
-                if (target->GetTypeId() == TYPEID_PLAYER)
+                if (target->IsPlayer())
                     target->GetSpellHistory()->ResetCooldown(20252, true);
                 break;
             }
@@ -1532,7 +1532,7 @@ void Aura::HandleAuraSpecificMods(AuraApplication const* aurApp, Unit* caster, b
                 if (Aura const* aura = caster->GetAuraOfRankedSpell(47535))
                 {
                     // check cooldown
-                    if (caster->GetTypeId() == TYPEID_PLAYER)
+                    if (caster->IsPlayer())
                     {
                         if (caster->GetSpellHistory()->HasCooldown(aura->GetId()))
                         {
@@ -1899,7 +1899,7 @@ uint8 Aura::GetProcEffectMask(AuraApplication* aurApp, ProcEventInfo& eventInfo,
     // do that only for passive spells
     /// @todo this needs to be unified for all kinds of auras
     Unit* target = aurApp->GetTarget();
-    if (IsPassive() && target->GetTypeId() == TYPEID_PLAYER && GetSpellInfo()->EquippedItemClass != -1)
+    if (IsPassive() && target->IsPlayer() && GetSpellInfo()->EquippedItemClass != -1)
     {
         if (!GetSpellInfo()->HasAttribute(SPELL_ATTR3_IGNORE_PROC_SUBCLASS_MASK))
         {

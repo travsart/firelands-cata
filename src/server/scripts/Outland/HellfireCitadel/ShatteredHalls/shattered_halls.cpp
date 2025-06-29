@@ -205,7 +205,7 @@ class spell_kargath_executioner : public SpellScriptLoader
 
         bool Load() override
         {
-            return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+            return GetCaster()->IsPlayer();
         }
 
         void Register() override
@@ -240,7 +240,7 @@ class spell_remove_kargath_executioner : public SpellScriptLoader
 
         bool Load() override
         {
-            return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+            return GetCaster()->IsPlayer();
         }
 
         void Register() override

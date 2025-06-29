@@ -386,9 +386,9 @@ struct npc_gilneas_forsaken_catapult : public VehicleAI
                 _events.CancelEvent(EVENT_FIERY_BOULDER);
             }
         }
-        else if (passenger->GetTypeId() == TYPEID_PLAYER && !apply)
+        else if (passenger->IsPlayer() && !apply)
             me->DespawnOrUnsummon(Seconds(9));
-        else if (passenger->GetTypeId() == TYPEID_PLAYER && apply)
+        else if (passenger->IsPlayer() && apply)
             _events.ScheduleEvent(EVENT_CHECK_AREA, Milliseconds(1));
     }
 

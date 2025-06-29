@@ -126,7 +126,7 @@ class boss_jaraxxus : public CreatureScript
 
             void KilledUnit(Unit* who) override
             {
-                if (who->GetTypeId() == TYPEID_PLAYER)
+                if (who->IsPlayer())
                     Talk(SAY_KILL_PLAYER);
             }
 
@@ -534,7 +534,7 @@ class MistressKissTargetSelector
 
         bool operator()(WorldObject* unit) const
         {
-            if (unit->GetTypeId() == TYPEID_PLAYER)
+            if (unit->IsPlayer())
                 if (unit->ToPlayer()->GetPowerType() == POWER_MANA)
                     return false;
 

@@ -155,7 +155,7 @@ public:
     {
         npc_ancestral_wolfAI(Creature* creature) : EscortAI(creature)
         {
-            if (creature->GetOwner() && creature->GetOwner()->GetTypeId() == TYPEID_PLAYER)
+            if (creature->GetOwner() && creature->GetOwner()->IsPlayer())
                 Start(false, false, creature->GetOwner()->GetGUID());
             else
                 LOG_ERROR("scripts", "Firelands: npc_ancestral_wolf can not obtain owner or owner is not a player.");

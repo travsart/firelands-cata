@@ -296,7 +296,7 @@ class spell_pal_divine_sacrifice : public AuraScript
 
         if (Unit* caster = GetCaster())
         {
-            if (caster->GetTypeId() == TYPEID_PLAYER)
+            if (caster->IsPlayer())
             {
                 if (caster->ToPlayer()->GetGroup())
                     groupSize = caster->ToPlayer()->GetGroup()->GetMembersCount();

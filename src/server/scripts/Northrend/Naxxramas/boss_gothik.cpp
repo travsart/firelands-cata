@@ -357,7 +357,7 @@ class boss_gothik : public CreatureScript
 
             void KilledUnit(Unit* victim) override
             {
-                if (victim && victim->GetTypeId() == TYPEID_PLAYER)
+                if (victim && victim->IsPlayer())
                     Talk(SAY_KILL);
             }
 

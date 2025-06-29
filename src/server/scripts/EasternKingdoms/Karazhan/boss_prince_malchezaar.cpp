@@ -316,7 +316,7 @@ public:
             for (ThreatReference const* ref : me->GetThreatManager().GetUnsortedThreatList())
             {
                 Unit* target = ref->GetVictim();
-                if (target != tank && target->IsAlive() && target->GetTypeId() == TYPEID_PLAYER)
+                if (target != tank && target->IsAlive() && target->IsPlayer())
                     targets.push_back(target);
             }
 

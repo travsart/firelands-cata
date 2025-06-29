@@ -145,7 +145,7 @@ class npc_deadmines_vanessas_trap_bunny : public CreatureScript
                 if (!passenger)
                     return;
 
-                if (apply && passenger->GetTypeId() == TYPEID_PLAYER && !_movementStarted)
+                if (apply && passenger->IsPlayer() && !_movementStarted)
                 {
                     passenger->SetDisableGravity(true);
                     _events.ScheduleEvent(EVENT_SUMMON_VALVES, Seconds(2) + Milliseconds(900));

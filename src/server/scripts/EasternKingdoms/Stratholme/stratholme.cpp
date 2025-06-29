@@ -312,7 +312,7 @@ class spell_ysida_saved_credit : public SpellScript
     {
         targets.remove_if([](WorldObject* obj)
         {
-            return obj->GetTypeId() != TYPEID_PLAYER;
+            return obj->IsPlayer();
         });
     }
 

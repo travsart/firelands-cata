@@ -286,7 +286,7 @@ struct npc_brazie_the_bonatist_vehicle : public VehicleAI
 
     void PassengerBoarded(Unit* passenger, int8 /*seatId*/, bool apply) override
     {
-        if (!passenger || passenger->GetTypeId() != TYPEID_PLAYER || !me->GetCharmerOrOwner())
+        if (!passenger || passenger->IsPlayer() || !me->GetCharmerOrOwner())
             return;
 
         if (apply)

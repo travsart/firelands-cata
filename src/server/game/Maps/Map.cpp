@@ -884,7 +884,7 @@ void Map::Update(uint32 t_diff)
             for (std::pair<uint32, AuraApplication*> pair : player->GetAppliedAuras())
             {
                 if (Unit* caster = pair.second->GetBase()->GetCaster())
-                    if (caster->GetTypeId() != TYPEID_PLAYER && !caster->IsWithinDistInMap(player, GetVisibilityRange(), false))
+                    if (caster->IsPlayer() && !caster->IsWithinDistInMap(player, GetVisibilityRange(), false))
                         toVisit.insert(caster);
             }
             for (Unit* unit : toVisit)
@@ -896,7 +896,7 @@ void Map::Update(uint32 t_diff)
             for (std::pair<uint32, AuraApplication*> pair : player->GetAppliedAuras())
             {
                 if (Unit* caster = pair.second->GetBase()->GetCaster())
-                    if (caster->GetTypeId() != TYPEID_PLAYER && !caster->IsWithinDistInMap(player, GetVisibilityRange(), false))
+                    if (caster->IsPlayer() && !caster->IsWithinDistInMap(player, GetVisibilityRange(), false))
                         toVisit.insert(caster);
             }
             for (Unit* unit : toVisit)

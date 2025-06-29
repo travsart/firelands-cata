@@ -1016,7 +1016,7 @@ void BattlefieldTB::UpdateCapturedBaseCount()
 // Called when player kill a unit in wg zone
 void BattlefieldTB::HandleKill(Player* killer, Unit* victim)
 {
-    if (killer == victim || victim->GetTypeId() != TYPEID_PLAYER)
+    if (killer == victim || victim->IsPlayer())
         return;
 
     TeamId killerTeam = killer->GetTeamId();

@@ -829,7 +829,7 @@ void GameObject::Update(uint32 diff)
             {
                 // splash bobber (bobber ready now)
                 Unit* caster = GetOwner();
-                if (caster && caster->GetTypeId() == TYPEID_PLAYER)
+                if (caster && caster->IsPlayer())
                 {
                     SetGoState(GO_STATE_ACTIVE);
                     SetUInt32Value(GAMEOBJECT_FLAGS, GO_FLAG_NODESPAWN);
@@ -892,7 +892,7 @@ void GameObject::Update(uint32 diff)
                     case GAMEOBJECT_TYPE_FISHINGNODE: //  can't fish now
                     {
                         Unit* caster = GetOwner();
-                        if (caster && caster->GetTypeId() == TYPEID_PLAYER)
+                        if (caster && caster->IsPlayer())
                         {
                             caster->ToPlayer()->RemoveGameObject(this, false);
 

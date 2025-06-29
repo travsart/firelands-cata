@@ -271,7 +271,7 @@ class boss_onyxia : public CreatureScript
             if (((Spell->Id >= 17086 && Spell->Id <= 17095) || (Spell->Id == 17097) || (Spell->Id >= 18351 && Spell->Id <= 18361) || (Spell->Id >= 18564 && Spell->Id <= 18576) ||
                     (Spell->Id >= 18578 && Spell->Id <= 18607) || (Spell->Id == 18609) || (Spell->Id >= 18611 && Spell->Id <= 18628) || (Spell->Id >= 21132 && Spell->Id <= 21133) ||
                     (Spell->Id >= 21135 && Spell->Id <= 21139) || (Spell->Id >= 22191 && Spell->Id <= 22202) || (Spell->Id >= 22267 && Spell->Id <= 22268)) &&
-                (target->GetTypeId() == TYPEID_PLAYER))
+                (target->IsPlayer()))
             {
                 instance->SetData(DATA_SHE_DEEP_BREATH_MORE, FAIL);
             }

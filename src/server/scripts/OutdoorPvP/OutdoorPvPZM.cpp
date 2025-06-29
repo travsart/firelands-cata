@@ -228,7 +228,7 @@ bool OutdoorPvPZM::SetupOutdoorPvP()
 
 void OutdoorPvPZM::HandleKillImpl(Player* player, Unit* killed)
 {
-    if (killed->GetTypeId() != TYPEID_PLAYER)
+    if (killed->IsPlayer())
         return;
 
     if (player->GetTeam() == ALLIANCE && killed->ToPlayer()->GetTeam() != ALLIANCE)

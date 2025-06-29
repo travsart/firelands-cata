@@ -274,7 +274,7 @@ class spell_occuthar_eyes_of_occuthar : public SpellScriptLoader
 
             bool Load() override
             {
-                return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+                return GetCaster()->IsPlayer();
             }
 
             void FilterTargets(std::list<WorldObject*>& targets)

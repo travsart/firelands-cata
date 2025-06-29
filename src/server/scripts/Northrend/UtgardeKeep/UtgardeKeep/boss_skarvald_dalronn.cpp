@@ -159,7 +159,7 @@ struct generic_boss_controllerAI : public BossAI
 
     void KilledUnit(Unit* who) override
     {
-        if (!IsInGhostForm && who->GetTypeId() == TYPEID_PLAYER)
+        if (!IsInGhostForm && who->IsPlayer())
             Talk(SAY_KILL);
     }
 

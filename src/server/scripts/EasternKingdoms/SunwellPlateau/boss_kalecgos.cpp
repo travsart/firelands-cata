@@ -214,7 +214,7 @@ struct boss_kalecgos : public BossAI
 
     void KilledUnit(Unit* who) override
     {
-        if (who->GetTypeId() == TYPEID_PLAYER && roll_chance_i(50))
+        if (who->IsPlayer() && roll_chance_i(50))
             Talk(SAY_EVIL_SLAY);
     }
 
@@ -485,7 +485,7 @@ struct boss_sathrovarr : public BossAI
 
     void KilledUnit(Unit* target) override
     {
-        if (target->GetTypeId() == TYPEID_PLAYER)
+        if (target->IsPlayer())
             Talk(SAY_SATH_SLAY);
         else if (Creature* kalecgosHuman = instance->GetCreature(DATA_KALECGOS_HUMAN))
         {

@@ -138,7 +138,7 @@ inline void CreatureUnitRelocationWorker(Creature* c, Unit* u)
         if (c->IsAIEnabled && c->CanSeeOrDetect(u, false, true))
             c->AI()->MoveInLineOfSight_Safe(u);
         else
-            if (u->GetTypeId() == TYPEID_PLAYER && u->HasStealthAura() && c->IsAIEnabled && c->CanSeeOrDetect(u, false, true, true))
+            if (u->IsPlayer() && u->HasStealthAura() && c->IsAIEnabled && c->CanSeeOrDetect(u, false, true, true))
                 c->AI()->TriggerAlert(u);
     }
 }
@@ -393,7 +393,7 @@ void MessageDistDelivererToHostile::Visit(DynamicObjectMapType &m)
 void
 MessageDistDeliverer::VisitObject(Player* player)
 {
-    if (!i_ownTeamOnly || (i_source.GetTypeId() == TYPEID_PLAYER && player->GetTeam() == ((Player&)i_source).GetTeam()))
+    if (!i_ownTeamOnly || (i_source.IsPlayer() && player->GetTeam() == ((Player&)i_source).GetTeam()))
     {
         SendPacket(player);
     }

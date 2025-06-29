@@ -975,7 +975,7 @@ class boss_icehowl : public CreatureScript
 
             void SpellHitTarget(Unit* target, SpellInfo const* spell) override
             {
-                if (spell->Id == SPELL_TRAMPLE && target->GetTypeId() == TYPEID_PLAYER)
+                if (spell->Id == SPELL_TRAMPLE && target->IsPlayer())
                 {
                     if (!_trampleCast)
                     {

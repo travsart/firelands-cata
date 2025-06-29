@@ -243,7 +243,7 @@ bool MoveSplineInitArgs::Validate(Unit* unit) const
     if (!(exp))\
     {\
         if (unit)\
-            LOG_ERROR("misc.movesplineinitargs", "MoveSplineInitArgs::Validate: expression '%s' failed for GUID: %u Entry: %u", #exp, unit->GetTypeId() == TYPEID_PLAYER ? unit->GetGUID().GetCounter() : unit->ToCreature()->GetSpawnId(), unit->GetEntry());\
+            LOG_ERROR("misc.movesplineinitargs", "MoveSplineInitArgs::Validate: expression '%s' failed for GUID: %u Entry: %u", #exp, unit->IsPlayer() ? unit->GetGUID().GetCounter() : unit->ToCreature()->GetSpawnId(), unit->GetEntry());\
         else\
             LOG_ERROR("misc.movesplineinitargs", "MoveSplineInitArgs::Validate: expression '%s' failed for cyclic spline continuation", #exp); \
         return false;\

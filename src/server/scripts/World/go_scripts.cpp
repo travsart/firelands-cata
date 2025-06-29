@@ -1088,7 +1088,7 @@ class go_soulwell : public GameObjectScript
             bool GossipHello(Player* player) override
             {
                 Unit* owner = me->GetOwner();
-                if (!owner || owner->GetTypeId() != TYPEID_PLAYER || !player->IsInSameRaidWith(owner->ToPlayer()))
+                if (!owner || owner->IsPlayer() || !player->IsInSameRaidWith(owner->ToPlayer()))
                     return true;
                 return false;
             }

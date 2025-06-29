@@ -90,7 +90,7 @@ public:
 
         void KilledUnit(Unit* victim) override
         {
-            if (victim->GetTypeId() == TYPEID_PLAYER || (victim->GetTypeId() == TYPEID_UNIT && victim->GetEntry() == NPC_DK_UNDERSTUDY))
+            if (victim->IsPlayer() || (victim->GetTypeId() == TYPEID_UNIT && victim->GetEntry() == NPC_DK_UNDERSTUDY))
                 Talk(SAY_SLAY);
         }
 

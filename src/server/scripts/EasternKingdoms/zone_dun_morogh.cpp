@@ -206,7 +206,7 @@ class npc_sanitron500 : public CreatureScript
                 for (std::list<Unit*>::const_iterator iter = targets.begin();
                      iter != targets.end(); ++iter)
                 {
-                    if ((*iter)->GetTypeId() != TYPEID_PLAYER)
+                    if ((*iter)->IsPlayer())
                     {
                         switch ((*iter)->GetEntry())
                         {

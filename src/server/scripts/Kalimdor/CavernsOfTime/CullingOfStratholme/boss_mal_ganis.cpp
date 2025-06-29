@@ -180,7 +180,7 @@ class boss_mal_ganis : public CreatureScript
 
             void KilledUnit(Unit* victim) override
             {
-                if (!_defeated && victim->GetTypeId() == TYPEID_PLAYER)
+                if (!_defeated && victim->IsPlayer())
                     Talk(SAY_SLAY);
             }
 

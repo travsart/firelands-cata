@@ -938,7 +938,7 @@ public:
                                 {
                                     if (Unit* passenger = drakeVehicle->GetPassenger(0))
                                     {
-                                        if (passenger->GetTypeId() == TYPEID_PLAYER)
+                                        if (passenger->IsPlayer())
                                         {
                                             Talk(EMOTE_SURGE_OF_POWER_WARNING_P3, passenger);
                                             DoCast(tempSurgeTarget, SPELL_SURGE_OF_POWER_PHASE_3_10, true);
@@ -1161,7 +1161,7 @@ public:
                     unit->CastSpell(unit, SPELL_TELEPORT_VISUAL_ONLY);
                     unit->ToCreature()->AI()->DoZoneInCombat();
                 }
-                else if (unit->GetTypeId() == TYPEID_PLAYER)
+                else if (unit->IsPlayer())
                     me->SetDisableGravity(true);
             }
             else
@@ -1174,7 +1174,7 @@ public:
                     me->SetDisableGravity(false);
                     me->SetCanFly(false);
                 }
-                else if (unit->GetTypeId() == TYPEID_PLAYER)
+                else if (unit->IsPlayer())
                 {
                     me->SetDisableGravity(false);
                     me->SetCanFly(false);
@@ -1197,7 +1197,7 @@ public:
         {
             if (Vehicle* vehicleTemp = me->GetVehicleKit())
             {
-                if (vehicleTemp->GetPassenger(0) && vehicleTemp->GetPassenger(0)->GetTypeId() == TYPEID_PLAYER)
+                if (vehicleTemp->GetPassenger(0) && vehicleTemp->GetPassenger(0)->IsPlayer())
                 {
                     vehicleTemp->RemoveAllPassengers();
                     me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
@@ -2122,7 +2122,7 @@ class spell_wyrmrest_skytalon_summon_red_dragon_buddy : public SpellScriptLoader
         {
             bool Load() override
             {
-                return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+                return GetCaster()->IsPlayer();
             }
 
             void SetDest(SpellDestination& dest)
@@ -2212,7 +2212,7 @@ class spell_malygos_surge_of_power_warning_selector_25 : public SpellScriptLoade
 
                     if (Vehicle* vehicle = target->GetVehicleKit())
                         if (Unit* passenger = vehicle->GetPassenger(0))
-                            if (passenger->GetTypeId() == TYPEID_PLAYER)
+                            if (passenger->IsPlayer())
                                 caster->AI()->Talk(EMOTE_SURGE_OF_POWER_WARNING_P3, passenger);
                 }
             }

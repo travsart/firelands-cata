@@ -1158,7 +1158,7 @@ struct npc_argent_captainAI : public ScriptedAI
 
         void KilledUnit(Unit* victim) override
         {
-            if (victim->GetTypeId() == TYPEID_PLAYER)
+            if (victim->IsPlayer())
                 Talk(SAY_CAPTAIN_KILL);
         }
 

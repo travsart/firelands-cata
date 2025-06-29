@@ -335,7 +335,7 @@ bool Pet::LoadPetData(Player* owner, uint32 petEntry, uint32 petnumber, bool cur
     }
 
     // set last used pet number (for use in BG's)
-    if (owner->GetTypeId() == TYPEID_PLAYER && isControlled() && !isTemporarySummoned() && (getPetType() == SUMMON_PET || getPetType() == HUNTER_PET))
+    if (owner->IsPlayer() && isControlled() && !isTemporarySummoned() && (getPetType() == SUMMON_PET || getPetType() == HUNTER_PET))
         owner->ToPlayer()->SetLastPetNumber(petId);
 
     // must be after SetMinion (owner guid check)
@@ -711,7 +711,7 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
 
     // Determine pet type
     PetType petType = MAX_PET_TYPE;
-    if (IsPet() && GetOwner()->GetTypeId() == TYPEID_PLAYER)
+    if (IsPet() && GetOwner()->IsPlayer())
     {
         switch (m_owner->getClass())
         {
@@ -932,7 +932,7 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
         }
         case ENTRY_INFERNAL:
         {
-            if (m_owner->GetTypeId() == TYPEID_PLAYER) // Infernal get 100% of owners spell, Immolation has his own coef.
+            if (m_owner->IsPlayer()) // Infernal get 100% of owners spell, Immolation has his own coef.
                 SetBonusDamage(int32(m_owner->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_SPELL)));
 
             float mod = 1;

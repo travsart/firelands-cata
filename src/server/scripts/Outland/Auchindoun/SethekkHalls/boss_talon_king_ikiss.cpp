@@ -72,7 +72,7 @@ public:
 
         void MoveInLineOfSight(Unit* who) override
         {
-            if (!Intro && who->GetTypeId() == TYPEID_PLAYER && me->IsWithinDistInMap(who, 100.0f))
+            if (!Intro && who->IsPlayer() && me->IsWithinDistInMap(who, 100.0f))
             {
                 Intro = true;
                 Talk(SAY_INTRO);
@@ -146,7 +146,7 @@ public:
 
         void KilledUnit(Unit* who) override
         {
-            if (who->GetTypeId() == TYPEID_PLAYER)
+            if (who->IsPlayer())
                 Talk(SAY_SLAY);
         }
 
