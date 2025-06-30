@@ -2344,15 +2344,14 @@ static float GetArmorReduction(float armor, uint8 attackerLevel)
     return victimResistance / (victimResistance + resistanceConstant);
 }
 
-void Unit::CalcAbsorbResist(DamageInfo& dmgInfo, bool Splited)
+void Unit::CalcAbsorbResist(DamageInfo& damageInfo, bool Splited)
 {
-    Unit* victim = dmgInfo.GetVictim();
-    Unit* attacker = dmgInfo.GetAttacker();
-    uint32 damage = dmgInfo.GetDamage();
-    SpellSchoolMask schoolMask = dmgInfo.GetSchoolMask();
-    SpellInfo const* spellInfo = dmgInfo.GetSpellInfo();
+    Unit* victim = damageInfo.GetVictim();
+    Unit* attacker = damageInfo.GetAttacker();
+    SpellSchoolMask schoolMask = damageInfo.GetSchoolMask();
+    SpellInfo const* spellInfo = damageInfo.GetSpellInfo();
 
-    if (!victim || !victim->IsAlive() || !damage)
+    if (!victim || !victim->IsAlive() || !damageInfo.GetDamage())
         return;
 
     // Magic damage, check for resists
@@ -2361,47 +2360,46 @@ void Unit::CalcAbsorbResist(DamageInfo& dmgInfo, bool Splited)
     if (!(schoolMask & SPELL_SCHOOL_MASK_NORMAL) && (!(schoolMask & SPELL_SCHOOL_MASK_HOLY) || victim->IsCreature()) &&
         (!spellInfo || (!spellInfo->HasAttribute(SPELL_ATTR0_CU_BINARY_SPELL) && !spellInfo->HasAttribute(SPELL_ATTR4_IGNORE_RESISTANCES))))
     {
-        uint32 resistedDamage = Unit::CalcSpellResistedDamage(attacker, victim, damage, schoolMask, spellInfo);
-        dmgInfo.ResistDamage(resistedDamage);
+        uint32 resistedDamage = Unit::CalcSpellResistedDamage(attacker, victim, damageInfo.GetDamage(), schoolMask, spellInfo);
+        damageInfo.ResistDamage(resistedDamage);
     }
 
     // Ignore Absorption Auras
     float auraAbsorbMod = 0.f;
-    if (Unit* attacker = dmgInfo.GetAttacker())
+    if (attacker)
     {
-        auraAbsorbMod = attacker->GetMaxPositiveAuraModifierByMiscMask(SPELL_AURA_MOD_TARGET_ABSORB_SCHOOL, dmgInfo.GetSchoolMask());
+        auraAbsorbMod = attacker->GetMaxPositiveAuraModifierByMiscMask(SPELL_AURA_MOD_TARGET_ABSORB_SCHOOL, schoolMask);
         auraAbsorbMod = std::max(auraAbsorbMod, static_cast<float>(attacker->GetMaxPositiveAuraModifier(SPELL_AURA_MOD_TARGET_ABILITY_ABSORB_SCHOOL,
-                                                    [&dmgInfo](AuraEffect const* aurEff) -> bool
+                                                    [&damageInfo](AuraEffect const* aurEff) -> bool
                                                     {
-                                                        if (!(aurEff->GetMiscValue() & dmgInfo.GetSchoolMask()))
+                                                        if (!(aurEff->GetMiscValue() & schoolMask))
                                                             return false;
 
-                                                        if (!aurEff->IsAffectedOnSpell(dmgInfo.GetSpellInfo()))
+                                                        if (!aurEff->IsAffectedOnSpell(spellInfo))
                                                             return false;
 
                                                         return true;
                                                     })));
+        RoundToInterval(auraAbsorbMod, 0.0f, 100.0f);
     }
 
-    RoundToInterval(auraAbsorbMod, 0.0f, 100.0f);
-
-    int32 absorbIgnoringDamage = CalculatePct(dmgInfo.GetDamage(), auraAbsorbMod);
-    dmgInfo.ModifyDamage(-absorbIgnoringDamage);
+    int32 absorbIgnoringDamage = CalculatePct(damageInfo.GetDamage(), auraAbsorbMod);
+    damageInfo.ModifyDamage(-absorbIgnoringDamage);
 
     // We're going to call functions which can modify content of the list during iteration over it's elements
     // Let's copy the list so we can prevent iterator invalidation
-    AuraEffectList vSchoolAbsorbCopy(dmgInfo.GetVictim()->GetAuraEffectsByType(SPELL_AURA_SCHOOL_ABSORB));
+    AuraEffectList vSchoolAbsorbCopy(victim->GetAuraEffectsByType(SPELL_AURA_SCHOOL_ABSORB));
     vSchoolAbsorbCopy.sort(Firelands::AbsorbAuraOrderPred());
 
     // absorb without mana cost
-    for (AuraEffectList::iterator itr = vSchoolAbsorbCopy.begin(); (itr != vSchoolAbsorbCopy.end()) && (dmgInfo.GetDamage() > 0); ++itr)
+    for (AuraEffectList::iterator itr = vSchoolAbsorbCopy.begin(); (itr != vSchoolAbsorbCopy.end()) && (damageInfo.GetDamage() > 0); ++itr)
     {
         AuraEffect* absorbAurEff = *itr;
         // Check if aura was removed during iteration - we don't need to work on such auras
-        AuraApplication const* aurApp = absorbAurEff->GetBase()->GetApplicationOfTarget(dmgInfo.GetVictim()->GetGUID());
+        AuraApplication const* aurApp = absorbAurEff->GetBase()->GetApplicationOfTarget(victim->GetGUID());
         if (!aurApp)
             continue;
-        if (!(absorbAurEff->GetMiscValue() & dmgInfo.GetSchoolMask()))
+        if (!(absorbAurEff->GetMiscValue() & schoolMask))
             continue;
 
         // get amount which can be still absorbed by the aura
@@ -2414,7 +2412,7 @@ void Unit::CalcAbsorbResist(DamageInfo& dmgInfo, bool Splited)
 
         bool defaultPrevented = false;
 
-        absorbAurEff->GetBase()->CallScriptEffectAbsorbHandlers(absorbAurEff, aurApp, dmgInfo, tempAbsorb, defaultPrevented);
+        absorbAurEff->GetBase()->CallScriptEffectAbsorbHandlers(absorbAurEff, aurApp, damageInfo, tempAbsorb, defaultPrevented);
         currentAbsorb = tempAbsorb;
 
         if (defaultPrevented)
@@ -2440,16 +2438,16 @@ void Unit::CalcAbsorbResist(DamageInfo& dmgInfo, bool Splited)
     }
 
     // absorb by mana cost
-    AuraEffectList vManaShieldCopy(damageInfo.GetVictim()->GetAuraEffectsByType(SPELL_AURA_MANA_SHIELD));
+    AuraEffectList vManaShieldCopy(victim->GetAuraEffectsByType(SPELL_AURA_MANA_SHIELD));
     for (AuraEffectList::const_iterator itr = vManaShieldCopy.begin(); (itr != vManaShieldCopy.end()) && (damageInfo.GetDamage() > 0); ++itr)
     {
         AuraEffect* absorbAurEff = *itr;
         // Check if aura was removed during iteration - we don't need to work on such auras
-        AuraApplication const* aurApp = absorbAurEff->GetBase()->GetApplicationOfTarget(damageInfo.GetVictim()->GetGUID());
+        AuraApplication const* aurApp = absorbAurEff->GetBase()->GetApplicationOfTarget(victim->GetGUID());
         if (!aurApp)
             continue;
         // check damage school mask
-        if (!(absorbAurEff->GetMiscValue() & damageInfo.GetSchoolMask()))
+        if (!(absorbAurEff->GetMiscValue() & schoolMask))
             continue;
 
         // get amount which can be still absorbed by the aura
@@ -2471,13 +2469,16 @@ void Unit::CalcAbsorbResist(DamageInfo& dmgInfo, bool Splited)
         // absorb must be smaller than the damage itself
         currentAbsorb = RoundToInterval(currentAbsorb, 0, int32(damageInfo.GetDamage()));
 
+        // xinef: do this after absorb is rounded to damage...
+        AddPct(currentAbsorb, -auraAbsorbMod);
+
         int32 manaReduction = currentAbsorb;
 
         // lower absorb amount by talents
         if (float manaMultiplier = absorbAurEff->GetSpellInfo()->Effects[absorbAurEff->GetEffIndex()].CalcValueMultiplier(absorbAurEff->GetCaster()))
             manaReduction = int32(float(manaReduction) * manaMultiplier);
 
-        int32 manaTaken = -damageInfo.GetVictim()->ModifyPower(POWER_MANA, -manaReduction);
+        int32 manaTaken = -victim->ModifyPower(POWER_MANA, -manaReduction);
 
         // take case when mana has ended up into account
         currentAbsorb = currentAbsorb ? int32(float(currentAbsorb) * (float(manaTaken) / float(manaReduction))) : 0;
@@ -2499,25 +2500,25 @@ void Unit::CalcAbsorbResist(DamageInfo& dmgInfo, bool Splited)
     damageInfo.ModifyDamage(absorbIgnoringDamage);
 
     // split damage auras - only when not damaging self
-    if (damageInfo.GetVictim() != damageInfo.GetAttacker())
+    if (victim != attacker)
     {
         // We're going to call functions which can modify content of the list during iteration over it's elements
         // Let's copy the list so we can prevent iterator invalidation
-        AuraEffectList vSplitDamagePctCopy(damageInfo.GetVictim()->GetAuraEffectsByType(SPELL_AURA_SPLIT_DAMAGE_PCT));
+        AuraEffectList vSplitDamagePctCopy(victim->GetAuraEffectsByType(SPELL_AURA_SPLIT_DAMAGE_PCT));
         for (AuraEffectList::iterator itr = vSplitDamagePctCopy.begin(); itr != vSplitDamagePctCopy.end() && damageInfo.GetDamage() > 0; ++itr)
         {
             // Check if aura was removed during iteration - we don't need to work on such auras
-            AuraApplication const* aurApp = (*itr)->GetBase()->GetApplicationOfTarget(damageInfo.GetVictim()->GetGUID());
+            AuraApplication const* aurApp = (*itr)->GetBase()->GetApplicationOfTarget(victim->GetGUID());
             if (!aurApp)
                 continue;
 
             // check damage school mask
-            if (!((*itr)->GetMiscValue() & damageInfo.GetSchoolMask()))
+            if (!((*itr)->GetMiscValue() & schoolMask))
                 continue;
 
             // Damage can be splitted only if aura has an alive caster
             Unit* caster = (*itr)->GetCaster();
-            if (!caster || (caster == damageInfo.GetVictim()) || !caster->IsInWorld() || !caster->IsAlive())
+            if (!caster || (caster == victim) || !caster->IsInWorld() || !caster->IsAlive())
                 continue;
 
             uint32 splitDamage = CalculatePct(damageInfo.GetDamage(), (*itr)->GetAmount());
@@ -2530,33 +2531,32 @@ void Unit::CalcAbsorbResist(DamageInfo& dmgInfo, bool Splited)
             damageInfo.AbsorbDamage(splitDamage);
 
             // check if caster is immune to damage
-            if (caster->IsImmunedToDamage(damageInfo.GetSchoolMask()))
+            if (caster->IsImmunedToDamage(schoolMask))
             {
-                damageInfo.GetVictim()->SendSpellMiss(caster, (*itr)->GetSpellInfo()->Id, SPELL_MISS_IMMUNE);
+                victim->SendSpellMiss(caster, (*itr)->GetSpellInfo()->Id, SPELL_MISS_IMMUNE);
                 continue;
             }
 
             uint32 split_absorb = 0;
             Unit::DealDamageMods(caster, splitDamage, &split_absorb);
 
-            if (Unit* attacker = damageInfo.GetAttacker())
+            if (Unit* attacker = attacker)
             {
                 // Sparring Checks
-                if (Creature* target = damageInfo.GetVictim()->ToCreature())
+                if (Creature* target = victim->ToCreature())
                     if (attacker->IsCreature() && !attacker->IsCharmedOwnedByPlayerOrPlayer())
                         if (target->GetNoNpcDamageBelowPctHealthValue() != 0.0f)
                             if (target->GetHealthPct() <= target->GetNoNpcDamageBelowPctHealthValue())
                                 damageInfo.ModifyDamage(damageInfo.GetDamage() * -1);
 
-                attacker->SendSpellNonMeleeDamageLog(caster, (*itr)->GetSpellInfo()->Id, splitDamage, damageInfo.GetSchoolMask(), split_absorb, 0, false, 0, false);
+                attacker->SendSpellNonMeleeDamageLog(caster, (*itr)->GetSpellInfo()->Id, splitDamage, schoolMask, split_absorb, 0, false, 0, false);
             }
 
             CleanDamage cleanDamage = CleanDamage(splitDamage, 0, BASE_ATTACK, MELEE_HIT_NORMAL);
-            Unit::DealDamage(damageInfo.GetAttacker(), caster, splitDamage, &cleanDamage, DIRECT_DAMAGE, damageInfo.GetSchoolMask(), (*itr)->GetSpellInfo(), false);
+            Unit::DealDamage(attacker, caster, splitDamage, &cleanDamage, DIRECT_DAMAGE, schoolMask, (*itr)->GetSpellInfo(), false);
 
             // break 'Fear' and similar auras
-            Unit::ProcSkillsAndAuras(
-                damageInfo.GetAttacker(), caster, PROC_FLAG_NONE, PROC_FLAG_TAKE_HARMFUL_SPELL, PROC_SPELL_TYPE_DAMAGE, PROC_SPELL_PHASE_HIT, PROC_HIT_NONE, nullptr, &damageInfo, nullptr);
+            Unit::ProcSkillsAndAuras(attacker, caster, PROC_FLAG_NONE, PROC_FLAG_TAKE_HARMFUL_SPELL, PROC_SPELL_TYPE_DAMAGE, PROC_SPELL_PHASE_HIT, PROC_HIT_NONE, nullptr, &damageInfo, nullptr);
         }
     }
 }
