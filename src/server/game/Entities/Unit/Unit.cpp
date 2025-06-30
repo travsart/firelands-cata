@@ -2194,10 +2194,11 @@ static float GetArmorReduction(float armor, uint8 attackerLevel)
     return temp * 100;
 }
 
-/*static*/ uint32 Unit::CalcArmorReducedDamage(Unit const* attacker, Unit* victim, const uint32 damage, SpellInfo const* spellInfo, WeaponAttackType /*attackType*/, uint8 attackerLevel /*= 0*/)
+/*static*/ uint32 Unit::CalcArmorReducedDamage(Unit const* attacker, Unit const* victim, const uint32 damage, SpellInfo const* spellInfo, uint8 attackerLevel, WeaponAttackType /*attackType*/)
 {
     float armor = float(victim->GetArmor());
 
+    // Ignore enemy armor by SPELL_AURA_MOD_TARGET_RESISTANCE aura
     if (attacker)
     {
         // bypass enemy armor by SPELL_AURA_BYPASS_ARMOR_FOR_CASTER
@@ -2252,7 +2253,7 @@ static float GetArmorReduction(float armor, uint8 attackerLevel)
             return 0;
     }
 
-    float const averageResist = Unit::CalculateAverageResistReduction(attacker, schoolMask, victim, spellInfo);
+    float const averageResist = Unit::GetEffectiveResistChance(attacker, schoolMask, victim, spellInfo);
 
     float discreteResistProbability[11] = {};
     if (averageResist <= 0.1f)
@@ -2297,7 +2298,7 @@ static float GetArmorReduction(float armor, uint8 attackerLevel)
     return uint32(damageResisted);
 }
 
-/*static*/ float Unit::CalculateAverageResistReduction(Unit const* attacker, SpellSchoolMask schoolMask, Unit const* victim, SpellInfo const* spellInfo)
+/*static*/ float Unit::GetEffectiveResistChance(Unit const* attacker, SpellSchoolMask schoolMask, Unit const* victim, SpellInfo const* spellInfo)
 {
     float victimResistance = float(victim->GetResistance(schoolMask));
 
@@ -2343,7 +2344,6 @@ static float GetArmorReduction(float armor, uint8 attackerLevel)
     return victimResistance / (victimResistance + resistanceConstant);
 }
 
-// START HERRRRRRRRRRRRRRRR
 void Unit::CalcAbsorbResist(DamageInfo& dmgInfo, bool Splited)
 {
     Unit* victim = dmgInfo.GetVictim();
@@ -3292,7 +3292,7 @@ SpellMissInfo Unit::MagicSpellHitResult(Unit* victim, SpellInfo const* spellInfo
 
         // Players resistance for binary spells
         if (spellInfo->HasAttribute(SPELL_ATTR0_CU_BINARY_SPELL) && (spellInfo->GetSchoolMask() & (SPELL_SCHOOL_MASK_NORMAL | SPELL_SCHOOL_MASK_HOLY)) == 0)
-            tmp += int32(Unit::CalculateAverageResistReduction(this, spellInfo->GetSchoolMask(), victim, spellInfo) * 10000.0f); // 100 for spell calculations, and 100 for return value percentage
+            tmp += int32(Unit::GetEffectiveResistChance(this, spellInfo->GetSchoolMask(), victim, spellInfo) * 10000.0f); // 100 for spell calculations, and 100 for return value percentage
     }
 
     // Roll chance
