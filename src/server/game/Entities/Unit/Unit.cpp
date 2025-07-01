@@ -2730,27 +2730,127 @@ void Unit::AttackerStateUpdate(Unit* victim, WeaponAttackType attType /*= BASE_A
     }
 }
 
-void Unit::HandleProcExtraAttackFor(Unit* victim)
+bool Unit::GetMeleeAttackPoint(Unit* attacker, Position& pos)
 {
-    while (m_extraAttacks)
+    if (!attacker)
     {
-        AttackerStateUpdate(victim, BASE_ATTACK, true);
-        --m_extraAttacks;
+        return false;
     }
+
+    AttackerSet attackers = getAttackers();
+
+    if (attackers.size() <= 1) // if the attackers are not more than one
+    {
+        return false;
+    }
+
+    float meleeReach = GetExactDist2d(attacker);
+    if (meleeReach <= 0)
+    {
+        return false;
+    }
+
+    float minAngle = 0;
+    Unit* refUnit = nullptr;
+    uint32 validAttackers = 0;
+
+    double attackerSize = attacker->GetCollisionRadius();
+
+    for (auto const& otherAttacker : attackers)
+    {
+        // if the otherAttacker is not valid, skip
+        if (!otherAttacker || otherAttacker->GetGUID() == attacker->GetGUID() || !otherAttacker->IsWithinMeleeRange(this) || otherAttacker->isMoving())
+        {
+            continue;
+        }
+
+        float curretAngle = atan(attacker->GetExactDist2d(otherAttacker) / meleeReach);
+        if (minAngle == 0 || curretAngle < minAngle)
+        {
+            minAngle = curretAngle;
+            refUnit = otherAttacker;
+        }
+
+        validAttackers++;
+    }
+
+    if (!validAttackers || !refUnit)
+    {
+        return false;
+    }
+
+    float contactDist = attackerSize + refUnit->GetCollisionRadius();
+    float requiredAngle = atan(contactDist / meleeReach);
+    float attackersAngle = atan(attacker->GetExactDist2d(refUnit) / meleeReach);
+
+    // in instance: the more attacker there are, the higher will be the tollerance
+    // outside: creatures should not intersecate
+    float angleTollerance = attacker->GetMap()->IsDungeon() ? requiredAngle - requiredAngle * tanh(validAttackers / 5.0f) : requiredAngle;
+
+    if (attackersAngle > angleTollerance)
+    {
+        return false;
+    }
+
+    double angle = atan(contactDist / meleeReach);
+
+    float angularRadius = frand(0.1f, 0.3f) + angle;
+    int8 direction = (urand(0, 1) ? -1 : 1);
+    float currentAngle = GetAngle(refUnit);
+    float absAngle = currentAngle + angularRadius * direction;
+
+    float x, y, z;
+    float distance = meleeReach - GetObjectSize();
+    GetNearPoint(attacker, x, y, z, distance, 0.0f, absAngle);
+
+    if (!GetMap()->CanReachPositionAndGetValidCoords(this, x, y, z, true, true))
+    {
+        GetNearPoint(attacker, x, y, z, distance, 0.0f, absAngle * -1); // try the other side
+
+        if (!GetMap()->CanReachPositionAndGetValidCoords(this, x, y, z, true, true))
+        {
+            return false;
+        }
+    }
+
+    pos.Relocate(x, y, z);
+
+    return true;
+}
+
+void Unit::HandleProcExtraAttackFor(Unit* victim, uint32 count)
+{
+    while (count)
+    {
+        --count;
+        AttackerStateUpdate(victim, BASE_ATTACK, true);
+    }
+}
+
+void Unit::AddExtraAttacks(uint32 count)
+{
+    ObjectGuid targetGUID = _lastDamagedTargetGuid;
+    if (!targetGUID)
+    {
+        if (ObjectGuid selection = GetTarget())
+        {
+            targetGUID = selection; // Spell was cast directly (not triggered by aura)
+        }
+        else
+            return;
+    }
+
+    extraAttacksTargets[targetGUID] += count;
 }
 
 MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackType attType) const
 {
     // This is only wrapper
-
-    int32 const attackerMaxSkillValueForLevel = GetMaxSkillValueForLevel(victim);
-    int32 const victimMaxSkillValueForLevel = victim->GetMaxSkillValueForLevel(this);
-
     // Miss chance based on melee
-    int32 miss_chance = int32(MeleeSpellMissChance(victim, attType) * 100.f);
+    int32 miss_chance = int32(MeleeSpellMissChance(victim, attType));
 
     // Critical hit chance
-    int32 crit_chance = int32(GetUnitCriticalChance(attType, victim) * 100.0f);
+    int32 crit_chance = int32(GetUnitCriticalChance(attType, victim));
 
     float dodge_chance = victim->GetUnitDodgeChance();
     float block_chance = victim->GetUnitBlockChance();
@@ -2772,9 +2872,6 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
     int32 attackerMaxSkillValueForLevel = GetMaxSkillValueForLevel(victim);
     int32 victimMaxSkillValueForLevel = victim->GetMaxSkillValueForLevel(this);
 
-    int32 attackerWeaponSkill = 0;
-    int32 victimDefenseSkill = 0;
-
     // Miss chance based on melee
     int32 miss_chance = int32(MeleeSpellMissChance(victim, attType) * 100.f);
 
@@ -2794,8 +2891,7 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
 
     bool glancing = attType != RANGED_ATTACK && (IsPlayer() || IsPet()) && !victim->IsPlayer() && !victim->IsPet() && GetLevel() < victim->getLevelForTarget(this);
 
-    sScriptMgr->OnBeforeRollMeleeOutcomeAgainst(
-        this, victim, attType, attackerMaxSkillValueForLevel, victimMaxSkillValueForLevel, attackerWeaponSkill, victimDefenseSkill, crit_chance, miss_chance, dodge_chance, parry_chance, block_chance);
+    sScriptMgr->OnBeforeRollMeleeOutcomeAgainst(this, victim, attType, attackerMaxSkillValueForLevel, victimMaxSkillValueForLevel, crit_chance, miss_chance, dodge_chance, parry_chance, block_chance);
 
     // bonus from skills is 0.04%
     int32 sum = 0, tmp = 0;
@@ -2943,7 +3039,24 @@ uint32 Unit::CalculateDamage(WeaponAttackType attType, bool normalized, bool add
     float maxDamage = 0.0f;
 
     if (normalized || !addTotalPct)
-        CalculateMinMaxDamage(attType, normalized, addTotalPct, minDamage, maxDamage);
+    {
+        // get both by default
+        if (!itemDamagesMask)
+        {
+            itemDamagesMask = (1 << 0) | (1 << 1);
+        }
+
+        for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
+        {
+            if (itemDamagesMask & (1 << i))
+            {
+                float minTmp, maxTmp;
+                CalculateMinMaxDamage(attType, normalized, addTotalPct, minTmp, maxTmp, i);
+                minDamage += minTmp;
+                maxDamage += maxTmp;
+            }
+        }
+    }
     else
     {
         switch (attType)
@@ -2975,6 +3088,27 @@ uint32 Unit::CalculateDamage(WeaponAttackType attType, bool normalized, bool add
         maxDamage = 5.0f;
 
     return urand(uint32(minDamage), uint32(maxDamage));
+}
+
+float Unit::CalculateLevelPenalty(SpellInfo const* spellProto) const
+{
+    if (!IsPlayer())
+        return 1.0f;
+
+    if (spellProto->SpellLevel <= 0 || spellProto->SpellLevel >= spellProto->MaxLevel)
+        return 1.0f;
+
+    float LvlPenalty = 0.0f;
+
+    // xinef: added brackets
+    if (spellProto->SpellLevel < 20)
+        LvlPenalty = (20.0f - spellProto->SpellLevel) * 3.75f;
+
+    float LvlFactor = (float(spellProto->SpellLevel) + 6.0f) / float(GetLevel());
+    if (LvlFactor > 1.0f)
+        LvlFactor = 1.0f;
+
+    return AddPct(LvlFactor, -LvlPenalty);
 }
 
 void Unit::SendMeleeAttackStart(Unit* victim)

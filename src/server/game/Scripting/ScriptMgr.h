@@ -98,33 +98,32 @@ namespace Firelands::ChatCommands
 
 class PlayerbotScript : public ScriptObject
 {
-protected:
-
+  protected:
     PlayerbotScript(const char* name);
 
-public:
+  public:
     bool IsDatabaseBound() const { return false; }
 
     [[nodiscard]] virtual bool OnPlayerbotCheckLFGQueue(lfg::Lfg5Guids const& /*guidsList*/) { return true; }
-    virtual void OnPlayerbotCheckKillTask(Player* /*player*/, Unit* /*victim*/) { }
-    virtual void OnPlayerbotCheckPetitionAccount(Player* /*player*/, bool& /*found*/) { }
+    virtual void OnPlayerbotCheckKillTask(Player* /*player*/, Unit* /*victim*/) {}
+    virtual void OnPlayerbotCheckPetitionAccount(Player* /*player*/, bool& /*found*/) {}
     [[nodiscard]] virtual bool OnPlayerbotCheckUpdatesToSend(Player* /*player*/) { return true; }
-    virtual void OnPlayerbotPacketSent(Player* /*player*/, WorldPacket const* /*packet*/) { }
-    virtual void OnPlayerbotUpdate(uint32 /*diff*/) { }
-    virtual void OnPlayerbotUpdateSessions(Player* /*player*/) { }
-    virtual void OnPlayerbotLogout(Player* /*player*/) { }
-    virtual void OnPlayerbotLogoutBots() { }
+    virtual void OnPlayerbotPacketSent(Player* /*player*/, WorldPacket const* /*packet*/) {}
+    virtual void OnPlayerbotUpdate(uint32 /*diff*/) {}
+    virtual void OnPlayerbotUpdateSessions(Player* /*player*/) {}
+    virtual void OnPlayerbotLogout(Player* /*player*/) {}
+    virtual void OnPlayerbotLogoutBots() {}
 };
 
 class ScriptMgr
 {
     friend class ScriptObject;
 
-private:
+  private:
     ScriptMgr();
     virtual ~ScriptMgr();
 
-public: /* Initialization */
+  public: /* Initialization */
     static ScriptMgr* instance();
     void Initialize();
     void LoadDatabase();
@@ -137,32 +136,26 @@ public: /* Initialization */
     void DecreaseScriptCount() { --_scriptCount; }
     [[nodiscard]] uint32 GetScriptCount() const { return _scriptCount; }
 
-    typedef void(*ScriptLoaderCallbackType)();
-    typedef void(*ModulesLoaderCallbackType)();
+    typedef void (*ScriptLoaderCallbackType)();
+    typedef void (*ModulesLoaderCallbackType)();
 
     /// Sets the script loader callback which is invoked to load scripts
     /// (Workaround for circular dependency game <-> scripts)
-    void SetScriptLoader(ScriptLoaderCallbackType script_loader_callback)
-    {
-        _script_loader_callback = script_loader_callback;
-    }
+    void SetScriptLoader(ScriptLoaderCallbackType script_loader_callback) { _script_loader_callback = script_loader_callback; }
 
     /// Sets the modules loader callback which is invoked to load modules
     /// (Workaround for circular dependency game <-> modules)
-    void SetModulesLoader(ModulesLoaderCallbackType script_loader_callback)
-    {
-        _modules_loader_callback = script_loader_callback;
-    }
+    void SetModulesLoader(ModulesLoaderCallbackType script_loader_callback) { _modules_loader_callback = script_loader_callback; }
 
-public: /* Unloading */
+  public: /* Unloading */
     void Unload();
 
-public: /* SpellScriptLoader */
+  public: /* SpellScriptLoader */
     void CreateSpellScripts(uint32 spellId, std::list<SpellScript*>& scriptVector);
     void CreateAuraScripts(uint32 spellId, std::list<AuraScript*>& scriptVector);
     void CreateSpellScriptLoaders(uint32 spellId, std::vector<std::pair<SpellScriptLoader*, std::multimap<uint32, uint32>::iterator>>& scriptVector);
 
-public: /* ServerScript */
+  public: /* ServerScript */
     void OnNetworkStart();
     void OnNetworkStop();
     void OnSocketOpen(std::shared_ptr<WorldSocket> socket);
@@ -172,7 +165,7 @@ public: /* ServerScript */
     bool CanPacketSend(WorldSession* session, WorldPacket const& packet);
     void OnPacketSend(WorldSession* session, WorldPacket const& packet);
 
-public: /* WorldScript */
+  public: /* WorldScript */
     void OnLoadCustomDatabaseTable();
     void OnOpenStateChange(bool open);
     void OnBeforeConfigLoad(bool reload);
@@ -187,7 +180,7 @@ public: /* WorldScript */
     void OnBeforeWorldInitialized();
     void OnAfterUnloadAllMaps();
 
-public: /* FormulaScript */
+  public: /* FormulaScript */
     void OnHonorCalculation(float& honor, uint8 level, float multiplier);
     void OnGrayLevelCalculation(uint8& grayLevel, uint8 playerLevel);
     void OnColorCodeCalculation(XPColorChar& color, uint8 playerLevel, uint8 mobLevel);
@@ -198,7 +191,7 @@ public: /* FormulaScript */
     void OnAfterArenaRatingCalculation(Battleground* const bg, int32& winnerMatchmakerChange, int32& loserMatchmakerChange, int32& winnerChange, int32& loserChange);
     void OnBeforeUpdatingPersonalRating(int32& mod, uint32 type);
 
-public: /* MapScript */
+  public: /* MapScript */
     void OnCreateMap(Map* map);
     void OnDestroyMap(Map* map);
     void OnLoadGridMap(Map* map, GridTerrainData* gmap, uint32 gx, uint32 gy);
@@ -207,10 +200,10 @@ public: /* MapScript */
     void OnPlayerLeaveMap(Map* map, Player* player);
     void OnMapUpdate(Map* map, uint32 diff);
 
-public: /* InstanceMapScript */
+  public: /* InstanceMapScript */
     InstanceScript* CreateInstanceScript(InstanceMap* map);
 
-public: /* ItemScript */
+  public: /* ItemScript */
     bool OnQuestAccept(Player* player, Item* item, Quest const* quest);
     bool OnItemUse(Player* player, Item* item, SpellCastTargets const& targets);
     bool OnItemExpire(Player* player, ItemTemplate const* proto);
@@ -219,7 +212,7 @@ public: /* ItemScript */
     void OnGossipSelect(Player* player, Item* item, uint32 sender, uint32 action);
     void OnGossipSelectCode(Player* player, Item* item, uint32 sender, uint32 action, const char* code);
 
-public: /* CreatureScript */
+  public: /* CreatureScript */
     bool OnGossipHello(Player* player, Creature* creature);
     bool OnGossipSelect(Player* player, Creature* creature, uint32 sender, uint32 action);
     bool OnGossipSelectCode(Player* player, Creature* creature, uint32 sender, uint32 action, const char* code);
@@ -234,7 +227,7 @@ public: /* CreatureScript */
     void OnCreatureRemoveWorld(Creature* creature);
     void OnFfaPvpStateUpdate(Creature* creature, bool InPvp);
 
-public: /* GameObjectScript */
+  public: /* GameObjectScript */
     bool OnGossipHello(Player* player, GameObject* go);
     bool OnGossipSelect(Player* player, GameObject* go, uint32 sender, uint32 action);
     bool OnGossipSelectCode(Player* player, GameObject* go, uint32 sender, uint32 action, const char* code);
@@ -251,39 +244,42 @@ public: /* GameObjectScript */
     void OnGameObjectAddWorld(GameObject* go);
     void OnGameObjectRemoveWorld(GameObject* go);
 
-public: /* AreaTriggerScript */
+  public: /* AreaTriggerScript */
     bool OnAreaTrigger(Player* player, AreaTrigger const* trigger);
 
-public: /* BattlegroundScript */
+  public: /* BattlegroundScript */
     Battleground* CreateBattleground(BattlegroundTypeId typeId);
 
-public: /* OutdoorPvPScript */
+  public: /* OutdoorPvPScript */
     OutdoorPvP* CreateOutdoorPvP(OutdoorPvPData const* data);
 
-public: /* CommandScript */
+  public: /* CommandScript */
     std::vector<Firelands::ChatCommands::ChatCommandBuilder> GetChatCommands();
 
-public: /* WeatherScript */
+  public: /* WeatherScript */
     void OnWeatherChange(Weather* weather, WeatherState state, float grade);
     void OnWeatherUpdate(Weather* weather, uint32 diff);
 
-public: /* AuctionHouseScript */
+  public: /* AuctionHouseScript */
     void OnAuctionAdd(AuctionHouseObject* ah, AuctionEntry* entry);
     void OnAuctionRemove(AuctionHouseObject* ah, AuctionEntry* entry);
     void OnAuctionSuccessful(AuctionHouseObject* ah, AuctionEntry* entry);
     void OnAuctionExpire(AuctionHouseObject* ah, AuctionEntry* entry);
-    void OnBeforeAuctionHouseMgrSendAuctionWonMail(AuctionHouseMgr* auctionHouseMgr, AuctionEntry* auction, Player* bidder, uint32& bidder_accId, bool& sendNotification, bool& updateAchievementCriteria, bool& sendMail);
+    void OnBeforeAuctionHouseMgrSendAuctionWonMail(
+        AuctionHouseMgr* auctionHouseMgr, AuctionEntry* auction, Player* bidder, uint32& bidder_accId, bool& sendNotification, bool& updateAchievementCriteria, bool& sendMail);
     void OnBeforeAuctionHouseMgrSendAuctionSalePendingMail(AuctionHouseMgr* auctionHouseMgr, AuctionEntry* auction, Player* owner, uint32& owner_accId, bool& sendMail);
-    void OnBeforeAuctionHouseMgrSendAuctionSuccessfulMail(AuctionHouseMgr* auctionHouseMgr, AuctionEntry* auction, Player* owner, uint32& owner_accId, uint32& profit, bool& sendNotification, bool& updateAchievementCriteria, bool& sendMail);
+    void OnBeforeAuctionHouseMgrSendAuctionSuccessfulMail(
+        AuctionHouseMgr* auctionHouseMgr, AuctionEntry* auction, Player* owner, uint32& owner_accId, uint32& profit, bool& sendNotification, bool& updateAchievementCriteria, bool& sendMail);
     void OnBeforeAuctionHouseMgrSendAuctionExpiredMail(AuctionHouseMgr* auctionHouseMgr, AuctionEntry* auction, Player* owner, uint32& owner_accId, bool& sendNotification, bool& sendMail);
-    void OnBeforeAuctionHouseMgrSendAuctionOutbiddedMail(AuctionHouseMgr* auctionHouseMgr, AuctionEntry* auction, Player* oldBidder, uint32& oldBidder_accId, Player* newBidder, uint32& newPrice, bool& sendNotification, bool& sendMail);
+    void OnBeforeAuctionHouseMgrSendAuctionOutbiddedMail(
+        AuctionHouseMgr* auctionHouseMgr, AuctionEntry* auction, Player* oldBidder, uint32& oldBidder_accId, Player* newBidder, uint32& newPrice, bool& sendNotification, bool& sendMail);
     void OnBeforeAuctionHouseMgrSendAuctionCancelledToBidderMail(AuctionHouseMgr* auctionHouseMgr, AuctionEntry* auction, Player* bidder, uint32& bidder_accId, bool& sendMail);
     void OnBeforeAuctionHouseMgrUpdate();
 
-public: /* ConditionScript */
+  public: /* ConditionScript */
     bool OnConditionCheck(Condition* condition, ConditionSourceInfo& sourceInfo);
 
-public: /* VehicleScript */
+  public: /* VehicleScript */
     void OnInstall(Vehicle* veh);
     void OnUninstall(Vehicle* veh);
     void OnReset(Vehicle* veh);
@@ -291,20 +287,20 @@ public: /* VehicleScript */
     void OnAddPassenger(Vehicle* veh, Unit* passenger, int8 seatId);
     void OnRemovePassenger(Vehicle* veh, Unit* passenger);
 
-public: /* DynamicObjectScript */
+  public: /* DynamicObjectScript */
     void OnDynamicObjectUpdate(DynamicObject* dynobj, uint32 diff);
 
-public: /* TransportScript */
+  public: /* TransportScript */
     void OnAddPassenger(Transport* transport, Player* player);
     void OnAddCreaturePassenger(Transport* transport, Creature* creature);
     void OnRemovePassenger(Transport* transport, Player* player);
     void OnTransportUpdate(Transport* transport, uint32 diff);
     void OnRelocate(Transport* transport, uint32 waypointId, uint32 mapId, float x, float y, float z);
 
-public: /* AchievementCriteriaScript */
+  public: /* AchievementCriteriaScript */
     bool OnCriteriaCheck(uint32 scriptId, Player* source, Unit* target, uint32 criteria_id);
 
-public: /* PlayerScript */
+  public: /* PlayerScript */
     void OnPlayerJustDied(Player* player);
     void OnPlayerCalculateTalentsPoints(Player const* player, uint32& talentPointsForLevel);
     void OnPlayerReleasedGhost(Player* player);
@@ -354,7 +350,7 @@ public: /* PlayerScript */
     bool OnPlayerBeforeTeleport(Player* player, uint32 mapid, float x, float y, float z, float orientation, uint32 options, Unit* target);
     void OnPlayerUpdateFaction(Player* player);
     void OnPlayerAddToBattleground(Player* player, Battleground* bg);
-    void OnPlayerQueueRandomDungeon(Player* player, uint32 & rDungeonId);
+    void OnPlayerQueueRandomDungeon(Player* player, uint32& rDungeonId);
     void OnPlayerRemoveFromBattleground(Player* player, Battleground* bg);
     void OnPlayerAchievementComplete(Player* player, AchievementEntry const* achievement);
     bool OnPlayerBeforeAchievementComplete(Player* player, AchievementEntry const* achievement);
@@ -383,8 +379,10 @@ public: /* PlayerScript */
     void OnPlayerQuestComputeXP(Player* player, Quest const* quest, uint32& xpValue);
     void OnPlayerBeforeDurabilityRepair(Player* player, ObjectGuid npcGUID, ObjectGuid itemGUID, float& discountMod, uint8 guildBank);
     void OnPlayerBeforeBuyItemFromVendor(Player* player, ObjectGuid vendorguid, uint32 vendorslot, uint32& item, uint8 count, uint8 bag, uint8 slot);
-    void OnPlayerBeforeStoreOrEquipNewItem(Player* player, uint32 vendorslot, uint32& item, uint8 count, uint8 bag, uint8 slot, ItemTemplate const* pProto, Creature* pVendor, VendorItem const* crItem, bool bStore);
-    void OnPlayerAfterStoreOrEquipNewItem(Player* player, uint32 vendorslot, Item* item, uint8 count, uint8 bag, uint8 slot, ItemTemplate const* pProto, Creature* pVendor, VendorItem const* crItem, bool bStore);
+    void OnPlayerBeforeStoreOrEquipNewItem(
+        Player* player, uint32 vendorslot, uint32& item, uint8 count, uint8 bag, uint8 slot, ItemTemplate const* pProto, Creature* pVendor, VendorItem const* crItem, bool bStore);
+    void OnPlayerAfterStoreOrEquipNewItem(
+        Player* player, uint32 vendorslot, Item* item, uint8 count, uint8 bag, uint8 slot, ItemTemplate const* pProto, Creature* pVendor, VendorItem const* crItem, bool bStore);
     void OnPlayerAfterUpdateMaxPower(Player* player, Powers& power, float& value);
     void OnPlayerAfterUpdateMaxHealth(Player* player, float& value);
     void OnPlayerBeforeUpdateAttackPowerAndDamage(Player* player, float& level, float& val2, bool ranged);
@@ -488,7 +486,7 @@ public: /* PlayerScript */
     bool AnticheatHandleDoubleJump(Player* player, Unit* mover);
     bool AnticheatCheckMovementInfo(Player* player, MovementInfo const& movementInfo, Unit* mover, bool jump);
 
-public: /* AccountScript */
+  public: /* AccountScript */
     void OnAccountLogin(uint32 accountId);
     void OnBeforeAccountDelete(uint32 accountId);
     void OnLastIpUpdate(uint32 accountId, std::string ip);
@@ -499,7 +497,7 @@ public: /* AccountScript */
     void OnFailedPasswordChange(uint32 accountId);
     bool CanAccountCreateCharacter(uint32 accountId, uint8 charRace, uint8 charClass);
 
-public: /* GuildScript */
+  public: /* GuildScript */
     void OnGuildAddMember(Guild* guild, Player* player, uint8& plRank);
     void OnGuildRemoveMember(Guild* guild, Player* player, bool isDisbanding, bool isKicked);
     void OnGuildMOTDChanged(Guild* guild, const std::string& newMotd);
@@ -508,13 +506,12 @@ public: /* GuildScript */
     void OnGuildDisband(Guild* guild);
     void OnGuildMemberWitdrawMoney(Guild* guild, Player* player, uint32& amount, bool isRepair);
     void OnGuildMemberDepositMoney(Guild* guild, Player* player, uint32& amount);
-    void OnGuildItemMove(Guild* guild, Player* player, Item* pItem, bool isSrcBank, uint8 srcContainer, uint8 srcSlotId,
-                         bool isDestBank, uint8 destContainer, uint8 destSlotId);
+    void OnGuildItemMove(Guild* guild, Player* player, Item* pItem, bool isSrcBank, uint8 srcContainer, uint8 srcSlotId, bool isDestBank, uint8 destContainer, uint8 destSlotId);
     void OnGuildEvent(Guild* guild, uint8 eventType, ObjectGuid::LowType playerGuid1, ObjectGuid::LowType playerGuid2, uint8 newRank);
     void OnGuildBankEvent(Guild* guild, uint8 eventType, uint8 tabId, ObjectGuid::LowType playerGuid, uint32 itemOrMoney, uint16 itemStackCount, uint8 destTabId);
     bool CanGuildSendBankList(Guild const* guild, WorldSession* session, uint8 tabId, bool sendAllSlots);
 
-public: /* GroupScript */
+  public: /* GroupScript */
     void OnGroupAddMember(Group* group, ObjectGuid guid);
     void OnGroupInviteMember(Group* group, ObjectGuid guid);
     void OnGroupRemoveMember(Group* group, ObjectGuid guid, RemoveMethod method, ObjectGuid kicker, const char* reason);
@@ -523,7 +520,7 @@ public: /* GroupScript */
     bool CanGroupJoinBattlegroundQueue(Group const* group, Player* member, Battleground const* bgTemplate, uint32 MinPlayerCount, bool isRated, uint32 arenaSlot);
     void OnCreate(Group* group, Player* leader);
 
-public: /* GlobalScript */
+  public: /* GlobalScript */
     void OnGlobalItemDelFromDB(CharacterDatabaseTransaction trans, ObjectGuid::LowType itemGuid);
     void OnGlobalMirrorImageDisplayItem(Item const* item, uint32& display);
     void OnBeforeUpdateArenaPoints(ArenaTeam* at, std::map<ObjectGuid, uint32>& ap);
@@ -534,7 +531,8 @@ public: /* GlobalScript */
     bool OnBeforeLootEqualChanced(Player const* player, LootStoreItemList EqualChanced, Loot& loot, LootStore const& store);
     void OnInitializeLockedDungeons(Player* player, uint8& level, uint32& lockData, lfg::LFGDungeonData const* dungeon);
     void OnAfterInitializeLockedDungeons(Player* player);
-    void OnAfterUpdateEncounterState(Map* map, EncounterCreditType type, uint32 creditEntry, Unit* source, Difficulty difficulty_fixed, DungeonEncounterList const* encounters, uint32 dungeonCompleted, bool updated);
+    void OnAfterUpdateEncounterState(
+        Map* map, EncounterCreditType type, uint32 creditEntry, Unit* source, Difficulty difficulty_fixed, DungeonEncounterList const* encounters, uint32 dungeonCompleted, bool updated);
     void OnBeforeWorldObjectSetPhaseMask(WorldObject const* worldObject, uint32& oldPhaseMask, uint32& newPhaseMask, bool& useCombinedPhases, bool& update);
     bool OnIsAffectedBySpellModCheck(SpellInfo const* affectSpell, SpellInfo const* checkSpell, SpellModifier const* mod);
     bool OnSpellHealingBonusTakenNegativeModifiers(Unit const* target, Unit const* caster, SpellInfo const* spellInfo, float& val);
@@ -545,13 +543,13 @@ public: /* GlobalScript */
     void OnBeforeSetBossState(uint32 id, EncounterState newState, EncounterState oldState, Map* instance);
     void AfterInstanceGameObjectCreate(Map* instance, GameObject* go);
 
-public: /* Scheduled scripts */
+  public: /* Scheduled scripts */
     uint32 IncreaseScheduledScriptsCount() { return ++_scheduledScripts; }
     uint32 DecreaseScheduledScriptCount() { return --_scheduledScripts; }
     uint32 DecreaseScheduledScriptCount(std::size_t count) { return _scheduledScripts -= count; }
     bool IsScriptScheduled() const { return _scheduledScripts > 0; }
 
-public: /* UnitScript */
+  public: /* UnitScript */
     void OnHeal(Unit* healer, Unit* reciever, uint32& gain);
     void OnDamage(Unit* attacker, Unit* victim, uint32& damage);
     void ModifyPeriodicDamageAurasTick(Unit* target, Unit* attacker, uint32& damage, SpellInfo const* spellInfo);
@@ -559,7 +557,8 @@ public: /* UnitScript */
     void ModifySpellDamageTaken(Unit* target, Unit* attacker, int32& damage, SpellInfo const* spellInfo);
     void ModifyHealReceived(Unit* target, Unit* healer, uint32& addHealth, SpellInfo const* spellInfo);
     uint32 DealDamage(Unit* AttackerUnit, Unit* pVictim, uint32 damage, DamageEffectType damagetype);
-    void OnBeforeRollMeleeOutcomeAgainst(Unit const* attacker, Unit const* victim, WeaponAttackType attType, int32& attackerMaxSkillValueForLevel, int32& victimMaxSkillValueForLevel, int32& attackerWeaponSkill, int32& victimDefenseSkill, int32& crit_chance, int32& miss_chance, int32& dodge_chance, int32& parry_chance, int32& block_chance);
+    void OnBeforeRollMeleeOutcomeAgainst(Unit const* attacker, Unit const* victim, WeaponAttackType attType, int32& attackerMaxSkillValueForLevel, int32& victimMaxSkillValueForLevel,
+        int32& crit_chance, int32& miss_chance, int32& dodge_chance, int32& parry_chance, int32& block_chance);
     void OnAuraApply(Unit* /*unit*/, Aura* /*aura*/);
     void OnAuraRemove(Unit* unit, AuraApplication* aurApp, AuraRemoveMode mode);
     bool IfNormalReaction(Unit const* unit, Unit const* target, ReputationRank& repRank);
@@ -577,24 +576,24 @@ public: /* UnitScript */
     void OnUnitDeath(Unit* unit, Unit* killer);
     void OnUnitSetShapeshiftForm(Unit* unit, uint8 form);
 
-public: /* MovementHandlerScript */
+  public: /* MovementHandlerScript */
     void OnPlayerMove(Player* player, MovementInfo movementInfo, uint32 opcode);
 
-public: /* AllCreatureScript */
-    //listener function (OnAllCreatureUpdate) is called by OnCreatureUpdate
-    //void OnAllCreatureUpdate(Creature* creature, uint32 diff);
+  public: /* AllCreatureScript */
+    // listener function (OnAllCreatureUpdate) is called by OnCreatureUpdate
+    // void OnAllCreatureUpdate(Creature* creature, uint32 diff);
     void OnBeforeCreatureSelectLevel(const CreatureTemplate* cinfo, Creature* creature, uint8& level);
     void Creature_SelectLevel(const CreatureTemplate* cinfo, Creature* creature);
     void OnCreatureSaveToDB(Creature* creature);
 
-public: /* AllGameobjectScript */
+  public: /* AllGameobjectScript */
     void OnGameObjectSaveToDB(GameObject* go);
 
-public: /* AllMapScript */
+  public: /* AllMapScript */
     void OnBeforeCreateInstanceScript(InstanceMap* instanceMap, InstanceScript** instanceData, bool load, std::string data, uint32 completedEncounterMask);
     void OnDestroyInstance(MapInstanced* mapInstanced, Map* map);
 
-public: /* BGScript */
+  public: /* BGScript */
     void OnBattlegroundStart(Battleground* bg);
     void OnBattlegroundEndReward(Battleground* bg, Player* player, TeamId winnerTeamId);
     void OnBattlegroundUpdate(Battleground* bg, uint32 diff);
@@ -603,8 +602,8 @@ public: /* BGScript */
     void OnBattlegroundRemovePlayerAtLeave(Battleground* bg, Player* player);
     void OnQueueUpdate(BattlegroundQueue* queue, uint32 diff, BattlegroundTypeId bgTypeId, BattlegroundBracketId bracket_id, uint8 arenaType, bool isRated, uint32 arenaRating);
     bool OnQueueUpdateValidity(BattlegroundQueue* queue, uint32 diff, BattlegroundTypeId bgTypeId, BattlegroundBracketId bracket_id, uint8 arenaType, bool isRated, uint32 arenaRating);
-    void OnAddGroup(BattlegroundQueue* queue, GroupQueueInfo* ginfo, uint32& index, Player* leader, Group* group, BattlegroundTypeId bgTypeId, PvPDifficultyEntry const* bracketEntry,
-        uint8 arenaType, bool isRated, bool isPremade, uint32 arenaRating, uint32 matchmakerRating, uint32 arenaTeamId, uint32 opponentsArenaTeamId);
+    void OnAddGroup(BattlegroundQueue* queue, GroupQueueInfo* ginfo, uint32& index, Player* leader, Group* group, BattlegroundTypeId bgTypeId, PvPDifficultyEntry const* bracketEntry, uint8 arenaType,
+        bool isRated, bool isPremade, uint32 arenaRating, uint32 matchmakerRating, uint32 arenaTeamId, uint32 opponentsArenaTeamId);
     bool CanFillPlayersToBG(BattlegroundQueue* queue, Battleground* bg, BattlegroundBracketId bracket_id);
     bool IsCheckNormalMatch(BattlegroundQueue* queue, Battleground* bgTemplate, BattlegroundBracketId bracket_id, uint32 minPlayers, uint32 maxPlayers);
     bool CanSendMessageBGQueue(BattlegroundQueue* queue, Player* leader, Battleground* bg, PvPDifficultyEntry const* bracketEntry);
@@ -614,14 +613,14 @@ public: /* BGScript */
     void OnBattlegroundDestroy(Battleground* bg);
     void OnBattlegroundCreate(Battleground* bg);
 
-public: /* Arena Team Script */
+  public: /* Arena Team Script */
     void OnGetSlotByType(const uint32 type, uint8& slot);
     void OnGetArenaPoints(ArenaTeam* at, float& points);
     void OnArenaTypeIDToQueueID(const BattlegroundTypeId bgTypeId, const uint8 arenaType, uint32& queueTypeID);
     void OnArenaQueueIdToArenaType(const BattlegroundQueueTypeId bgQueueTypeId, uint8& ArenaType);
     void OnSetArenaMaxPlayersPerTeam(const uint8 arenaType, uint32& maxPlayerPerTeam);
 
-public: /* SpellSC */
+  public: /* SpellSC */
     void OnCalcMaxDuration(Aura const* aura, int32& maxDuration);
     bool CanModAuraEffectDamageDone(AuraEffect const* auraEff, Unit* target, AuraApplication const* aurApp, uint8 mode, bool apply);
     bool CanModAuraEffectModDamagePercentDone(AuraEffect const* auraEff, Unit* target, AuraApplication const* aurApp, uint8 mode, bool apply);
@@ -639,16 +638,16 @@ public: /* SpellSC */
     void OnSpellCast(Spell* spell, Unit* caster, SpellInfo const* spellInfo, bool skipCheck);
     void OnSpellPrepare(Spell* spell, Unit* caster, SpellInfo const* spellInfo);
 
-public: /* GameEventScript */
+  public: /* GameEventScript */
     void OnGameEventStart(uint16 EventID);
     void OnGameEventStop(uint16 EventID);
     void OnGameEventCheck(uint16 EventID);
 
-public: /* MailScript */
-    void OnBeforeMailDraftSendMailTo(MailDraft* mailDraft, MailReceiver const& receiver, MailSender const& sender, MailCheckMask& checked, uint32& deliver_delay, uint32& custom_expiration, bool& deleteMailItemsFromDB, bool& sendMail);
+  public: /* MailScript */
+    void OnBeforeMailDraftSendMailTo(MailDraft* mailDraft, MailReceiver const& receiver, MailSender const& sender, MailCheckMask& checked, uint32& deliver_delay, uint32& custom_expiration,
+        bool& deleteMailItemsFromDB, bool& sendMail);
 
-public: /* AchievementScript */
-
+  public: /* AchievementScript */
     void SetRealmCompleted(AchievementEntry const* achievement);
     bool IsCompletedCriteria(AchievementMgr<Player>* mgr, AchievementCriteriaEntry const* achievementCriteria, AchievementEntry const* achievement, CriteriaProgress const* progress);
     bool IsCompletedCriteria(AchievementMgr<Guild>* mgr, AchievementCriteriaEntry const* achievementCriteria, AchievementEntry const* achievement, CriteriaProgress const* progress);
@@ -658,24 +657,21 @@ public: /* AchievementScript */
     bool CanCheckCriteria(AchievementMgr<Player>* mgr, AchievementCriteriaEntry const* achievementCriteria);
     bool CanCheckCriteria(AchievementMgr<Guild>* mgr, AchievementCriteriaEntry const* achievementCriteria);
 
-public: /* PetScript */
-
+  public: /* PetScript */
     void OnInitStatsForLevel(Guardian* guardian, uint8 petlevel);
     void OnCalculateMaxTalentPointsForLevel(Pet* pet, uint8 level, uint8& points);
     bool CanUnlearnSpellSet(Pet* pet, uint32 level, uint32 spell);
     bool CanUnlearnSpellDefault(Pet* pet, SpellInfo const* spellInfo);
     bool CanResetTalents(Pet* pet);
 
-public: /* ArenaScript */
-
+  public: /* ArenaScript */
     bool CanAddMember(ArenaTeam* team, ObjectGuid PlayerGuid);
     void OnGetPoints(ArenaTeam* team, uint32 memberRating, float& points);
     bool CanSaveToDB(ArenaTeam* team);
     bool OnBeforeArenaCheckWinConditions(Battleground* const bg);
     void OnArenaStart(Battleground* const bg);
 
-public: /* MiscScript */
-
+  public: /* MiscScript */
     void OnConstructObject(Object* origin);
     void OnDestructObject(Object* origin);
     void OnConstructPlayer(Player* origin);
@@ -695,14 +691,12 @@ public: /* MiscScript */
     void OnInstanceSave(InstanceSave* instanceSave);
     void GetDialogStatus(Player* player, Object* questgiver);
 
-public: /* CommandSC */
-
+  public: /* CommandSC */
     void OnHandleDevCommand(Player* player, bool& enable);
     bool OnTryExecuteCommand(ChatHandler& handler, std::string_view cmdStr);
     bool OnBeforeIsInvokerVisible(std::string name, CommandPermissions permissions, ChatHandler const& who);
 
-public: /* DatabaseScript */
-
+  public: /* DatabaseScript */
     bool OnDatabasesLoading();
     void OnAfterDatabasesLoaded(uint32 updateFlags);
     void OnAfterDatabaseLoadCreatureTemplates(std::vector<CreatureTemplate*> creatureTemplateStore);
@@ -712,24 +706,20 @@ public: /* DatabaseScript */
     void OnDatabaseSelectIndexLogout(Player* player, uint32& statementIndex, uint32& statementParam);
     void OnDatabaseGetDBRevision(std::string& revision);
 
-public: /* WorldObjectScript */
-
+  public: /* WorldObjectScript */
     void OnWorldObjectDestroy(WorldObject* object);
     void OnWorldObjectCreate(WorldObject* object);
     void OnWorldObjectSetMap(WorldObject* object, Map* map);
     void OnWorldObjectResetMap(WorldObject* object);
     void OnWorldObjectUpdate(WorldObject* object, uint32 diff);
 
-public: /* PetScript */
-
+  public: /* PetScript */
     void OnPetAddToWorld(Pet* pet);
 
-public: /* LootScript */
-
+  public: /* LootScript */
     void OnLootMoney(Player* player, uint32 gold);
 
-public: /* PlayerbotScript */
-    
+  public: /* PlayerbotScript */
     bool OnPlayerbotCheckLFGQueue(lfg::Lfg5Guids const& guidsList);
     void OnPlayerbotCheckKillTask(Player* player, Unit* victim);
     void OnPlayerbotCheckPetitionAccount(Player* player, bool& found);
@@ -740,18 +730,17 @@ public: /* PlayerbotScript */
     void OnPlayerbotLogout(Player* player);
     void OnPlayerbotLogoutBots();
 
-public: /* TicketScript */
-
+  public: /* TicketScript */
     void OnTicketCreate(GmTicket* ticket);
     void OnTicketUpdateLastChange(GmTicket* ticket);
     void OnTicketClose(GmTicket* ticket);
     void OnTicketStatusUpdate(GmTicket* ticket);
     void OnTicketResolve(GmTicket* ticket);
 
-private:
+  private:
     uint32 _scriptCount;
 
-    //atomic op counter for active scripts amount
+    // atomic op counter for active scripts amount
     std::atomic<long> _scheduledScripts;
 
     ScriptLoaderCallbackType _script_loader_callback;
@@ -760,14 +749,13 @@ private:
 
 #define sScriptMgr ScriptMgr::instance()
 
-template<class TScript>
-class ScriptRegistry
+template <class TScript> class ScriptRegistry
 {
-public:
+  public:
     typedef std::map<uint32, TScript*> ScriptMap;
     typedef typename ScriptMap::iterator ScriptMapIterator;
 
-    typedef std::vector<std::pair<TScript*,std::vector<uint16>>> ScriptVector;
+    typedef std::vector<std::pair<TScript*, std::vector<uint16>>> ScriptVector;
     typedef typename ScriptVector::iterator ScriptVectorIterator;
 
     typedef std::vector<std::vector<TScript*>> EnabledHooksVector;
@@ -782,10 +770,7 @@ public:
     // With this approach, we wouldn't call all available hooks in case if we override just one hook.
     static EnabledHooksVector EnabledHooks;
 
-    static void InitEnabledHooksIfNeeded(uint16 totalAvailableHooks)
-    {
-        EnabledHooks.resize(totalAvailableHooks);
-    }
+    static void InitEnabledHooksIfNeeded(uint16 totalAvailableHooks) { EnabledHooks.resize(totalAvailableHooks); }
 
     static void AddScript(TScript* const script, std::vector<uint16> enabledHooks = {})
     {
@@ -874,8 +859,7 @@ public:
                 {
                     // The script uses a script name from database, but isn't assigned to anything.
                     if (script->GetName().find("Smart") == std::string::npos)
-                        LOG_ERROR("sql.sql", "Script named '{}' is not assigned in the database.",
-                                         script->GetName());
+                        LOG_ERROR("sql.sql", "Script named '{}' is not assigned in the database.", script->GetName());
                 }
             }
             else
@@ -900,7 +884,7 @@ public:
         return nullptr;
     }
 
-private:
+  private:
     // See if the script is using the same memory as another script. If this happens, it means that
     // someone forgot to allocate new memory for a script.
     static bool _checkMemory(TScript* const script)
@@ -911,8 +895,7 @@ private:
         {
             if (it->second == script)
             {
-                LOG_ERROR("scripts", "Script '{}' has same memory pointer as '{}'.",
-                               script->GetName(), it->second->GetName());
+                LOG_ERROR("scripts", "Script '{}' has same memory pointer as '{}'.", script->GetName(), it->second->GetName());
 
                 return false;
             }
@@ -926,9 +909,9 @@ private:
 };
 
 // Instantiate static members of ScriptRegistry.
-template<class TScript> std::map<uint32, TScript*> ScriptRegistry<TScript>::ScriptPointerList;
-template<class TScript> std::vector<std::pair<TScript*,std::vector<uint16>>> ScriptRegistry<TScript>::ALScripts;
-template<class TScript> std::vector<std::vector<TScript*>> ScriptRegistry<TScript>::EnabledHooks;
-template<class TScript> uint32 ScriptRegistry<TScript>::_scriptIdCounter = 0;
+template <class TScript> std::map<uint32, TScript*> ScriptRegistry<TScript>::ScriptPointerList;
+template <class TScript> std::vector<std::pair<TScript*, std::vector<uint16>>> ScriptRegistry<TScript>::ALScripts;
+template <class TScript> std::vector<std::vector<TScript*>> ScriptRegistry<TScript>::EnabledHooks;
+template <class TScript> uint32 ScriptRegistry<TScript>::_scriptIdCounter = 0;
 
 #endif

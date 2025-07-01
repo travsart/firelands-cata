@@ -19,25 +19,16 @@
 #include "ScriptMgr.h"
 #include "ScriptMgrMacros.h"
 
-void ScriptMgr::OnHeal(Unit* healer, Unit* reciever, uint32& gain)
-{
-    CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_HEAL, script->OnHeal(healer, reciever, gain));
-}
+void ScriptMgr::OnHeal(Unit* healer, Unit* reciever, uint32& gain) { CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_HEAL, script->OnHeal(healer, reciever, gain)); }
 
-void ScriptMgr::OnDamage(Unit* attacker, Unit* victim, uint32& damage)
-{
-    CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_DAMAGE, script->OnDamage(attacker, victim, damage));
-}
+void ScriptMgr::OnDamage(Unit* attacker, Unit* victim, uint32& damage) { CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_DAMAGE, script->OnDamage(attacker, victim, damage)); }
 
 void ScriptMgr::ModifyPeriodicDamageAurasTick(Unit* target, Unit* attacker, uint32& damage, SpellInfo const* spellInfo)
 {
     CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_MODIFY_PERIODIC_DAMAGE_AURAS_TICK, script->ModifyPeriodicDamageAurasTick(target, attacker, damage, spellInfo));
 }
 
-void ScriptMgr::ModifyMeleeDamage(Unit* target, Unit* attacker, uint32& damage)
-{
-    CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_MODIFY_MELEE_DAMAGE, script->ModifyMeleeDamage(target, attacker, damage));
-}
+void ScriptMgr::ModifyMeleeDamage(Unit* target, Unit* attacker, uint32& damage) { CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_MODIFY_MELEE_DAMAGE, script->ModifyMeleeDamage(target, attacker, damage)); }
 
 void ScriptMgr::ModifySpellDamageTaken(Unit* target, Unit* attacker, int32& damage, SpellInfo const* spellInfo)
 {
@@ -68,20 +59,17 @@ uint32 ScriptMgr::DealDamage(Unit* AttackerUnit, Unit* pVictim, uint32 damage, D
     return damage;
 }
 
-void ScriptMgr::OnBeforeRollMeleeOutcomeAgainst(Unit const* attacker, Unit const* victim, WeaponAttackType attType, int32& attackerMaxSkillValueForLevel, int32& victimMaxSkillValueForLevel, int32& attackerWeaponSkill, int32& victimDefenseSkill, int32& crit_chance, int32& miss_chance, int32& dodge_chance, int32& parry_chance, int32& block_chance)
+void ScriptMgr::OnBeforeRollMeleeOutcomeAgainst(Unit const* attacker, Unit const* victim, WeaponAttackType attType, int32& attackerMaxSkillValueForLevel, int32& victimMaxSkillValueForLevel,
+    int32& crit_chance, int32& miss_chance, int32& dodge_chance, int32& parry_chance, int32& block_chance)
 {
-    CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_BEFORE_ROLL_MELEE_OUTCOME_AGAINST, script->OnBeforeRollMeleeOutcomeAgainst(attacker, victim, attType, attackerMaxSkillValueForLevel, victimMaxSkillValueForLevel, attackerWeaponSkill, victimDefenseSkill, crit_chance, miss_chance, dodge_chance, parry_chance, block_chance));
+    CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_BEFORE_ROLL_MELEE_OUTCOME_AGAINST,
+        script->OnBeforeRollMeleeOutcomeAgainst(
+            attacker, victim, attType, attackerMaxSkillValueForLevel, victimMaxSkillValueForLevel, crit_chance, miss_chance, dodge_chance, parry_chance, block_chance));
 }
 
-void ScriptMgr::OnAuraApply(Unit* unit, Aura* aura)
-{
-    CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_AURA_APPLY, script->OnAuraApply(unit, aura));
-}
+void ScriptMgr::OnAuraApply(Unit* unit, Aura* aura) { CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_AURA_APPLY, script->OnAuraApply(unit, aura)); }
 
-void ScriptMgr::OnAuraRemove(Unit* unit, AuraApplication* aurApp, AuraRemoveMode mode)
-{
-    CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_AURA_REMOVE, script->OnAuraRemove(unit, aurApp, mode));
-}
+void ScriptMgr::OnAuraRemove(Unit* unit, AuraApplication* aurApp, AuraRemoveMode mode) { CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_AURA_REMOVE, script->OnAuraRemove(unit, aurApp, mode)); }
 
 bool ScriptMgr::IfNormalReaction(Unit const* unit, Unit const* target, ReputationRank& repRank)
 {
@@ -123,38 +111,19 @@ void ScriptMgr::OnPatchValuesUpdate(Unit const* unit, ByteBuffer& valuesUpdateBu
     CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_PATCH_VALUES_UPDATE, script->OnPatchValuesUpdate(unit, valuesUpdateBuf, posPointers, target));
 }
 
-void ScriptMgr::OnUnitUpdate(Unit* unit, uint32 diff)
-{
-    CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_UNIT_UPDATE, script->OnUnitUpdate(unit, diff));
-}
+void ScriptMgr::OnUnitUpdate(Unit* unit, uint32 diff) { CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_UNIT_UPDATE, script->OnUnitUpdate(unit, diff)); }
 
-void ScriptMgr::OnDisplayIdChange(Unit* unit, uint32 displayId)
-{
-    CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_DISPLAYID_CHANGE, script->OnDisplayIdChange(unit, displayId));
-}
+void ScriptMgr::OnDisplayIdChange(Unit* unit, uint32 displayId) { CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_DISPLAYID_CHANGE, script->OnDisplayIdChange(unit, displayId)); }
 
-void ScriptMgr::OnUnitEnterEvadeMode(Unit* unit, uint8 evadeReason)
-{
-    CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_UNIT_ENTER_EVADE_MODE, script->OnUnitEnterEvadeMode(unit, evadeReason));
-}
+void ScriptMgr::OnUnitEnterEvadeMode(Unit* unit, uint8 evadeReason) { CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_UNIT_ENTER_EVADE_MODE, script->OnUnitEnterEvadeMode(unit, evadeReason)); }
 
-void ScriptMgr::OnUnitEnterCombat(Unit* unit, Unit* victim)
-{
-    CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_UNIT_ENTER_COMBAT, script->OnUnitEnterCombat(unit, victim));
-}
+void ScriptMgr::OnUnitEnterCombat(Unit* unit, Unit* victim) { CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_UNIT_ENTER_COMBAT, script->OnUnitEnterCombat(unit, victim)); }
 
-void ScriptMgr::OnUnitDeath(Unit* unit, Unit* killer)
-{
-    CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_UNIT_DEATH, script->OnUnitDeath(unit, killer));
-}
+void ScriptMgr::OnUnitDeath(Unit* unit, Unit* killer) { CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_UNIT_DEATH, script->OnUnitDeath(unit, killer)); }
 
-void ScriptMgr::OnUnitSetShapeshiftForm(Unit* unit, uint8 form)
-{
-    CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_UNIT_SET_SHAPESHIFT_FORM, script->OnUnitSetShapeshiftForm(unit, form));
-}
+void ScriptMgr::OnUnitSetShapeshiftForm(Unit* unit, uint8 form) { CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_UNIT_SET_SHAPESHIFT_FORM, script->OnUnitSetShapeshiftForm(unit, form)); }
 
-UnitScript::UnitScript(const char* name, bool addToScripts, std::vector<uint16> enabledHooks)
-    : ScriptObject(name, UNITHOOK_END)
+UnitScript::UnitScript(const char* name, bool addToScripts, std::vector<uint16> enabledHooks) : ScriptObject(name, UNITHOOK_END)
 {
     if (addToScripts)
     {
