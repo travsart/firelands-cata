@@ -3111,12 +3111,17 @@ float Unit::CalculateLevelPenalty(SpellInfo const* spellProto) const
     return AddPct(LvlFactor, -LvlPenalty);
 }
 
-void Unit::SendMeleeAttackStart(Unit* victim)
+void Unit::SendMeleeAttackStart(Unit* victim, Player* sendTo)
 {
     WorldPackets::Combat::AttackStart packet;
     packet.Attacker = GetGUID();
     packet.Victim = victim->GetGUID();
-    SendMessageToSet(packet.Write(), IsPlayer());
+
+    if (sendTo)
+        sendTo->SendDirectMessage(packet.Write());
+    else
+        SendMessageToSet(packet.Write(), true);
+    LOG_DEBUG("entities.unit", "WORLD: Sent SMSG_ATTACKSTART");
 }
 
 void Unit::SendMeleeAttackStop(Unit* victim)
@@ -3142,6 +3147,10 @@ bool Unit::isSpellBlocked(Unit* victim, SpellInfo const* spellProto)
 
     if (victim->HasAuraType(SPELL_AURA_IGNORE_HIT_DIRECTION) || victim->HasInArc(float(M_PI), this))
     {
+        // Check creatures flags_extra for disable block
+        if (victim->IsCreature() && victim->ToCreature()->HasFlagsExtra(CREATURE_FLAG_EXTRA_NO_BLOCK))
+            return false;
+
         float blockChance = GetUnitBlockChance(victim);
         if (blockChance && roll_chance_f(blockChance))
             return true;
