@@ -3348,10 +3348,10 @@ SpellMissInfo Unit::MagicSpellHitResult(Unit* victim, SpellInfo const* spellInfo
     // Spells with SPELL_ATTR3_ALWAYS_HIT will additionally fully ignore
     // resist and deflect chances
     // xinef: skip all calculations, proof: Toxic Tolerance quest
-    if (spellInfo->HasAttribute(SPELL_ATTR3_ALWAYS_HIT))
+    if (spellInfo->HasAttribute(SPELL_ATTR3_IGNORE_HIT_RESULT))
         return SPELL_MISS_NONE;
 
-    if (spellInfo->HasAttribute(SPELL_ATTR7_NO_ATTACK_MISS))
+    if (spellInfo->HasAttribute(SPELL_ATTR7_CANT_MISS))
     {
         return SPELL_MISS_NONE;
     }
