@@ -3191,6 +3191,11 @@ int32 Unit::GetMechanicResistChance(SpellInfo const* spellInfo) const
 // Melee based spells hit result calculations
 SpellMissInfo Unit::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo)
 {
+    // Spells with SPELL_ATTR3_ALWAYS_HIT will additionally fully ignore
+    // resist and deflect chances
+    if (spellInfo->HasAttribute(SPELL_ATTR3_IGNORE_HIT_RESULT))
+        return SPELL_MISS_NONE;
+
     WeaponAttackType attType = BASE_ATTACK;
 
     // Check damage class instead of attack type to correctly handle judgements
@@ -3198,7 +3203,7 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo
     if (spellInfo->DmgClass == SPELL_DAMAGE_CLASS_RANGED)
         attType = RANGED_ATTACK;
 
-    uint32 roll = urand(0, 9999);
+    uint32 roll = urand(0, 10000);
     uint32 missChance = uint32(MeleeSpellMissChance(victim, attType, spellInfo) * 100.0f);
 
     // Roll miss

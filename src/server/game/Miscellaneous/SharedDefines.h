@@ -65,30 +65,30 @@ enum Gender
 // DisplayRace values from CreatureDisplayInfoExtra.dbc
 enum class DisplayRace : uint8
 {
-    None              = 0,
-    Human             = 1,
-    Orc               = 2,
-    Dwarf             = 3,
-    NightElf          = 4,
-    Undead            = 5,
-    Tauren            = 6,
-    Gnome             = 7,
-    Troll             = 8,
-    Goblin            = 9,
-    BloodElf          = 10,
-    Draenei           = 11,
-    FelOrc            = 12,
-    Naga              = 13,
-    Broken            = 14,
-    Skeleton          = 15,
-    Vrykul            = 16,
-    Tuskarr           = 17,
-    ForestTroll       = 18,
-    Taunka            = 19,
+    None = 0,
+    Human = 1,
+    Orc = 2,
+    Dwarf = 3,
+    NightElf = 4,
+    Undead = 5,
+    Tauren = 6,
+    Gnome = 7,
+    Troll = 8,
+    Goblin = 9,
+    BloodElf = 10,
+    Draenei = 11,
+    FelOrc = 12,
+    Naga = 13,
+    Broken = 14,
+    Skeleton = 15,
+    Vrykul = 16,
+    Tuskarr = 17,
+    ForestTroll = 18,
+    Taunka = 19,
     NorthrendSkeleton = 20,
-    IceTroll          = 21,
-    RACE_WORGEN       = 22,
-    RACE_GILNEAN      = 23
+    IceTroll = 21,
+    RACE_WORGEN = 22,
+    RACE_GILNEAN = 23
 };
 
 // max+1 for player race
@@ -141,7 +141,7 @@ enum UnitClass
 
 #define PLAYER_MAX_BATTLEGROUND_QUEUES 2
 
-enum ReputationRank: uint8
+enum ReputationRank : uint8
 {
     REP_HATED = 0,
     REP_HOSTILE = 1,
@@ -339,14 +339,7 @@ const uint32 ItemQualityColors[MAX_ITEM_QUALITY] = {
 };
 
 std::size_t constexpr MAX_QUEST_DIFFICULTY = 5;
-uint32 constexpr QuestDifficultyColors[MAX_QUEST_DIFFICULTY] =
-{
-    0xff40c040,
-    0xff808080,
-    0xffffff00,
-    0xffff8040,
-    0xffff2020
-};
+uint32 constexpr QuestDifficultyColors[MAX_QUEST_DIFFICULTY] = {0xff40c040, 0xff808080, 0xffffff00, 0xffff8040, 0xffff2020};
 
 // ***********************************
 // Spell Attributes definitions
@@ -1639,7 +1632,6 @@ enum SpellImmunity
     IMMUNITY_MECHANIC = 5, // enum Mechanics
     IMMUNITY_ID = 6,
     IMMUNITY_ALLOW_ID = 7, // xinef: special type of immunity, npc is immune to everything except for those spells id
-
 
     MAX_SPELL_IMMUNITY
 };
