@@ -3033,12 +3033,12 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
     return MELEE_HIT_NORMAL;
 }
 
-uint32 Unit::CalculateDamage(WeaponAttackType attType, bool normalized, bool addTotalPct) const
+uint32 Unit::CalculateDamage(WeaponAttackType attType, bool normalized, bool addTotalPct, uint8 itemDamagesMask)
 {
     float minDamage = 0.0f;
     float maxDamage = 0.0f;
 
-    if (normalized || !addTotalPct)
+    if (normalized || !addTotalPct || itemDamagesMask)
     {
         // get both by default
         if (!itemDamagesMask)
@@ -3135,7 +3135,7 @@ void Unit::SendMeleeAttackStop(Unit* victim)
         LOG_DEBUG("entities.unit", "%s %u stopped attacking", (IsPlayer() ? "Player" : "Creature"), GetGUID().GetCounter());
 }
 
-bool Unit::isSpellBlocked(Unit* victim, SpellInfo const* spellProto)
+bool Unit::isSpellBlocked(Unit* victim, SpellInfo const* spellProto, WeaponAttackType attackType = BASE_ATTACK)
 {
     // These spells can't be blocked
     if (spellProto && (spellProto->HasAttribute(SPELL_ATTR0_NO_ACTIVE_DEFENSE) || spellProto->HasAttribute(SPELL_ATTR3_IGNORE_HIT_RESULT) || spellProto->HasAttribute(SPELL_ATTR8_CANT_BLOCK)))
@@ -3166,7 +3166,7 @@ bool Unit::isBlockCritical()
     return false;
 }
 
-int32 Unit::GetMechanicResistChance(SpellInfo const* spellInfo) const
+int32 Unit::GetMechanicResistChance(SpellInfo const* spellInfo)
 {
     if (!spellInfo)
         return 0;
