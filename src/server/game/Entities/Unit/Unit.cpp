@@ -3349,7 +3349,9 @@ SpellMissInfo Unit::MagicSpellHitResult(Unit* victim, SpellInfo const* spellInfo
     // resist and deflect chances
     // xinef: skip all calculations, proof: Toxic Tolerance quest
     if (spellInfo->HasAttribute(SPELL_ATTR3_IGNORE_HIT_RESULT))
+    {
         return SPELL_MISS_NONE;
+    }
 
     if (spellInfo->HasAttribute(SPELL_ATTR7_CANT_MISS))
     {
@@ -3373,29 +3375,41 @@ SpellMissInfo Unit::MagicSpellHitResult(Unit* victim, SpellInfo const* spellInfo
     }
 
     // Base hit chance from attacker and victim levels
-    int32 modHitChance = levelDiff < 3 ? 96 - levelDiff : 94 - (levelDiff - 2) * MISS_CHANCE_MULTIPLIER;
+    int32 modHitChance = 100;
+    if (levelBasedHitDiff >= 0)
+    {
+        if (victim->IsPlayer())
+        {
+            modHitChance = 94 - 3 * std::min(levelBasedHitDiff, 3);
+            levelBasedHitDiff -= 3;
+        }
+        else
+        {
+            modHitChance = 96 - std::min(levelBasedHitDiff, 2);
+            levelBasedHitDiff -= 2;
+        }
+        if (levelBasedHitDiff > 0)
+            modHitChance -= lchance * std::min(levelBasedHitDiff, 7);
+    }
+    else
+    {
+        modHitChance = 97 - levelBasedHitDiff;
+    }
+    modHitChance *= MISS_CHANCE_MULTIPLIER;
 
     // Spellmod from SPELLMOD_RESIST_MISS_CHANCE
     if (Player* modOwner = GetSpellModOwner())
         modOwner->ApplySpellMod(spellInfo->Id, SPELLMOD_RESIST_MISS_CHANCE, modHitChance);
 
-    // Increase from attacker SPELL_AURA_MOD_INCREASES_SPELL_PCT_TO_HIT auras
-    modHitChance += GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_INCREASES_SPELL_PCT_TO_HIT, schoolMask);
+    // Chance hit from victim SPELL_AURA_MOD_ATTACKER_SPELL_HIT_CHANCE auras
+    modHitChance += victim->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_ATTACKER_SPELL_HIT_CHANCE, schoolMask);
+    // Reduce spell hit chance for Area of effect spells from victim SPELL_AURA_MOD_AOE_AVOIDANCE aura
+    if (spellInfo->IsAffectingArea())
+        modHitChance -= victim->GetTotalAuraModifier(SPELL_AURA_MOD_AOE_AVOIDANCE);
 
-    // Spells with SPELL_ATTR3_ALWAYS_HIT will ignore target's avoidance effects
-    // xinef: imo it should completly ignore all calculations, eg: 14792. Hits 80 level players on blizz without any problems
-    // if (!spell->HasAttribute(SPELL_ATTR3_ALWAYS_HIT))
-    {
-        // Chance hit from victim SPELL_AURA_MOD_ATTACKER_SPELL_HIT_CHANCE auras
-        modHitChance += victim->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_ATTACKER_SPELL_HIT_CHANCE, schoolMask);
-        // Reduce spell hit chance for Area of effect spells from victim SPELL_AURA_MOD_AOE_AVOIDANCE aura
-        if (spellInfo->IsAffectingArea())
-            modHitChance -= victim->GetTotalAuraModifier(SPELL_AURA_MOD_AOE_AVOIDANCE);
-
-        // Decrease hit chance from victim rating bonus
-        if (victim->IsPlayer())
-            modHitChance -= int32(victim->ToPlayer()->GetRatingBonusValue(CR_HIT_TAKEN_SPELL));
-    }
+    // Decrease hit chance from victim rating bonus
+    if (victim->IsPlayer())
+        modHitChance -= int32(victim->ToPlayer()->GetRatingBonusValue(CR_HIT_TAKEN_SPELL));
 
     int32 HitChance = modHitChance * 100;
     // Increase hit chance from attacker SPELL_AURA_MOD_SPELL_HIT_CHANCE and attacker ratings
@@ -3448,7 +3462,7 @@ SpellMissInfo Unit::MagicSpellHitResult(Unit* victim, SpellInfo const* spellInfo
         return SPELL_MISS_RESIST;
 
     // cast by caster in front of victim
-    if (!victim->HasUnitState(UNIT_STATE_STUNNED) && (victim->HasInArc(M_PI, this) || victim->HasIgnoreHitDirectionAura()))
+    if (!victim->HasUnitState(UNIT_STATE_CONTROLLED) && !victim->HasUnitState(UNIT_STATE_STUNNED) && (victim->HasInArc(M_PI, this) || victim->HasIgnoreHitDirectionAura()))
     {
         int32 deflect_chance = victim->GetTotalAuraModifier(SPELL_AURA_DEFLECT_SPELLS) * 100;
         tmp += deflect_chance;
