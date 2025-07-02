@@ -65,6 +65,7 @@
 #include "QuestDef.h"
 #include "ReputationMgr.h"
 #include "ScheduledChangeAI.h"
+#include "SharedDefines.h"
 #include "Spell.h"
 #include "SpellAuraEffects.h"
 #include "SpellAuras.h"
@@ -2850,16 +2851,15 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
     int32 miss_chance = int32(MeleeSpellMissChance(victim, attType));
 
     // Critical hit chance
-    int32 crit_chance = int32(GetUnitCriticalChance(attType, victim));
-
-    float dodge_chance = victim->GetUnitDodgeChance();
-    float block_chance = victim->GetUnitBlockChance();
-    float parry_chance = victim->GetUnitParryChance();
+    int32 crit_chance = int32(GetUnitCriticalChance(attType, victim) * 100.0f);
+    int32 dodge_chance = int32(GetUnitDodgeChance(attType, victim) * 100.0f);
+    int32 block_chance = int32(GetUnitBlockChance(victim) * 100.0f);
+    int32 parry_chance = int32(GetUnitParryChance(attType, victim) * 100.0f);
 
     // Useful if want to specify crit & miss chances for melee, else it could be removed
     // LOG_DEBUG("entities.unit", "MELEE OUTCOME: miss {} crit {} dodge {} parry {} block {}", miss_chance, crit_chance, dodge_chance, parry_chance, block_chance);
 
-    return RollMeleeOutcomeAgainst(victim, attType, int32(crit_chance * 100), int32(miss_chance * 100), int32(dodge_chance * 100), int32(parry_chance * 100), int32(block_chance * 100));
+    return RollMeleeOutcomeAgainst(victim, attType, crit_chance, miss_chance, dodge_chance, parry_chance, block_chance);
 }
 
 MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackType attType, int32 crit_chance, int32 miss_chance, int32 dodge_chance, int32 parry_chance, int32 block_chance) const
@@ -2877,11 +2877,6 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
 
     // Critical hit chance
     int32 crit_chance = int32(GetUnitCriticalChance(attType, victim) * 100.0f);
-
-    // stunned target cannot dodge and this is check in GetUnitDodgeChance() (returned 0 in this case)
-    int32 dodge_chance = int32(GetUnitDodgeChance(attType, victim) * 100.0f);
-    int32 block_chance = int32(GetUnitBlockChance(victim) * 100.0f);
-    int32 parry_chance = int32(GetUnitParryChance(attType, victim) * 100.0f);
 
     // check if attack comes from behind, nobody can parry or block if attacker is behind
     bool canParryOrBlock = victim->HasInArc(float(M_PI), this) || victim - HasIgnoreHitDirectionAura();
@@ -3481,10 +3476,10 @@ SpellMissInfo Unit::MagicSpellHitResult(Unit* victim, SpellInfo const* spellInfo
 //   Parry
 // For spells
 //   Resist
-SpellMissInfo Unit::SpellHitResult(Unit* victim, SpellInfo const* spellInfo, bool canReflect /*= false*/, Optional<uint8> effectMask /*= nullptr*/)
+SpellMissInfo Unit::SpellHitResult(Unit* victim, SpellInfo const* spellInfo, bool canReflect /*= false*/)
 {
     // Check for immune
-    if (victim->IsImmunedToSpell(spellInfo, this, effectMask))
+    if (victim->IsImmunedToSpell(spellInfo))
         return SPELL_MISS_IMMUNE;
 
     // Damage immunity is only checked if the spell has damage effects, this immunity must not prevent aura apply
@@ -3494,14 +3489,15 @@ SpellMissInfo Unit::SpellHitResult(Unit* victim, SpellInfo const* spellInfo, boo
 
     // All positive spells can`t miss
     /// @todo client not show miss log for this spells - so need find info for this in dbc and use it!
-    if (spellInfo->IsPositive() && !IsHostileTo(victim)) // prevent from affecting enemy by "positive" spell
+    if ((spell->IsPositive() || spell->HasEffect(SPELL_EFFECT_DISPEL)) && !IsHostileTo(victim)) // prevent from affecting enemy by "positive" spell
         return SPELL_MISS_NONE;
 
     if (this == victim)
         return SPELL_MISS_NONE;
 
     // Return evade for units in evade mode
-    if (victim->GetTypeId() == TYPEID_UNIT && victim->ToCreature()->IsEvadingAttacks())
+    if (victim->IsCreature() && victim->ToCreature()->IsEvadingAttacks() && !spell->HasAura(SPELL_AURA_CONTROL_VEHICLE) && !spell->HasAttribute(SPELL_ATTR0_CU_IGNORE_EVADE) &&
+        !spell->HasAttribute(SPELL_ATTR1_AURA_STAYS_AFTER_COMBAT))
         return SPELL_MISS_EVADE;
 
     // Try victim reflect spell
@@ -3523,11 +3519,34 @@ SpellMissInfo Unit::SpellHitResult(Unit* victim, SpellInfo const* spellInfo, boo
     case SPELL_DAMAGE_CLASS_MELEE:
         return MeleeSpellHitResult(victim, spellInfo);
     case SPELL_DAMAGE_CLASS_NONE:
-        return SPELL_MISS_NONE;
+    {
+        if (spell->SpellFamilyName)
+        {
+            return SPELL_MISS_NONE;
+        }
+        // Xinef: apply DAMAGE_CLASS_MAGIC conditions to damaging DAMAGE_CLASS_NONE spells
+        for (uint8 i = EFFECT_0; i < MAX_SPELL_EFFECTS; ++i)
+            if (spell->Effects[i].Effect && spell->Effects[i].Effect != SPELL_EFFECT_SCHOOL_DAMAGE)
+                if (spell->Effects[i].ApplyAuraName != SPELL_AURA_PERIODIC_DAMAGE)
+                    return SPELL_MISS_NONE;
+        [[fallthrough]];
+    }
     case SPELL_DAMAGE_CLASS_MAGIC:
-        return MagicSpellHitResult(victim, spellInfo);
+        return MagicSpellHitResult(victim, spell);
     }
     return SPELL_MISS_NONE;
+}
+
+SpellMissInfo Unit::SpellHitResult(Unit* victim, Spell const* spell, bool canReflect)
+{
+    SpellInfo const* spellInfo = spell->GetSpellInfo();
+
+    if (!spellInfo)
+    {
+        return SPELL_MISS_NONE;
+    }
+
+    return SpellHitResult(victim, spellInfo, canReflect);
 }
 
 float Unit::GetUnitDodgeChance(WeaponAttackType attType, Unit const* victim) const
@@ -3711,6 +3730,21 @@ float Unit::GetUnitCriticalChanceTaken(WeaponAttackType attackType, float critDo
         chance += GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_RANGED_CRIT_CHANCE);
     else
         chance += GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_MELEE_CRIT_CHANCE);
+
+    AuraEffectList const& mTotalAuraList = victim->GetAuraEffectsByType(SPELL_AURA_MOD_CRIT_CHANCE_FOR_CASTER);
+    for (AuraEffectList::const_iterator i = mTotalAuraList.begin(); i != mTotalAuraList.end(); ++i)
+    {
+        if (GetGUID() != (*i)->GetCasterGUID())
+            continue;
+
+        crit += (*i)->GetAmount();
+    }
+
+    // reduce crit chance from Rating for players
+    if (attackType != RANGED_ATTACK)
+        Unit::ApplyResilience(victim, &crit, nullptr, false, CR_CRIT_TAKEN_MELEE);
+    else
+        Unit::ApplyResilience(victim, &crit, nullptr, false, CR_CRIT_TAKEN_RANGED);
 
     // applied after resilience
     chance += GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE);

@@ -415,8 +415,8 @@ enum SpellAttr1
     SPELL_ATTR1_FINISHING_MOVE_DURATION = 0x00400000,         // 22 Finishing Move - Duration
     SPELL_ATTR1_UNK23 = 0x00800000,                           // 23
     SPELL_ATTR1_IS_FISHING = 0x01000000,                      // 24 only fishing spells
-    SPELL_ATTR1_UNK25 = 0x02000000,                           // 25
-    SPELL_ATTR1_UNK26 = 0x04000000,                           // 26 works correctly with [target=focus] and [target=mouseover] macros?
+    SPELL_ATTR1_AURA_STAYS_AFTER_COMBAT = 0x02000000,         // 25
+    SPELL_ATTR1_REQUIRE_ALL_TARGETS = 0x04000000,             // 26 works correctly with [target=focus] and [target=mouseover] macros?
     SPELL_ATTR1_DISCOUNT_POWER_ON_MISS = 0x08000000,          // 27 Discount Power On Miss
     SPELL_ATTR1_DONT_DISPLAY_IN_AURA_BAR = 0x10000000,        // 28 client doesn't display these spells in aura bar
     SPELL_ATTR1_CHANNEL_DISPLAY_SPELL_NAME = 0x20000000,      // 29 spell name is displayed in cast bar instead of 'channeling' text
