@@ -3831,21 +3831,30 @@ void Unit::_UpdateAutoRepeatSpell()
 {
     SpellInfo const* autoRepeatSpellInfo = m_currentSpells[CURRENT_AUTOREPEAT_SPELL]->m_spellInfo;
 
+    if (!autoRepeatSpellInfo)
+    {
+        return;
+    }
+
+    static uint32 const HUNTER_AUTOSHOOT = 75;
     // check "realtime" interrupts
     // don't cancel spells which are affected by a SPELL_AURA_CAST_WHILE_WALKING effect
-    if (((IsPlayer() && ToPlayer()->isMoving()) || IsNonMeleeSpellCast(false, false, true, autoRepeatSpellInfo->Id == 75)) &&
+    if (((IsPlayer() && ToPlayer()->isMoving() && spellProto->Id != HUNTER_AUTOSHOOT) || IsNonMeleeSpellCast(false, false, true, autoRepeatSpellInfo->Id == HUNTER_AUTOSHOOT)) &&
         !HasAuraTypeWithAffectMask(SPELL_AURA_CAST_WHILE_WALKING, m_currentSpells[CURRENT_AUTOREPEAT_SPELL]->m_spellInfo))
     {
         // cancel wand shoot
-        if (autoRepeatSpellInfo->Id != 75)
+        if (autoRepeatSpellInfo->Id != HUNTER_AUTOSHOOT)
             InterruptSpell(CURRENT_AUTOREPEAT_SPELL);
         m_AutoRepeatFirstCast = true;
         return;
     }
 
     // apply delay (Auto Shot (spellID 75) not affected)
-    if (m_AutoRepeatFirstCast && getAttackTimer(RANGED_ATTACK) < 500 && autoRepeatSpellInfo->Id != 75)
+    if (m_AutoRepeatFirstCast && getAttackTimer(RANGED_ATTACK) < 500 && autoRepeatSpellInfo->Id != HUNTER_AUTOSHOOT)
+    {
         setAttackTimer(RANGED_ATTACK, 500);
+    }
+
     m_AutoRepeatFirstCast = false;
 
     // castroutine
@@ -3855,11 +3864,14 @@ void Unit::_UpdateAutoRepeatSpell()
         SpellCastResult result = m_currentSpells[CURRENT_AUTOREPEAT_SPELL]->CheckCast(true);
         if (result != SPELL_CAST_OK)
         {
-            if (autoRepeatSpellInfo->Id != 75)
+            if (autoRepeatSpellInfo->Id != HUNTER_AUTOSHOOT)
+            {
                 InterruptSpell(CURRENT_AUTOREPEAT_SPELL);
+            }
             else if (IsPlayer())
+            {
                 Spell::SendCastResult(ToPlayer(), autoRepeatSpellInfo, 1, result);
-
+            }
             return;
         }
 
@@ -3872,6 +3884,24 @@ void Unit::_UpdateAutoRepeatSpell()
     }
 }
 
+bool Unit::CanSparringWith(Unit const* attacker) const
+{
+    if (!IsCreature() || IsCharmedOwnedByPlayerOrPlayer())
+        return false;
+
+    if (!attacker)
+        return false;
+
+    if (!attacker->IsCreature() || attacker->IsCharmedOwnedByPlayerOrPlayer())
+        return false;
+
+    if (Creature const* creature = ToCreature())
+        if (!creature->GetSparringPct())
+            return false;
+
+    return true;
+}
+
 void Unit::SetCurrentCastedSpell(Spell* pSpell)
 {
     ASSERT(pSpell); // nullptr may be never passed here, use InterruptSpell or InterruptNonMeleeSpells
@@ -3881,8 +3911,10 @@ void Unit::SetCurrentCastedSpell(Spell* pSpell)
     if (pSpell == m_currentSpells[CSpellType]) // avoid breaking self
         return;
 
+    bool bySelf = m_currentSpells[CSpellType] && m_currentSpells[CSpellType]->m_spellInfo->Id == pSpell->m_spellInfo->Id;
+
     // break same type spell if it is not delayed
-    InterruptSpell(CSpellType, false, true, pSpell);
+    InterruptSpell(CSpellType, false, true, bySelf);
 
     // special breakage effects:
     switch (CSpellType)
@@ -3890,15 +3922,31 @@ void Unit::SetCurrentCastedSpell(Spell* pSpell)
     case CURRENT_GENERIC_SPELL:
     {
         // generic spells always break channeled not delayed spells
-        InterruptSpell(CURRENT_CHANNELED_SPELL, false);
+        if (Spell* s = GetCurrentSpell(CURRENT_CHANNELED_SPELL))
+        {
+            if (!s->GetSpellInfo()->IsActionAllowedChannel())
+            {
+                InterruptSpell(CURRENT_CHANNELED_SPELL, false);
+            }
+        }
 
         // autorepeat breaking
         if (m_currentSpells[CURRENT_AUTOREPEAT_SPELL])
         {
             // break autorepeat if not Auto Shot
-            if (m_currentSpells[CURRENT_AUTOREPEAT_SPELL]->GetSpellInfo()->Id != 75)
+            if (m_currentSpells[CURRENT_AUTOREPEAT_SPELL]->m_spellInfo->Id != 75)
                 InterruptSpell(CURRENT_AUTOREPEAT_SPELL);
             m_AutoRepeatFirstCast = true;
+        }
+
+        // melee spells breaking
+        if (m_currentSpells[CURRENT_MELEE_SPELL])
+        {
+            // break melee spells if cast time
+            if (pSpell->GetCastTime() > 0)
+            {
+                InterruptSpell(CURRENT_MELEE_SPELL);
+            }
         }
         if (pSpell->GetCastTime() > 0)
             AddUnitState(UNIT_STATE_CASTING);
@@ -3909,7 +3957,7 @@ void Unit::SetCurrentCastedSpell(Spell* pSpell)
     {
         // channel spells always break generic non-delayed and any channeled spells
         InterruptSpell(CURRENT_GENERIC_SPELL, false);
-        InterruptSpell(CURRENT_CHANNELED_SPELL);
+        InterruptSpell(CURRENT_CHANNELED_SPELL, true, true, bySelf);
 
         // it also does break autorepeat if not Auto Shot
         if (m_currentSpells[CURRENT_AUTOREPEAT_SPELL] && m_currentSpells[CURRENT_AUTOREPEAT_SPELL]->GetSpellInfo()->Id != 75)
@@ -3921,10 +3969,17 @@ void Unit::SetCurrentCastedSpell(Spell* pSpell)
     case CURRENT_AUTOREPEAT_SPELL:
     {
         // only Auto Shoot does not break anything
-        if (pSpell->GetSpellInfo()->Id != 75)
+        if (pSpell->m_spellInfo->Id != 75)
         {
             // generic autorepeats break generic non-delayed and channeled non-delayed spells
-            InterruptSpell(CURRENT_GENERIC_SPELL, false);
+            if (Spell* s = GetCurrentSpell(CURRENT_CHANNELED_SPELL))
+            {
+                if (!s->GetSpellInfo()->IsActionAllowedChannel())
+                {
+                    InterruptSpell(CURRENT_CHANNELED_SPELL, false);
+                }
+            }
+
             InterruptSpell(CURRENT_CHANNELED_SPELL, false);
         }
         // special action: set first cast flag
@@ -3947,7 +4002,7 @@ void Unit::SetCurrentCastedSpell(Spell* pSpell)
     pSpell->m_selfContainer = &(m_currentSpells[pSpell->GetCurrentContainer()]);
 }
 
-void Unit::InterruptSpell(CurrentSpellTypes spellType, bool withDelayed, bool withInstant, Spell* interruptingSpell /* = nullptr */)
+void Unit::InterruptSpell(CurrentSpellTypes spellType, bool withDelayed, bool withInstant, bool bySelf)
 {
     Spell* spell = m_currentSpells[spellType];
     if (!spell)
@@ -3965,7 +4020,7 @@ void Unit::InterruptSpell(CurrentSpellTypes spellType, bool withDelayed, bool wi
                 ToPlayer()->SendAutoRepeatCancel(this);
 
         if (spell->getState() != SPELL_STATE_FINISHED)
-            spell->cancel(interruptingSpell);
+            spell->cancel(bySelf);
         else
         {
             m_currentSpells[spellType] = nullptr;

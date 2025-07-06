@@ -405,19 +405,11 @@ void SpellCastTargets::ModSrc(Position const& pos)
     m_src.Relocate(pos);
 }
 
-void SpellCastTargets::RemoveSrc() {
-    m_targetMask &= ~(TARGET_FLAG_SOURCE_LOCATION);
-}
+void SpellCastTargets::RemoveSrc() { m_targetMask &= ~(TARGET_FLAG_SOURCE_LOCATION); }
 
-SpellDestination const* SpellCastTargets::GetDst() const
-{
-    return &m_dst;
-}
+SpellDestination const* SpellCastTargets::GetDst() const { return &m_dst; }
 
-WorldLocation const* SpellCastTargets::GetDstPos() const
-{
-    return &m_dst._position;
-}
+WorldLocation const* SpellCastTargets::GetDstPos() const { return &m_dst._position; }
 
 void SpellCastTargets::SetDst(float x, float y, float z, float orientation, uint32 mapId)
 {
@@ -2636,8 +2628,7 @@ void Spell::TargetInfo::DoDamageAndTriggers(Spell* spell)
             spellDamageInfo = std::make_unique<DamageInfo>(damageInfo, SPELL_DIRECT_DAMAGE, spell->m_attackType, hitMask);
             procSpellType |= PROC_SPELL_TYPE_DAMAGE;
 
-            if (caster->IsPlayer() && !spell->m_spellInfo->HasAttribute(SPELL_ATTR0_CANCELS_AUTO_ATTACK_COMBAT) &&
-                !spell->m_spellInfo->HasAttribute(SPELL_ATTR4_CANT_TRIGGER_ITEM_SPELLS) &&
+            if (caster->IsPlayer() && !spell->m_spellInfo->HasAttribute(SPELL_ATTR0_CANCELS_AUTO_ATTACK_COMBAT) && !spell->m_spellInfo->HasAttribute(SPELL_ATTR4_CANT_TRIGGER_ITEM_SPELLS) &&
                 (spell->m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MELEE || spell->m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_RANGED))
                 caster->ToPlayer()->CastItemCombatSpell(*spellDamageInfo);
         }
@@ -3252,62 +3243,61 @@ void Spell::cancel(Spell* interruptingSpell /* = nullptr */)
     {
     case SPELL_STATE_PREPARING:
         CancelGlobalCooldown();
+        SendCastResult(SPELL_FAILED_INTERRUPTED);
+
+        if (m_caster->IsPlayer())
+        {
+            if (m_caster->ToPlayer()->NeedSendSpectatorData())
+                ArenaSpectator::SendCommand_Spell(m_caster->FindMap(), m_caster->GetGUID(), "SPE", m_spellInfo->Id, bySelf ? 99998 : 99999);
+        }
         [[fallthrough]];
     case SPELL_STATE_DELAYED:
-        SendInterrupted(0);
-        SendCastResult(SPELL_FAILED_INTERRUPTED);
+        SendInterrupted(SPELL_FAILED_INTERRUPTED); // used to be SendInterrupted(0);
         break;
 
     case SPELL_STATE_CASTING:
-        for (TargetInfo const& targetInfo : m_UniqueTargetInfo)
+        if (!bySelf)
         {
-            // Remove if no miss.
-            bool removeOwnedAura = targetInfo.MissCondition == SPELL_MISS_NONE;
+            for (std::list<TargetInfo>::const_iterator ihit = m_UniqueTargetInfo.begin(); ihit != m_UniqueTargetInfo.end(); ++ihit)
+                if ((*ihit).missCondition == SPELL_MISS_NONE)
+                    if (Unit* unit = m_caster->GetGUID() == ihit->targetGUID ? m_caster : ObjectAccessor::GetUnit(*m_caster, ihit->targetGUID))
+                        unit->RemoveOwnedAura(m_spellInfo->Id, m_originalCasterGUID, 0, AURA_REMOVE_BY_CANCEL);
 
-            if (interruptingSpell != nullptr)
-            {
-                // However if we are refreshing a channeled spell, only removed owned aura
-                // if the new target isn't the old one.
-                if (m_spellInfo->Id == interruptingSpell->m_spellInfo->Id && m_spellInfo->IsChanneled())
-                {
-                    // Different target, ease up on the core and already remove auras
-                    // if same target, do nothing. If we miss with the new spell, auras will get removed anyways
-                    removeOwnedAura = targetInfo.TargetGUID != interruptingSpell->m_targets.GetUnitTargetGUID();
-                }
-            }
+            if (m_caster->IsPlayer() && m_spellInfo->IsCooldownStartedOnEvent())
+                m_caster->ToPlayer()->RemoveSpellCooldown(m_spellInfo->Id, true);
 
-            if (removeOwnedAura)
-                if (Unit* unit = m_caster->GetGUID() == targetInfo.TargetGUID ? m_caster : ObjectAccessor::GetUnit(*m_caster, targetInfo.TargetGUID))
-                    unit->RemoveOwnedAura(m_spellInfo->Id, m_originalCasterGUID, 0, AuraRemoveMode::ByCancel);
+            SendChannelUpdate(0);
+            SendInterrupted(SPELL_FAILED_INTERRUPTED);
         }
 
-        // Only send channel updates if we are interrupt with a spell that is not the one currently channeled.
-        sendChannelUpdate &= interruptingSpell == nullptr || m_spellInfo->Id != interruptingSpell->m_spellInfo->Id;
-        if (sendChannelUpdate)
-        {
-            SendInterrupted(0);
-            SendCastResult(SPELL_FAILED_INTERRUPTED);
-        }
+        if (m_caster->IsPlayer() && m_caster->ToPlayer()->NeedSendSpectatorData())
+            ArenaSpectator::SendCommand_Spell(m_caster->FindMap(), m_caster->GetGUID(), "SPE", m_spellInfo->Id, bySelf ? 99998 : 99999);
+
+        // spell is canceled-take mods and clear list
+        if (Player* player = m_caster->GetSpellModOwner())
+            player->RemoveSpellMods(this);
 
         m_appliedMods.clear();
         break;
-
     default:
         break;
     }
 
-    SetReferencedFromCurrent(false);
-    if (m_selfContainer && *m_selfContainer == this)
-        *m_selfContainer = nullptr;
+    // Do not remove current far sight object (already done in Spell::EffectAddFarsight) to prevent from reset viewpoint to player
+    if (!(bySelf && m_spellInfo->HasEffect(SPELL_EFFECT_ADD_FARSIGHT)))
+    {
+        m_caster->RemoveDynObject(m_spellInfo->Id);
+    }
 
-    m_caster->RemoveDynObject(m_spellInfo->Id);
     if (m_spellInfo->IsChanneled()) // if not channeled then the object for the current cast wasn't summoned yet
         m_caster->RemoveGameObject(m_spellInfo->Id, true);
 
     // set state back so finish will be processed
     m_spellState = oldState;
 
-    finish(false, sendChannelUpdate);
+    sScriptMgr->OnSpellCastCancel(this, m_caster, m_spellInfo, bySelf);
+
+    finish(false);
 }
 
 void Spell::cast(bool skipCheck)
@@ -3945,7 +3935,7 @@ void Spell::update(uint32 difftime)
     }
 }
 
-void Spell::finish(bool ok, bool sendChannelUpdate /* = false */)
+void Spell::finish(bool ok)
 {
     if (!m_caster)
         return;
@@ -3957,8 +3947,8 @@ void Spell::finish(bool ok, bool sendChannelUpdate /* = false */)
     if (m_spellInfo->IsChanneled())
         m_caster->UpdateInterruptMask();
 
-    if (sendChannelUpdate)
-        SendChannelUpdate(0);
+    // if (sendChannelUpdate)
+    //     SendChannelUpdate(0);
 
     if (m_caster->HasUnitState(UNIT_STATE_CASTING) && !m_caster->IsNonMeleeSpellCast(false, false, true))
         m_caster->ClearUnitState(UNIT_STATE_CASTING);
@@ -5368,8 +5358,7 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* param1 /*= nullptr*/, uint
             {
                 // These two auras check SpellFamilyName defined by dbc class data instead of current spell SpellFamilyName
                 if (m_caster->HasAuraType(SPELL_AURA_ALLOW_ONLY_ABILITY) && !m_spellInfo->HasAttribute(SPELL_ATTR0_USES_RANGED_SLOT) && !m_spellInfo->HasEffect(SPELL_EFFECT_ATTACK) &&
-                    !m_caster->HasAuraTypeWithFamilyFlags(
-                        SPELL_AURA_ALLOW_ONLY_ABILITY, sChrClassesStore.AssertEntry(m_caster->getClass())->SpellClassSet, m_spellInfo->SpellFamilyFlags))
+                    !m_caster->HasAuraTypeWithFamilyFlags(SPELL_AURA_ALLOW_ONLY_ABILITY, sChrClassesStore.AssertEntry(m_caster->getClass())->SpellClassSet, m_spellInfo->SpellFamilyFlags))
                     return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
 
                 if (m_caster->HasAuraType(SPELL_AURA_DISABLE_ATTACKING_EXCEPT_ABILITIES))
@@ -6651,8 +6640,7 @@ std::pair<float, float> Spell::GetMinMaxRange(bool strict) const
             }
         }
 
-        if (target && m_caster->isMoving() && target->isMoving() && !m_caster->IsWalking() && !target->IsWalking() &&
-            (m_spellInfo->RangeEntry->Flags & SPELL_RANGE_MELEE || target->IsPlayer()))
+        if (target && m_caster->isMoving() && target->isMoving() && !m_caster->IsWalking() && !target->IsWalking() && (m_spellInfo->RangeEntry->Flags & SPELL_RANGE_MELEE || target->IsPlayer()))
             rangeMod += 8.0f / 3.0f;
     }
 
@@ -7482,8 +7470,8 @@ SpellEvent::~SpellEvent()
     }
     else
     {
-        LOG_ERROR("spells", "~SpellEvent: %s %u tried to delete non-deletable spell %u. Was not deleted, causes memory leak.",
-            (m_Spell->GetCaster()->IsPlayer() ? "Player" : "Creature"), m_Spell->GetCaster()->GetGUID().GetCounter(), m_Spell->m_spellInfo->Id);
+        LOG_ERROR("spells", "~SpellEvent: %s %u tried to delete non-deletable spell %u. Was not deleted, causes memory leak.", (m_Spell->GetCaster()->IsPlayer() ? "Player" : "Creature"),
+            m_Spell->GetCaster()->GetGUID().GetCounter(), m_Spell->m_spellInfo->Id);
         ABORT();
     }
 }
