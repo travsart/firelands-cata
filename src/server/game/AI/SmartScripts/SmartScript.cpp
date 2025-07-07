@@ -1091,6 +1091,15 @@ void SmartScript::ProcessAction(SmartScriptHolder& e, Unit* unit, uint32 var0, u
     }
     case SMART_ACTION_SET_INGAME_PHASE_ID:
     {
+        // TODO Change
+        //  for (WorldObject* target : targets)
+        //      {
+        //          if (IsUnit(target))
+        //              target->ToUnit()->SetPhaseMask(e.action.ingamePhaseMask.mask, true);
+        //          else if (IsGameObject(target))
+        //              target->ToGameObject()->SetPhaseMask(e.action.ingamePhaseMask.mask, true);
+        //      }
+        //      break;
         for (WorldObject* target : targets)
         {
             if (e.action.ingamePhaseId.apply == 1)

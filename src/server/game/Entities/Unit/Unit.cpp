@@ -4803,19 +4803,6 @@ void Unit::RemoveAura(Aura* aura, AuraRemoveMode mode)
         RemoveAura(aurApp, mode);
 }
 
-void Unit::RemoveAppliedAuras(std::function<bool(AuraApplication const*)> const& check)
-{
-    for (AuraApplicationMap::iterator iter = m_appliedAuras.begin(); iter != m_appliedAuras.end();)
-    {
-        if (check(iter->second))
-        {
-            RemoveAura(iter);
-            continue;
-        }
-        ++iter;
-    }
-}
-
 void Unit::RemoveOwnedAuras(std::function<bool(Aura const*)> const& check)
 {
     for (AuraMap::iterator iter = m_ownedAuras.begin(); iter != m_ownedAuras.end();)
@@ -4823,19 +4810,6 @@ void Unit::RemoveOwnedAuras(std::function<bool(Aura const*)> const& check)
         if (check(iter->second))
         {
             RemoveOwnedAura(iter);
-            continue;
-        }
-        ++iter;
-    }
-}
-
-void Unit::RemoveAppliedAuras(uint32 spellId, std::function<bool(AuraApplication const*)> const& check)
-{
-    for (AuraApplicationMap::iterator iter = m_appliedAuras.lower_bound(spellId); iter != m_appliedAuras.upper_bound(spellId);)
-    {
-        if (check(iter->second))
-        {
-            RemoveAura(iter);
             continue;
         }
         ++iter;
@@ -4855,22 +4829,29 @@ void Unit::RemoveOwnedAuras(uint32 spellId, std::function<bool(Aura const*)> con
     }
 }
 
-void Unit::RemoveAurasByType(AuraType auraType, std::function<bool(AuraApplication const*)> const& check)
+void Unit::RemoveAppliedAuras(std::function<bool(AuraApplication const*)> const& check)
 {
-    for (AuraEffectList::iterator iter = m_modAuras[auraType].begin(); iter != m_modAuras[auraType].end();)
+    for (AuraApplicationMap::iterator iter = m_appliedAuras.begin(); iter != m_appliedAuras.end();)
     {
-        Aura* aura = (*iter)->GetBase();
-        AuraApplication* aurApp = aura->GetApplicationOfTarget(GetGUID());
-        ASSERT(aurApp);
-
-        ++iter;
-        if (check(aurApp))
+        if (check(iter->second))
         {
-            uint32 removedAuras = m_removedAurasCount;
-            RemoveAura(aurApp);
-            if (m_removedAurasCount > removedAuras + 1)
-                iter = m_modAuras[auraType].begin();
+            RemoveAura(iter);
+            continue;
         }
+        ++iter;
+    }
+}
+
+void Unit::RemoveAppliedAuras(uint32 spellId, std::function<bool(AuraApplication const*)> const& check)
+{
+    for (AuraApplicationMap::iterator iter = m_appliedAuras.lower_bound(spellId); iter != m_appliedAuras.upper_bound(spellId);)
+    {
+        if (check(iter->second))
+        {
+            RemoveAura(iter);
+            continue;
+        }
+        ++iter;
     }
 }
 
@@ -4926,6 +4907,42 @@ void Unit::RemoveAurasDueToSpellByDispel(uint32 spellId, uint32 dispellerSpellId
             // Call AfterDispel hook on AuraScript
             aura->CallScriptAfterDispel(&dispelInfo);
 
+            switch (aura->GetSpellInfo()->SpellFamilyName)
+            {
+            case SPELLFAMILY_HUNTER:
+            {
+                // Noxious Stings
+                if (aura->GetSpellInfo()->SpellFamilyFlags[1] & 0x1000)
+                {
+                    if (Unit* caster = aura->GetCaster())
+                    {
+                        if (AuraEffect* aureff = caster->GetAuraEffect(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS, SPELLFAMILY_HUNTER, 3521, 1))
+                        {
+                            if (Aura* noxious = Aura::TryCreate(aura->GetSpellInfo(), aura->GetEffectMask(), dispeller, caster))
+                            {
+                                noxious->SetDuration(aura->GetDuration() * aureff->GetAmount() / 100);
+                                if (aura->GetUnitOwner())
+                                    if (const std::vector<int32>* spell_triggered = sSpellMgr->GetSpellLinked(-int32(aura->GetId())))
+                                        for (std::vector<int32>::const_iterator itr = spell_triggered->begin(); itr != spell_triggered->end(); ++itr)
+                                            aura->GetUnitOwner()->RemoveAurasDueToSpell(*itr);
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+            case SPELLFAMILY_DEATHKNIGHT:
+            {
+                // Icy Clutch, remove with Frost Fever
+                if (aura->GetSpellInfo()->SpellFamilyFlags[1] & 0x4000000)
+                {
+                    if (AuraEffect* aureff = GetAuraEffect(SPELL_AURA_MOD_DECREASE_SPEED, SPELLFAMILY_DEATHKNIGHT, 0, 0x40000, 0, casterGUID))
+                        RemoveAurasDueToSpell(aureff->GetId());
+                }
+            }
+            default:
+                break;
+            }
             return;
         }
         else
@@ -5020,10 +5037,44 @@ void Unit::RemoveAurasDueToItemSpell(uint32 spellId, ObjectGuid castItemGuid)
         else
             ++iter;
     }
+
+    for (AuraMap::iterator iter = m_ownedAuras.lower_bound(spellId); iter != m_ownedAuras.upper_bound(spellId);)
+    {
+        if (iter->second->GetCastItemGUID() == castItemGuid)
+        {
+            RemoveOwnedAura(iter, AURA_REMOVE_BY_DEFAULT);
+            iter = m_ownedAuras.lower_bound(spellId);
+        }
+        else
+            ++iter;
+    }
+}
+
+void Unit::RemoveAurasByType(AuraType auraType, std::function<bool(AuraApplication const*)> const& check)
+{
+    for (AuraEffectList::iterator iter = m_modAuras[auraType].begin(); iter != m_modAuras[auraType].end();)
+    {
+        Aura* aura = (*iter)->GetBase();
+        AuraApplication* aurApp = aura->GetApplicationOfTarget(GetGUID());
+        ASSERT(aurApp);
+
+        ++iter;
+        if (check(aurApp))
+        {
+            uint32 removedAuras = m_removedAurasCount;
+            RemoveAura(aurApp);
+            if (m_removedAurasCount > removedAuras + 1)
+                iter = m_modAuras[auraType].begin();
+        }
+    }
 }
 
 void Unit::RemoveAurasByType(AuraType auraType, ObjectGuid casterGUID, Aura* except, bool negative, bool positive)
 {
+    // simple check if list is empty
+    if (m_modAuras[auraType].empty())
+        return;
+
     for (AuraEffectList::iterator iter = m_modAuras[auraType].begin(); iter != m_modAuras[auraType].end();)
     {
         Aura* aura = (*iter)->GetBase();
@@ -5053,7 +5104,7 @@ void Unit::RemoveAurasWithAttribute(uint32 flags)
     }
 }
 
-void Unit::RemoveNotOwnLimitedTargetAuras(bool onPhaseChange /*= false*/)
+void Unit::RemoveNotOwnSingleTargetAuras()
 {
     // single target auras from other casters
     // Iterate m_ownedAuras - aura is marked as single target in Unit::AddAura (and pushed to m_ownedAuras).
@@ -5070,50 +5121,32 @@ void Unit::RemoveNotOwnLimitedTargetAuras(bool onPhaseChange /*= false*/)
 
         if (aura->GetCasterGUID() != GetGUID() && aura->IsSingleTarget())
         {
-            if (!onPhaseChange)
-                RemoveOwnedAura(iter);
-            else
-            {
-                Unit* caster = aura->GetCaster();
-                if (!caster || !caster->IsInPhase(this))
-                    RemoveOwnedAura(iter);
-                else
-                    ++iter;
-            }
+            RemoveOwnedAura(iter);
+        }
+        else
+        {
+            ++iter;
+        }
+    }
+
+    // single target auras at other targets
+    AuraList& scAuras = GetSingleCastAuras();
+    for (AuraList::iterator iter = scAuras.begin(); iter != scAuras.end();)
+    {
+        Aura* aura = *iter;
+        if (aura->GetUnitOwner() != this)
+        {
+            aura->Remove();
+            iter = scAuras.begin();
         }
         else
             ++iter;
     }
-
-    // limited target auras at other targets
-    AurasBySpellIdMap& ltAurasBySpellId = GetAllLimitedCastAuras();
-    for (AurasBySpellIdMap::iterator itr = ltAurasBySpellId.begin(); itr != ltAurasBySpellId.end(); itr++)
-    {
-        AuraList& list = itr->second;
-        for (AuraList::iterator iter = list.begin(); iter != list.end();)
-        {
-            Aura* aura = *iter;
-            if (aura->GetUnitOwner() != this && (!onPhaseChange || !aura->GetUnitOwner()->IsInPhase(this)))
-            {
-                aura->Remove();
-                iter = list.begin();
-            }
-            else
-                ++iter;
-        }
-    }
 }
 
-template <typename InterruptFlag> bool IsInterruptFlagIgnoredForSpell(InterruptFlag /*flag*/, Unit const* /*unit*/, SpellInfo const* /*spellInfo*/) { return false; }
-
-template <> bool IsInterruptFlagIgnoredForSpell(SpellAuraInterruptFlags flag, Unit const* unit, SpellInfo const* spellInfo)
+void Unit::RemoveAurasWithInterruptFlags(uint32 flag, uint32 except, bool isAutoshot /*= false*/)
 {
-    return flag == SpellAuraInterruptFlags::Moving && unit->HasAuraTypeWithAffectMask(SPELL_AURA_CAST_WHILE_WALKING, spellInfo);
-}
-
-template <typename InterruptFlags> void Unit::RemoveAurasWithInterruptFlags(InterruptFlags flag, uint32 except, Spell* interruptingSpell /* = nullptr */)
-{
-    if (!HasInterruptFlag(flag))
+    if (!(m_interruptMask & flag))
         return;
 
     // interrupt auras
@@ -5121,7 +5154,7 @@ template <typename InterruptFlags> void Unit::RemoveAurasWithInterruptFlags(Inte
     {
         Aura* aura = (*iter)->GetBase();
         ++iter;
-        if (aura->GetSpellInfo()->HasAuraInterruptFlag(flag) && (!except || aura->GetId() != except) && !IsInterruptFlagIgnoredForSpell(flag, this, aura->GetSpellInfo()))
+        if ((aura->GetSpellInfo()->AuraInterruptFlags & flag) && (!except || aura->GetId() != except))
         {
             uint32 removedAuras = m_removedAurasCount;
             RemoveAura(aura);
@@ -5132,15 +5165,19 @@ template <typename InterruptFlags> void Unit::RemoveAurasWithInterruptFlags(Inte
 
     // interrupt channeled spell
     if (Spell* spell = m_currentSpells[CURRENT_CHANNELED_SPELL])
-        if (spell->getState() == SPELL_STATE_CASTING && spell->GetSpellInfo()->HasChannelInterruptFlag(flag) && spell->GetSpellInfo()->Id != except &&
-            !IsInterruptFlagIgnoredForSpell(flag, this, spell->GetSpellInfo()))
-            InterruptNonMeleeSpells(false, 0, true, interruptingSpell);
+    {
+        if (spell->getState() == SPELL_STATE_CASTING && (spell->m_spellInfo->ChannelInterruptFlags & flag) && spell->m_spellInfo->Id != except)
+        {
+            // Do not interrupt if auto shot
+            if (!(isAutoshot && spell->m_spellInfo->HasAttribute(SPELL_ATTR2_DO_NOT_RESET_COMBAT_TIMERS)))
+            {
+                InterruptNonMeleeSpells(false, spell->m_spellInfo->Id);
+            }
+        }
+    }
 
     UpdateInterruptMask();
 }
-
-template FC_GAME_API void Unit::RemoveAurasWithInterruptFlags(SpellAuraInterruptFlags flag, uint32 except, Spell* interruptingSpell);
-template FC_GAME_API void Unit::RemoveAurasWithInterruptFlags(SpellAuraInterruptFlags2 flag, uint32 except, Spell* interruptingSpell);
 
 void Unit::RemoveAurasWithFamily(SpellFamilyNames family, uint32 familyFlag1, uint32 familyFlag2, uint32 familyFlag3, ObjectGuid casterGUID)
 {
@@ -11317,7 +11354,7 @@ void Unit::RemoveFromWorld()
 
         RemoveCharmAuras();
         RemoveBindSightAuras();
-        RemoveNotOwnLimitedTargetAuras();
+        RemoveNotOwnSingleTargetAuras();
         RemoveAurasWithInterruptFlags(SpellAuraInterruptFlags::LeaveWorld);
 
         RemoveAllGameObjects();

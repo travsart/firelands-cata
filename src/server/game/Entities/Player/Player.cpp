@@ -27160,21 +27160,17 @@ void Player::ActivateSpec(uint8 spec)
     RemoveAllControlled();
 
     // remove limited target auras at other targets
-    AurasBySpellIdMap& ltAurasBySpellId = GetAllLimitedCastAuras();
-    for (AurasBySpellIdMap::iterator itr = ltAurasBySpellId.begin(); itr != ltAurasBySpellId.end(); itr++)
+    AuraList& scAuras = GetSingleCastAuras();
+    for (AuraList::iterator itr = scAuras.begin(); itr != scAuras.end(); itr++)
     {
-        AuraList& list = itr->second;
-        for (AuraList::iterator iter = list.begin(); iter != list.end();)
+        Aura* aura = *itr;
+        if (aura->GetUnitOwner() != this)
         {
-            Aura* aura = *iter;
-            if (aura->GetUnitOwner() != this)
-            {
-                aura->Remove();
-                iter = list.begin();
-            }
-            else
-                ++iter;
+            aura->Remove();
+            itr = scAuras.begin();
         }
+        else
+            ++itr;
     }
 
     /*RemoveAllAurasOnDeath();
