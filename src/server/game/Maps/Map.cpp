@@ -2008,7 +2008,7 @@ float GridMap::getHeightFromFloat(float x, float y) const
         if (x > y)
         {
             // 1 triangle (h1, h2, h5 points)
-            float h1 = m_V9[(x_int)*129 + y_int];
+            float h1 = m_V9[(x_int) * 129 + y_int];
             float h2 = m_V9[(x_int + 1) * 129 + y_int];
             float h5 = 2 * m_V8[x_int * 128 + y_int];
             a = h2 - h1;
@@ -2041,7 +2041,7 @@ float GridMap::getHeightFromFloat(float x, float y) const
         else
         {
             // 4 triangle (h3, h4, h5 points)
-            float h3 = m_V9[(x_int)*129 + y_int + 1];
+            float h3 = m_V9[(x_int) * 129 + y_int + 1];
             float h4 = m_V9[(x_int + 1) * 129 + y_int + 1];
             float h5 = 2 * m_V8[x_int * 128 + y_int];
             a = h4 - h3;
@@ -2258,7 +2258,7 @@ float GridMap::getLiquidLevel(float x, float y) const
 }
 
 // Get water state on map
-inline ZLiquidStatus GridMap::GetLiquidStatus(float x, float y, float z, uint8 ReqLiquidType, LiquidData* data, float collisionHeight)
+inline LiquidStatus GridMap::GetLiquidStatus(float x, float y, float z, uint8 ReqLiquidType, LiquidData* data, float collisionHeight)
 {
     // Check water type (if no water return)
     if (!_liquidGlobalFlags && !_liquidFlags)
@@ -2383,7 +2383,7 @@ float Map::GetWaterOrGroundLevel(PhaseShift const& phaseShift, float x, float y,
 
         LiquidData liquid_status;
 
-        ZLiquidStatus res = GetLiquidStatus(phaseShift, x, y, ground_z, MAP_ALL_LIQUIDS, &liquid_status, collisionHeight);
+        LiquidStatus res = GetLiquidStatus(phaseShift, x, y, ground_z, MAP_ALL_LIQUIDS, &liquid_status, collisionHeight);
         switch (res)
         {
         case LIQUID_MAP_ABOVE_WATER:
@@ -2510,9 +2510,9 @@ void Map::GetZoneAndAreaId(PhaseShift const& phaseShift, uint32& zoneid, uint32&
             zoneid = area->ParentAreaID;
 }
 
-ZLiquidStatus Map::GetLiquidStatus(PhaseShift const& phaseShift, float x, float y, float z, uint8 ReqLiquidType, LiquidData* data, float collisionHeight)
+LiquidStatus Map::GetLiquidStatus(PhaseShift const& phaseShift, float x, float y, float z, uint8 ReqLiquidType, LiquidData* data, float collisionHeight)
 {
-    ZLiquidStatus result = LIQUID_MAP_NO_WATER;
+    LiquidStatus result = LIQUID_MAP_NO_WATER;
     VMAP::IVMapManager* vmgr = VMAP::VMapFactory::createOrGetVMapManager();
     float liquid_level = INVALID_HEIGHT;
     float ground_level = INVALID_HEIGHT;
@@ -2583,7 +2583,7 @@ ZLiquidStatus Map::GetLiquidStatus(PhaseShift const& phaseShift, float x, float 
         if (GridMap* gmap = GetGrid(terrainMapId, x, y))
         {
             LiquidData map_data;
-            ZLiquidStatus map_result = gmap->GetLiquidStatus(x, y, z, ReqLiquidType, &map_data, collisionHeight);
+            LiquidStatus map_result = gmap->GetLiquidStatus(x, y, z, ReqLiquidType, &map_data, collisionHeight);
             // Not override LIQUID_MAP_ABOVE_WATER with LIQUID_MAP_NO_WATER:
             if (map_result != LIQUID_MAP_NO_WATER && (map_data.level > ground_level))
             {
@@ -2717,7 +2717,7 @@ void Map::GetFullTerrainStatusForPosition(PhaseShift const& phaseShift, float x,
     if (gmap && useGridLiquid)
     {
         LiquidData gridMapLiquid;
-        ZLiquidStatus gridMapStatus = gmap->GetLiquidStatus(x, y, z, reqLiquidType, &gridMapLiquid, collisionHeight);
+        LiquidStatus gridMapStatus = gmap->GetLiquidStatus(x, y, z, reqLiquidType, &gridMapLiquid, collisionHeight);
         if (gridMapStatus != LIQUID_MAP_NO_WATER && (gridMapLiquid.level > vmapData.floorZ))
         {
             if (GetId() == 530 && gridMapLiquid.entry == 2)
@@ -3383,10 +3383,7 @@ bool Map::IsSpawnGroupActive(uint32 groupId) const
     return (_toggledSpawnGroupIds.find(groupId) != _toggledSpawnGroupIds.end()) != !(data->flags & SPAWNGROUP_FLAG_MANUAL_SPAWN);
 }
 
-void Map::AddFarSpellCallback(FarSpellCallback&& callback)
-{
-    _farSpellCallbacks.Enqueue(new FarSpellCallback(std::move(callback)));
-}
+void Map::AddFarSpellCallback(FarSpellCallback&& callback) { _farSpellCallbacks.Enqueue(new FarSpellCallback(std::move(callback))); }
 
 void Map::DelayedUpdate(uint32 t_diff)
 {

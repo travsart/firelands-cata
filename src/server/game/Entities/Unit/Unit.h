@@ -112,7 +112,7 @@ enum InventorySlot
     NULL_SLOT = 255
 };
 
-enum ZLiquidStatus : uint32;
+enum LiquidStatus : uint32;
 
 namespace Movement
 {
@@ -2199,7 +2199,7 @@ class FC_GAME_API Unit : public WorldObject
     bool UpdatePosition(const Position& pos, bool teleport = false) { return UpdatePosition(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), pos.GetOrientation(), teleport); }
 
     void ProcessPositionDataChanged(PositionFullTerrainStatus const& data) override;
-    virtual void ProcessTerrainStatusUpdate();
+    virtual void ProcessTerrainStatusUpdate(LiquidStatus /*oldLiquidStatus*/, Optional<LiquidData> const& newLiquidData);
 
     // Visibility & Phase system
     [[nodiscard]] bool IsVisible() const { return m_serverSideVisibility.GetValue(SERVERSIDE_VISIBILITY_GM) <= SEC_PLAYER; }

@@ -646,8 +646,16 @@ class FC_GAME_API Spell
     SpellMissInfo targetMissInfo;
     SpellEffectHandleMode effectHandleMode;
     // used in effects handlers
-    UnitAura* _spellAura;
-    DynObjAura* _dynObjAura;
+
+    // used in effects handlers
+    Aura* m_spellAura; // UnitAura* _spellAura;
+
+    // DynObjAura* _dynObjAura; // TODO need????
+
+    // this is set in Spell Hit, but used in Apply Aura handler
+    DiminishingLevels m_diminishLevel;
+    DiminishingGroup m_diminishGroup;
+
     // -------------------------------------------
     GameObject* focusObject;
 
@@ -680,46 +688,60 @@ class FC_GAME_API Spell
         virtual ~TargetInfoBase() {}
     };
 
-    struct TargetInfo : public TargetInfoBase
+    // struct TargetInfo : public TargetInfoBase
+    // {
+    //     void PreprocessTarget(Spell* spell) override;
+    //     void DoTargetSpellHit(Spell* spell, uint8 effIndex) override;
+    //     void DoDamageAndTriggers(Spell* spell) override;
+
+    //     ObjectGuid TargetGUID;
+    //     uint64 TimeDelay = 0ULL;
+    //     int32 Damage = 0;
+    //     int32 Healing = 0;
+
+    //     SpellMissInfo MissCondition = SPELL_MISS_NONE;
+    //     SpellMissInfo ReflectResult = SPELL_MISS_NONE;
+
+    //     bool IsAlive = false;
+    //     bool IsCrit = false;
+    //     bool ScaleAura = false;
+
+    //     // info set at PreprocessTarget, used by DoTargetSpellHit
+    //     DiminishingGroup DRGroup = DIMINISHING_NONE;
+    //     int32 AuraDuration = 0;
+    //     SpellInfo const* AuraSpellInfo = nullptr;
+    //     int32 AuraBasePoints[MAX_SPELL_EFFECTS] = {};
+    //     bool Positive = true;
+
+    //   private:
+    //     Unit* _spellHitTarget = nullptr; // changed for example by reflect
+    //     bool _enablePVP = false;         // need to enable PVP at DoDamageAndTriggers?
+    // };
+
+    struct TargetInfo
     {
-        void PreprocessTarget(Spell* spell) override;
-        void DoTargetSpellHit(Spell* spell, uint8 effIndex) override;
-        void DoDamageAndTriggers(Spell* spell) override;
-
-        ObjectGuid TargetGUID;
-        uint64 TimeDelay = 0ULL;
-        int32 Damage = 0;
-        int32 Healing = 0;
-
-        SpellMissInfo MissCondition = SPELL_MISS_NONE;
-        SpellMissInfo ReflectResult = SPELL_MISS_NONE;
-
-        bool IsAlive = false;
-        bool IsCrit = false;
-        bool ScaleAura = false;
-
-        // info set at PreprocessTarget, used by DoTargetSpellHit
-        DiminishingGroup DRGroup = DIMINISHING_NONE;
-        int32 AuraDuration = 0;
-        SpellInfo const* AuraSpellInfo = nullptr;
-        int32 AuraBasePoints[MAX_SPELL_EFFECTS] = {};
-        bool Positive = true;
-
-      private:
-        Unit* _spellHitTarget = nullptr; // changed for example by reflect
-        bool _enablePVP = false;         // need to enable PVP at DoDamageAndTriggers?
+        ObjectGuid targetGUID;
+        uint64 timeDelay;
+        SpellMissInfo missCondition : 8;
+        SpellMissInfo reflectResult : 8;
+        uint8 effectMask : 8;
+        bool processed : 1;
+        bool alive : 1;
+        bool crit : 1;
+        bool scaleAura : 1;
+        int32 damage;
     };
 
     std::vector<TargetInfo> m_UniqueTargetInfo;
     uint8 m_channelTargetEffectMask; // Mask req. alive targets
 
-    struct GOTargetInfo : TargetInfo
-    {
-        void DoTargetSpellHit(Spell* spell, uint8 effIndex) override;
+    // struct GOTargetInfo : TargetInfo
+    // {
+    //     void DoTargetSpellHit(Spell* spell, uint8 effIndex) override;
 
-        ObjectGuid TargetGUID;
-        uint64 TimeDelay = 0ULL;
-    };
+    //     ObjectGuid TargetGUID;
+    //     uint64 TimeDelay = 0ULL;
+    // };
     std::vector<GOTargetInfo> m_UniqueGOTargetInfo;
 
     struct ItemTargetInfo : public TargetInfoBase
@@ -751,11 +773,18 @@ class FC_GAME_API Spell
 
     SpellMissInfo PreprocessSpellHit(Unit* unit, bool scaleAura, TargetInfo& targetInfo);
     void DoSpellEffectHit(Unit* unit, uint8 effIndex, TargetInfo& targetInfo);
+
+    void DoAllEffectOnTarget(TargetInfo* target);
+    void DoAllEffectOnTarget(GOTargetInfo* target);
+    void DoAllEffectOnTarget(ItemTargetInfo* target);
+
+    SpellMissInfo DoSpellHitOnUnit(Unit* unit, uint32 effectMask, bool scaleAura);
     void DoTriggersOnSpellHit(Unit* unit, uint8 effMask);
+
     bool UpdateChanneledTargetList();
     bool IsValidDeadOrAliveTarget(Unit const* target) const;
     void HandleLaunchPhase();
-    void DoEffectOnLaunchTarget(TargetInfo& targetInfo, float multiplier, uint8 effIndex);
+    void DoAllEffectOnLaunchTarget(TargetInfo& targetInfo, float* multiplier);
 
     void PrepareTargetProcessing();
     void FinishTargetProcessing();

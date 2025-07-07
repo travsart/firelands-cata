@@ -3288,7 +3288,6 @@ void Player::LearnSpell(uint32 spell_id, bool dependent, uint32 fromSkill /*= 0*
 #endif
         return;
     }
-    
 
     PlayerSpellMap::iterator itr = m_spells.find(spell_id);
 
@@ -4772,10 +4771,7 @@ void Player::CleanupChannels()
 // Playerbot helper if bot talks in a different locale
 bool Player::IsInChannel(const Channel* c)
 {
-    return std::any_of(m_channels.begin(), m_channels.end(), [c](const Channel* chan)
-    {
-        return c->GetChannelId() == chan->GetChannelId();
-    });
+    return std::any_of(m_channels.begin(), m_channels.end(), [c](const Channel* chan) { return c->GetChannelId() == chan->GetChannelId(); });
 }
 
 void Player::UpdateLocalChannels(uint32 newZone)
@@ -6272,7 +6268,6 @@ void Player::SetAreaExplored(uint32 areaId)
         }
     }
 }
-
 
 uint32 Player::TeamForRace(uint8 race)
 {
@@ -25368,7 +25363,7 @@ void Player::SetOriginalGroup(Group* group, int8 subgroup)
     }
 }
 
-void Player::ProcessTerrainStatusUpdate(ZLiquidStatus oldLiquidStatus, Optional<LiquidData> const& newLiquidData)
+void Player::ProcessTerrainStatusUpdate(LiquidStatus oldLiquidStatus, Optional<LiquidData> const& newLiquidData)
 {
     // process liquid auras using generic unit code
     Unit::ProcessTerrainStatusUpdate(oldLiquidStatus, newLiquidData);

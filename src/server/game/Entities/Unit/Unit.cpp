@@ -4124,19 +4124,68 @@ bool Unit::isInBackInMap(Unit const* target, float distance, float arc) const { 
 
 bool Unit::isInAccessiblePlaceFor(Creature const* c) const
 {
-    if (IsInWater())
-        return c->CanEnterWater();
+    if (c->GetMapId() == MAP_THE_RING_OF_VALOR)
+    {
+        // skip transport check, check for being below floor level
+        if (this->GetPositionZ() < 28.0f)
+            return false;
+        if (BattlegroundMap* bgMap = c->GetMap()->ToBattlegroundMap())
+            if (Battleground* bg = bgMap->GetBG())
+                if (bg->GetStartTime() < 80133) // 60000ms preparation time + 20133ms elevator rise time
+                    return false;
+    }
+    else if (c->GetMapId() == MAP_ICECROWN_CITADEL)
+    {
+        // if static transport doesn't match - return false
+        if (c->GetTransport() != this->GetTransport() && ((c->GetTransport() && c->GetTransport()->IsStaticTransport()) || (this->GetTransport() && this->GetTransport()->IsStaticTransport())))
+            return false;
+
+        // special handling for ICC (map 631), for non-flying pets in Gunship Battle, for trash npcs this is done via CanAIAttack
+        if (c->GetOwnerGUID().IsPlayer() && !c->CanFly())
+        {
+            if (c->GetTransport() != this->GetTransport())
+                return false;
+            if (this->GetTransport())
+            {
+                if (c->GetPositionY() < 2033.0f)
+                {
+                    if (this->GetPositionY() > 2033.0f)
+                        return false;
+                }
+                else if (c->GetPositionY() < 2438.0f)
+                {
+                    if (this->GetPositionY() < 2033.0f || this->GetPositionY() > 2438.0f)
+                        return false;
+                }
+                else if (this->GetPositionY() < 2438.0f)
+                    return false;
+            }
+        }
+    }
     else
+    {
+        // pussywizard: prevent any bugs by passengers exiting transports or normal creatures flying away
+        if (c->GetTransport() != this->GetTransport())
+            return false;
+    }
+
+    LiquidStatus liquidStatus = GetLiquidData().Status;
+    bool isInWater = (liquidStatus & MAP_LIQUID_STATUS_IN_CONTACT) != 0;
+
+    // In water or jumping in water
+    if (isInWater || (liquidStatus == LIQUID_MAP_ABOVE_WATER && (IsFalling() || (ToPlayer() && ToPlayer()->IsFalling()))))
+    {
+        return c->CanEnterWater();
+    }
+    else
+    {
         return c->CanWalk() || c->CanFly();
+    }
 }
-
-bool Unit::IsInWater() const { return GetLiquidStatus() & (LIQUID_MAP_IN_WATER | LIQUID_MAP_UNDER_WATER); }
-
-bool Unit::IsUnderWater() const { return GetLiquidStatus() & LIQUID_MAP_UNDER_WATER; }
 
 void Unit::ProcessPositionDataChanged(PositionFullTerrainStatus const& data)
 {
-    ZLiquidStatus oldLiquidStatus = GetLiquidStatus();
+    LiquidStatus oldLiquidStatus = GetLiquidStatus();
     WorldObject::ProcessPositionDataChanged(data);
     ProcessTerrainStatusUpdate(oldLiquidStatus, data.liquidInfo);
 
@@ -4144,7 +4193,7 @@ void Unit::ProcessPositionDataChanged(PositionFullTerrainStatus const& data)
         UpdateMountCapability();
 }
 
-void Unit::ProcessTerrainStatusUpdate(ZLiquidStatus /*oldLiquidStatus*/, Optional<LiquidData> const& newLiquidData)
+void Unit::ProcessTerrainStatusUpdate(LiquidStatus /*oldLiquidStatus*/, Optional<LiquidData> const& newLiquidData)
 {
     if (!IsControlledByPlayer())
         return;
@@ -4172,32 +4221,86 @@ void Unit::ProcessTerrainStatusUpdate(ZLiquidStatus /*oldLiquidStatus*/, Optiona
             CastSpell(this, curLiquid->SpellID, true);
     }
 }
+
+SafeUnitPointer::~SafeUnitPointer()
+{
+    if (ptr != defaultValue && ptr)
+        ptr->RemovePointedBy(this);
+    ptr = defaultValue;
+}
+
+void SafeUnitPointer::SetPointedTo(Unit* u)
+{
+    if (ptr != defaultValue && ptr)
+        ptr->RemovePointedBy(this);
+    ptr = u;
+    if (ptr != defaultValue && ptr)
+        ptr->AddPointedBy(this);
+}
+
+void SafeUnitPointer::UnitDeleted()
+{
+    LOG_INFO("misc", "SafeUnitPointer::UnitDeleted !!!");
+    if (defaultValue)
+    {
+        if (Player* p = defaultValue->ToPlayer())
+        {
+            LOG_INFO("misc", "SafeUnitPointer::UnitDeleted (A1) - {}, {}, {}, {}, {}, {}, {}, {}", p->GetGUID().ToString(), p->GetMapId(), p->GetInstanceId(), p->FindMap()->GetId(),
+                p->IsInWorld() ? 1 : 0, p->IsDuringRemoveFromWorld() ? 1 : 0, p->IsBeingTeleported() ? 1 : 0, p->isBeingLoaded() ? 1 : 0);
+            if (ptr)
+                LOG_INFO("misc", "SafeUnitPointer::UnitDeleted (A2)");
+
+            p->GetSession()->KickPlayer("Unit deleted");
+        }
+    }
+    else if (ptr)
+        LOG_INFO("misc", "SafeUnitPointer::UnitDeleted (B1)");
+
+    ptr = defaultValue;
+}
+
+void Unit::HandleSafeUnitPointersOnDelete(Unit* thisUnit)
+{
+    if (thisUnit->SafeUnitPointerSet.empty())
+        return;
+    for (std::set<SafeUnitPointer*>::iterator itr = thisUnit->SafeUnitPointerSet.begin(); itr != thisUnit->SafeUnitPointerSet.end(); ++itr)
+        (*itr)->UnitDeleted();
+
+    thisUnit->SafeUnitPointerSet.clear();
+}
+
+bool Unit::IsInWater() const { return GetLiquidStatus() & (LIQUID_MAP_IN_WATER | LIQUID_MAP_UNDER_WATER); }
+
+bool Unit::IsUnderWater() const { return GetLiquidStatus() & LIQUID_MAP_UNDER_WATER; }
+
 void Unit::DeMorph() { SetDisplayId(GetNativeDisplayId()); }
 
-Aura* Unit::_TryStackingOrRefreshingExistingAura(AuraCreateInfo& createInfo)
+Aura* Unit::_TryStackingOrRefreshingExistingAura(
+    SpellInfo const* newAura, uint8 effMask, Unit* caster, int32* baseAmount /*= nullptr*/, Item* castItem /*= nullptr*/, ObjectGuid casterGUID /*= ObjectGuid::Empty*/, bool periodicReset /*= false*/)
 {
-    ASSERT(createInfo.CasterGUID || createInfo.Caster);
+    if (!casterGUID && newAura->IsStackableOnOneSlotWithDifferentCasters())
+        casterGUID = caster->GetGUID();
 
-    // Check if these can stack anyway
-    if (!createInfo.CasterGUID && !createInfo.GetSpellInfo()->IsStackableOnOneSlotWithDifferentCasters())
-        createInfo.CasterGUID = createInfo.Caster->GetGUID();
+    // Xinef: Hax for mixology, best solution qq
+    if (sSpellMgr->GetSpellGroup(newAura->Id) == 1)
+        return nullptr;
 
     // passive and Incanter's Absorption and auras with different type can stack with themselves any number of times
-    if (!createInfo.GetSpellInfo()->IsMultiSlotAura())
+    if (!newAura->IsMultiSlotAura())
     {
         // check if cast item changed
         ObjectGuid castItemGUID;
-        if (createInfo.CastItem)
-            castItemGUID = createInfo.CastItem->GetGUID();
+        if (castItem)
+            castItemGUID = castItem->GetGUID();
 
         // find current aura from spell and change it's stackamount, or refresh it's duration
-        if (Aura* foundAura =
-                GetOwnedAura(createInfo.GetSpellInfo()->Id, createInfo.CasterGUID, createInfo.GetSpellInfo()->HasAttribute(SPELL_ATTR0_CU_ENCHANT_PROC) ? castItemGUID : ObjectGuid::Empty))
+        if (Aura* foundAura = GetOwnedAura(newAura->Id, newAura->HasAttribute(SPELL_ATTR0_CU_SINGLE_AURA_STACK) ? ObjectGuid::Empty : casterGUID,
+                newAura->HasAttribute(SPELL_ATTR0_CU_ENCHANT_PROC) ? castItemGUID : ObjectGuid::Empty, 0))
         {
             // effect masks do not match
             // extremely rare case
             // let's just recreate aura
-            if (createInfo.GetAuraEffectMask() != foundAura->GetEffectMask())
+            if (effMask != foundAura->GetEffectMask())
                 return nullptr;
 
             // update basepoints with new values - effect amount will be recalculated in ModStackAmount
@@ -4206,9 +4309,11 @@ Aura* Unit::_TryStackingOrRefreshingExistingAura(AuraCreateInfo& createInfo)
                 if (!foundAura->HasEffect(i))
                     continue;
 
-                int32 bp = foundAura->GetSpellInfo()->Effects[i].BasePoints;
-                if (createInfo.BaseAmount)
-                    bp = *(createInfo.BaseAmount + i);
+                int bp;
+                if (baseAmount)
+                    bp = *(baseAmount + i);
+                else
+                    bp = foundAura->GetSpellInfo()->Effects[i].BasePoints;
 
                 int32* oldBP = const_cast<int32*>(&(foundAura->GetEffect(i)->m_baseAmount));
                 *oldBP = bp;
@@ -4222,7 +4327,8 @@ Aura* Unit::_TryStackingOrRefreshingExistingAura(AuraCreateInfo& createInfo)
             }
 
             // try to increase stack amount
-            foundAura->ModStackAmount(1, AuraRemoveMode::ByDefault);
+            foundAura->ModStackAmount(1, AURA_REMOVE_BY_DEFAULT, periodicReset);
+            sScriptMgr->OnAuraApply(this, foundAura);
             return foundAura;
         }
     }
@@ -4233,16 +4339,16 @@ Aura* Unit::_TryStackingOrRefreshingExistingAura(AuraCreateInfo& createInfo)
 void Unit::_AddAura(UnitAura* aura, Unit* caster)
 {
     ASSERT(!m_cleanupDone);
-    m_ownedAuras.emplace(aura->GetId(), aura);
+    m_ownedAuras.insert(AuraMap::value_type(aura->GetId(), aura));
 
     _RemoveNoStackAurasDueToAura(aura);
 
     if (aura->IsRemoved())
         return;
 
-    aura->SetIsLimitedTarget(caster && (aura->GetSpellInfo()->IsSingleTarget() || aura->GetSpellInfo()->GetAuraTargetLimit() || aura->HasEffectType(SPELL_AURA_CONTROL_VEHICLE)));
+    aura->SetIsSingleTarget(caster && (aura->GetSpellInfo()->IsSingleTarget() || aura->GetSpellInfo()->GetAuraTargetLimit() || aura->HasEffectType(SPELL_AURA_CONTROL_VEHICLE)));
 
-    if (aura->IsLimitedTarget())
+    if (aura->IsSingleTarget())
     {
         ASSERT((IsInWorld() && !IsDuringRemoveFromWorld()) || (aura->GetCasterGUID() == GetGUID()) || (isBeingLoaded() && aura->HasEffectType(SPELL_AURA_CONTROL_VEHICLE)));
         /* @HACK: Player is not in world during loading auras.
@@ -4250,21 +4356,22 @@ void Unit::_AddAura(UnitAura* aura, Unit* caster)
          *        but may be created as a result of aura links (player mounts with passengers)
          */
 
-        // register limited target aura
-        caster->GetLimitedCastAuras(aura->GetId()).push_back(aura);
+        // register single target aura
+        caster->GetSingleCastAuras().push_back(aura);
 
         Unit::AuraList& ltAuras = caster->GetLimitedCastAuras(aura->GetId());
+
+        Unit::AuraList& scAuras = caster->GetSingleCastAuras();
         uint32 targetLimit = aura->GetSpellInfo()->GetAuraTargetLimit();
 
-        // remove other limited target auras
-        for (Unit::AuraList::iterator itr = ltAuras.begin(); itr != ltAuras.end();)
+        for (Unit::AuraList::iterator itr = scAuras.begin(); itr != scAuras.end();)
         {
-            if ((*itr) != aura && (*itr)->IsLimitedTargetWith(aura) && !targetLimit)
+            if ((*itr) != aura && (*itr)->IsSingleTargetWith(aura) && !targetLimit)
             {
                 (*itr)->Remove();
                 itr = ltAuras.begin();
             }
-            else if ((*itr) != aura && (*itr)->IsLimitedTargetWith(aura) && targetLimit && ltAuras.size() > targetLimit)
+            else if ((*itr) != aura && (*itr)->IsSingleTargetWith(aura) && targetLimit && ltAuras.size() > targetLimit)
             {
                 // We have more auras in our target limit list than we are allowed to have so we remove the oldest entry
                 if ((*itr) == ltAuras.front())
@@ -4273,10 +4380,14 @@ void Unit::_AddAura(UnitAura* aura, Unit* caster)
                     itr = ltAuras.begin();
                 }
                 else
+                {
                     ++itr;
+                }
             }
             else
+            {
                 ++itr;
+            }
         }
     }
 }
@@ -4528,8 +4639,8 @@ void Unit::RemoveOwnedAura(AuraMap::iterator& i, AuraRemoveMode removeMode)
     m_removedAuras.push_back(aura);
 
     // Unregister single target aura
-    if (aura->IsLimitedTarget())
-        aura->UnregisterLimitedTarget();
+    if (aura->IsSingleTarget())
+        aura->UnregisterSingleTarget();
 
     aura->_Remove(removeMode);
 
@@ -4833,8 +4944,8 @@ void Unit::RemoveAurasDueToSpellBySteal(uint32 spellId, ObjectGuid casterGUID, U
             else
             {
                 // limited target state must be removed before aura creation to preserve existing limited target aura
-                if (aura->IsLimitedTarget())
-                    aura->UnregisterLimitedTarget();
+                if (aura->IsSingleTarget())
+                    aura->UnregisterSingleTarget();
 
                 AuraCreateInfo createInfo(aura->GetSpellInfo(), effMask, stealer);
                 createInfo.SetCasterGUID(aura->GetCasterGUID()).SetBaseAmount(baseDamage);
@@ -4842,11 +4953,11 @@ void Unit::RemoveAurasDueToSpellBySteal(uint32 spellId, ObjectGuid casterGUID, U
                 if (Aura* newAura = Aura::TryRefreshStackOrCreate(createInfo))
                 {
                     // created aura must not be limited target aura, so stealer won't loose it on recast
-                    if (newAura->IsLimitedTarget())
+                    if (newAura->IsSingleTarget())
                     {
-                        newAura->UnregisterLimitedTarget();
+                        newAura->UnregisterSingleTarget();
                         // bring back single target aura status to the old aura
-                        aura->SetIsLimitedTarget(true);
+                        aura->SetIsSingleTarget(true);
                         caster->GetLimitedCastAuras(aura->GetId()).push_back(aura);
                     }
                     // FIXME: using aura->GetMaxDuration() maybe not blizzlike but it fixes stealing of spells like Innervate
@@ -4928,7 +5039,7 @@ void Unit::RemoveNotOwnLimitedTargetAuras(bool onPhaseChange /*= false*/)
     {
         Aura const* aura = iter->second;
 
-        if (aura->GetCasterGUID() != GetGUID() && aura->IsLimitedTarget())
+        if (aura->GetCasterGUID() != GetGUID() && aura->IsSingleTarget())
         {
             if (!onPhaseChange)
                 RemoveOwnedAura(iter);
@@ -9299,7 +9410,7 @@ MountCapabilityEntry const* Unit::GetMountCapability(uint32 mountType) const
     else if (AreaTableEntry const* areaTable = sAreaTableStore.LookupEntry(areaId))
         mountFlags = areaTable->MountFlags;
 
-    ZLiquidStatus liquidStatus = GetLiquidStatus();
+    LiquidStatus liquidStatus = GetLiquidStatus();
     isUnderwater = (liquidStatus & LIQUID_MAP_UNDER_WATER) != 0;
     isInWater = (liquidStatus & LIQUID_MAP_IN_WATER) != 0;
 

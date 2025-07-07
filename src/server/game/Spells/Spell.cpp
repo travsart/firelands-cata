@@ -3583,20 +3583,6 @@ void Spell::_cast(bool skipCheck)
             casterAI->OnSpellCastFinished(GetSpellInfo(), SPELL_FINISHED_SUCCESSFUL_CAST);
 }
 
-template <class Container> void Spell::DoProcessTargetContainer(Container& targetContainer)
-{
-    for (TargetInfoBase& target : targetContainer)
-        target.PreprocessTarget(this);
-
-    for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
-        for (TargetInfoBase& target : targetContainer)
-            if (target.EffectMask & (1 << i))
-                target.DoTargetSpellHit(this, i);
-
-    for (TargetInfoBase& target : targetContainer)
-        target.DoDamageAndTriggers(this);
-}
-
 void Spell::handle_immediate()
 {
     // start channeling if applicable
@@ -3625,13 +3611,26 @@ void Spell::handle_immediate()
 
     // consider spell hit for some spells without target, so they may proc on finish phase correctly
     if (m_UniqueTargetInfo.empty())
+    {
         m_hitMask = PROC_HIT_NORMAL;
+    }
     else
+    {
+        for (std::list<TargetInfo>::iterator ihit = m_UniqueTargetInfo.begin(); ihit != m_UniqueTargetInfo.end(); ++ihit)
+        {
+            DoAllEffectOnTarget(&(*ihit));
+        }
+    }
 
-        DoProcessTargetContainer(m_UniqueTargetInfo);
+    for (std::list<TargetInfo>::iterator ihit = m_UniqueGOTargetInfo.begin(); ihit != m_UniqueGOTargetInfo.end(); ++ihit)
+    {
+        DoAllEffectOnTarget(&(*ihit));
+    }
 
-    DoProcessTargetContainer(m_UniqueGOTargetInfo);
-    DoProcessTargetContainer(m_UniqueCorpseTargetInfo);
+    for (std::list<TargetInfo>::iterator ihit = m_UniqueCorpseTargetInfo.begin(); ihit != m_UniqueCorpseTargetInfo.end(); ++ihit)
+    {
+        DoAllEffectOnTarget(&(*ihit));
+    }
 
     FinishTargetProcessing();
 
@@ -3768,8 +3767,14 @@ void Spell::_handle_immediate_phase()
 {
     _spellAura = nullptr;
 
+    // initialize Diminishing Returns Data
+    m_diminishLevel = DIMINISHING_LEVEL_1;
+    m_diminishGroup = DIMINISHING_NONE;
+
     // handle some immediate features of the spell here
     HandleThreatSpells();
+
+    PrepareScriptHitHandlers();
 
     // handle effects with SPELL_EFFECT_HANDLE_HIT mode
     for (uint32 j = 0; j < MAX_SPELL_EFFECTS; ++j)
@@ -3783,7 +3788,8 @@ void Spell::_handle_immediate_phase()
     }
 
     // process items
-    DoProcessTargetContainer(m_UniqueItemInfo);
+    for (std::list<ItemTargetInfo>::iterator ihit = m_UniqueItemInfo.begin(); ihit != m_UniqueItemInfo.end(); ++ihit)
+        DoAllEffectOnTarget(&(*ihit));
 }
 
 void Spell::_handle_finish_phase()
@@ -7603,53 +7609,46 @@ void Spell::HandleLaunchPhase()
 
     PrepareTargetProcessing();
 
-    for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+    for (TargetInfo& target : m_UniqueTargetInfo)
     {
-        float multiplier = 1.0f;
-        if (m_applyMultiplierMask & (1 << i))
-            multiplier = m_spellInfo->Effects[i].CalcDamageMultiplier(m_originalCaster, this);
+        uint32 mask = target.EffectMask;
+        if (!(mask & (1 << i)))
+            continue;
 
-        bool ammoTaken = false;
-        for (TargetInfo& target : m_UniqueTargetInfo)
+        if (usesAmmo)
         {
-            uint32 mask = target.EffectMask;
-            if (!(mask & (1 << i)))
-                continue;
-
-            if (usesAmmo && !ammoTaken)
+            bool ammoTaken = false;
+            for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
             {
-                for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+                if (!(mask & 1 << i))
+                    continue;
+
+                switch (m_spellInfo->Effects[i].Effect)
                 {
-                    if (!(mask & 1 << i))
-                        continue;
-
-                    switch (m_spellInfo->Effects[i].Effect)
-                    {
-                    case SPELL_EFFECT_SCHOOL_DAMAGE:
-                    case SPELL_EFFECT_WEAPON_DAMAGE:
-                    case SPELL_EFFECT_WEAPON_DAMAGE_NOSCHOOL:
-                    case SPELL_EFFECT_NORMALIZED_WEAPON_DMG:
-                    case SPELL_EFFECT_WEAPON_PERCENT_DAMAGE:
-                        ammoTaken = true;
-                        TakeAmmo();
-                        break;
-                    default:
-                        break;
-                    }
-
-                    if (ammoTaken)
-                        break;
+                case SPELL_EFFECT_SCHOOL_DAMAGE:
+                case SPELL_EFFECT_WEAPON_DAMAGE:
+                case SPELL_EFFECT_WEAPON_DAMAGE_NOSCHOOL:
+                case SPELL_EFFECT_NORMALIZED_WEAPON_DMG:
+                case SPELL_EFFECT_WEAPON_PERCENT_DAMAGE:
+                    ammoTaken = true;
+                    TakeAmmo();
+                    break;
+                default:
+                    break;
                 }
-            }
 
-            DoEffectOnLaunchTarget(target, multiplier, i);
+                if (ammoTaken)
+                    break;
+            }
         }
+
+        DoAllEffectOnLaunchTarget(target, multiplier);
     }
 
     FinishTargetProcessing();
 }
 
-void Spell::DoEffectOnLaunchTarget(TargetInfo& targetInfo, float multiplier, uint8 effIndex)
+void Spell::DoAllEffectOnLaunchTarget(TargetInfo& targetInfo, float multiplier, uint8 effIndex)
 {
     Unit* unit = nullptr;
     // In case spell hit target, do all effect on that target
@@ -7661,6 +7660,7 @@ void Spell::DoEffectOnLaunchTarget(TargetInfo& targetInfo, float multiplier, uin
     if (!unit)
         return;
 
+    // TODO should this be here????
     // This will only cause combat - the target will engage once the projectile hits (in DoAllEffectOnTarget)
     bool triggerCombat = [&]()
     {
@@ -7681,41 +7681,54 @@ void Spell::DoEffectOnLaunchTarget(TargetInfo& targetInfo, float multiplier, uin
     {
         m_originalCaster->SetInCombatWith(unit);
     }
-    m_damage = 0;
-    m_healing = 0;
-
-    HandleEffects(unit, nullptr, nullptr, nullptr, effIndex, SPELL_EFFECT_HANDLE_LAUNCH_TARGET);
-    if (m_damage > 0)
+    for (uint32 i = 0; i < MAX_SPELL_EFFECTS; ++i)
     {
-        if (m_spellInfo->Effects[effIndex].IsTargetingArea() || m_spellInfo->Effects[effIndex].IsAreaAuraEffect() || m_spellInfo->Effects[effIndex].IsEffect(SPELL_EFFECT_PERSISTENT_AREA_AURA))
+        if (targetInfo.effectMask & (1 << i))
         {
-            m_damage = unit->CalculateAOEAvoidance(m_damage, m_spellInfo->SchoolMask, m_caster->GetGUID());
+            m_damage = 0;
+            m_healing = 0;
 
-            if (m_caster->IsPlayer())
+            HandleEffects(unit, nullptr, nullptr, i, SPELL_EFFECT_HANDLE_LAUNCH_TARGET);
+
+            if (m_damage > 0)
             {
-                // cap damage of player AOE
-                uint32 targetAmount = m_UniqueTargetInfo.size();
-                if (targetAmount > 10)
-                    m_damage = m_damage * 10 / targetAmount;
+                // Xinef: Area Auras, AoE Targetting spells AND Chain Target spells (cleave etc.)
+                if (m_spellInfo->Effects[i].IsAreaAuraEffect() || m_spellInfo->Effects[i].IsTargetingArea() ||
+                    (m_spellInfo->Effects[i].ChainTarget > 1 && m_spellInfo->DmgClass != SPELL_DAMAGE_CLASS_MAGIC))
+                {
+                    bool npcCaster = (m_caster && !m_caster->IsControlledByPlayer()) || GetSpellInfo()->HasAttribute(SPELL_ATTR7_TREAT_AS_NPC_AOE);
+                    m_damage = unit->CalculateAOEDamageReduction(m_damage, m_spellInfo->SchoolMask, npcCaster);
+                    if (m_caster->IsPlayer())
+                    {
+                        uint32 targetAmount = m_UniqueTargetInfo.size();
+                        if (targetAmount > 10)
+                            m_damage = m_damage * 10 / targetAmount;
+                    }
+                }
             }
+
+            if (m_applyMultiplierMask & (1 << i))
+            {
+                m_damage = int32(m_damage * m_damageMultipliers[i]);
+                m_damageMultipliers[i] *= multiplier[i];
+            }
+            targetInfo.damage += m_damage;
         }
     }
 
-    if (m_applyMultiplierMask & (1 << effIndex))
+    // xinef: totem's inherit owner crit chance and dancing rune weapon
+    Unit* caster = m_caster;
+    if (m_caster->IsTotem() || m_caster->GetEntry() == 27893)
     {
-        m_damage = int32(m_damage * m_damageMultipliers[effIndex]);
-        m_healing = int32(m_healing * m_damageMultipliers[effIndex]);
-
-        m_damageMultipliers[effIndex] *= multiplier;
+        if (Unit* owner = m_caster->GetOwner())
+            caster = owner;
     }
+    else if (m_originalCaster)
+        caster = m_originalCaster;
 
-    targetInfo.Damage += m_damage;
-    targetInfo.Healing += m_healing;
-
-    float critChance = m_spellValue->CriticalChance;
-    if (!critChance)
-        critChance = m_caster->SpellDoneCritChance(m_spellInfo, m_spellSchoolMask, m_attackType);
-    targetInfo.IsCrit = roll_chance_f(unit->SpellTakenCritChance(m_caster, m_spellInfo, m_spellSchoolMask, critChance, m_attackType));
+    float critChance = caster->SpellDoneCritChance(unit, m_spellInfo, m_spellSchoolMask, m_attackType, false);
+    critChance = unit->SpellTakenCritChance(caster, m_spellInfo, m_spellSchoolMask, critChance, m_attackType, false);
+    targetInfo.crit = roll_chance_f(std::max(0.0f, critChance));
 }
 
 SpellCastResult Spell::CanOpenLock(uint32 effIndex, uint32 lockId, SkillType& skillId, int32& reqSkillValue, int32& skillValue)
