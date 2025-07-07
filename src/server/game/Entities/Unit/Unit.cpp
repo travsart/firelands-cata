@@ -4072,19 +4072,19 @@ bool Unit::IsNonMeleeSpellCast(bool withDelayed, bool skipChanneled, bool skipAu
     return false;
 }
 
-void Unit::InterruptNonMeleeSpells(bool withDelayed, uint32 spell_id, bool withInstant /* = true */, Spell* interruptingSpell /* = nullptr */)
+void Unit::InterruptNonMeleeSpells(bool withDelayed, uint32 spell_id, bool withInstant, bool bySelf)
 {
     // generic spells are interrupted if they are not finished or delayed
     if (m_currentSpells[CURRENT_GENERIC_SPELL] && (!spell_id || m_currentSpells[CURRENT_GENERIC_SPELL]->m_spellInfo->Id == spell_id))
-        InterruptSpell(CURRENT_GENERIC_SPELL, withDelayed, withInstant, interruptingSpell);
+        InterruptSpell(CURRENT_GENERIC_SPELL, withDelayed, withInstant, bySelf);
 
     // autorepeat spells are interrupted if they are not finished or delayed
     if (m_currentSpells[CURRENT_AUTOREPEAT_SPELL] && (!spell_id || m_currentSpells[CURRENT_AUTOREPEAT_SPELL]->m_spellInfo->Id == spell_id))
-        InterruptSpell(CURRENT_AUTOREPEAT_SPELL, withDelayed, withInstant, interruptingSpell);
+        InterruptSpell(CURRENT_AUTOREPEAT_SPELL, withDelayed, withInstant, bySelf);
 
     // channeled spells are interrupted if they are not finished, even if they are delayed
     if (m_currentSpells[CURRENT_CHANNELED_SPELL] && (!spell_id || m_currentSpells[CURRENT_CHANNELED_SPELL]->m_spellInfo->Id == spell_id))
-        InterruptSpell(CURRENT_CHANNELED_SPELL, true, true, interruptingSpell);
+        InterruptSpell(CURRENT_CHANNELED_SPELL, true, true, bySelf);
 }
 
 Spell* Unit::FindCurrentSpellBySpellId(uint32 spell_id) const
@@ -4452,9 +4452,19 @@ void Unit::_ApplyAura(AuraApplication* aurApp, uint8 effMask)
     if (aurApp->GetRemoveMode().HasAnyFlag())
         return;
 
+    Unit* caster = aura->GetCaster();
+
     // Update target aura state flag
-    if (AuraStateType aState = aura->GetSpellInfo()->GetAuraState())
-        ModifyAuraState(aState, true);
+    SpellInfo const* spellInfo = aura->GetSpellInfo();
+    if (AuraStateType aState = spellInfo->GetAuraState())
+    {
+        uint32 aStateMask = (1 << (aState - 1));
+        // force update so the new caster registers it
+        if ((aStateMask & PER_CASTER_AURA_STATE_MASK) && HasFlag(UNIT_FIELD_AURASTATE, aStateMask))
+            ForceValuesUpdateAtIndex(UNIT_FIELD_AURASTATE);
+        else
+            ModifyAuraState(aState, true);
+    }
 
     if (aurApp->GetRemoveMode().HasAnyFlag())
         return;
@@ -4480,6 +4490,8 @@ void Unit::_ApplyAura(AuraApplication* aurApp, uint8 effMask)
     if (Player* player = ToPlayer())
         if (sConditionMgr->IsSpellUsedInSpellClickConditions(aurApp->GetBase()->GetId()))
             player->UpdateVisibleGameobjectsOrSpellClicks();
+
+    sScriptMgr->OnAuraApply(this, aura);
 }
 
 // removes aura application from lists and unapplies effects
@@ -4504,7 +4516,7 @@ void Unit::_UnapplyAura(AuraApplicationMap::iterator& i, AuraRemoveMode removeMo
     // Remove all pointers from lists here to prevent possible pointer invalidation on spellcast/auraapply/auraremove
     m_appliedAuras.erase(i);
 
-    if (aura->GetSpellInfo()->HasAnyAuraInterruptFlag())
+    if (aura->GetSpellInfo()->HasAnyAuraInterruptFlag() && this == aura->GetOwner())
     {
         m_interruptableAuras.remove(aurApp);
         UpdateInterruptMask();
@@ -4544,15 +4556,25 @@ void Unit::_UnapplyAura(AuraApplicationMap::iterator& i, AuraRemoveMode removeMo
     ASSERT(!aurApp->GetEffectMask());
 
     // Remove totem at next update if totem loses its aura
-    if (aurApp->GetRemoveMode().HasFlag(AuraRemoveMode::Expired) && GetTypeId() == TYPEID_UNIT && IsTotem())
+    if (aurApp->GetRemoveMode().HasFlag(AuraRemoveMode::Expired) && IsTotem() && GetGUID() == aura->GetCasterGUID())
     {
         if (ToTotem()->GetSpell() == aura->GetId() && ToTotem()->GetTotemType() == TOTEM_PASSIVE)
             ToTotem()->setDeathState(JUST_DIED);
     }
 
-    // Remove aurastates only if were not found
-    if (!auraStateFound)
-        ModifyAuraState(auraState, false);
+    // Remove aurastates only if needed and were not found
+    if (auraState)
+    {
+        if (!auraStateFound)
+            ModifyAuraState(auraState, false);
+        else
+        {
+            // update for casters, some shouldn't 'see' the aura state
+            uint32 aStateMask = (1 << (auraState - 1));
+            if ((aStateMask & PER_CASTER_AURA_STATE_MASK) != 0)
+                ForceValuesUpdateAtIndex(UNIT_FIELD_AURASTATE);
+        }
+    }
 
     aura->HandleAuraSpecificMods(aurApp, caster, false, false);
 
@@ -4560,7 +4582,14 @@ void Unit::_UnapplyAura(AuraApplicationMap::iterator& i, AuraRemoveMode removeMo
         if (sConditionMgr->IsSpellUsedInSpellClickConditions(aurApp->GetBase()->GetId()))
             player->UpdateVisibleGameobjectsOrSpellClicks();
 
+    // only way correctly remove all auras from list
+    // if (removedAuras != m_removedAurasCount) new aura may be added
     i = m_appliedAuras.begin();
+
+    sScriptMgr->OnAuraRemove(this, aurApp, removeMode);
+
+    if (this->ToCreature() && this->ToCreature()->IsAIEnabled)
+        this->ToCreature()->AI()->OnAuraRemove(aurApp, removeMode);
 }
 
 void Unit::_UnapplyAura(AuraApplication* aurApp, AuraRemoveMode removeMode)
@@ -4586,17 +4615,17 @@ void Unit::_UnapplyAura(AuraApplication* aurApp, AuraRemoveMode removeMode)
 
 void Unit::_RemoveNoStackAurasDueToAura(Aura* aura)
 {
-    SpellInfo const* spellProto = aura->GetSpellInfo();
+    // SpellInfo const* spellProto = aura->GetSpellInfo();
 
-    // passive spell special case (only non stackable with ranks)
-    if (spellProto->IsPassiveStackableWithRanks())
-        return;
+    // // passive spell special case (only non stackable with ranks)
+    // if (spellProto->IsPassiveStackableWithRanks())
+    //     return;
 
-    if (!IsHighestExclusiveAura(aura))
-    {
-        aura->Remove();
-        return;
-    }
+    // if (!IsHighestExclusiveAura(aura))
+    // {
+    //     aura->Remove();
+    //     return;
+    // }
 
     bool remove = false;
     for (AuraApplicationMap::iterator i = m_appliedAuras.begin(); i != m_appliedAuras.end(); ++i)
@@ -4632,7 +4661,7 @@ void Unit::RemoveOwnedAura(AuraMap::iterator& i, AuraRemoveMode removeMode)
     ASSERT(!aura->IsRemoved());
 
     // if unit currently update aura list then make safe update iterator shift to next
-    if (m_auraUpdateIterator == i)
+    if (m_auraUpdateIterator == i && m_auraUpdateIterator != m_ownedAuras.end())
         ++m_auraUpdateIterator;
 
     m_ownedAuras.erase(i);
