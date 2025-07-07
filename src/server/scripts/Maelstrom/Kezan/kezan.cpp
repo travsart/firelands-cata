@@ -50,9 +50,7 @@ std::unordered_map<uint32, bool> objectivesCompleted = {{OBJECTIVE_IZZY_PICKED_U
 class quest_rolling_with_my_homies : public QuestScript
 {
   public:
-    quest_rolling_with_my_homies() : QuestScript("quest_rolling_with_my_homies")
-    {
-    }
+    quest_rolling_with_my_homies() : QuestScript("quest_rolling_with_my_homies") {}
 
     void OnQuestStatusChange(Player* player, Quest const* /*quest*/, QuestStatus /*oldStatus*/, QuestStatus newStatus) override
     {
@@ -65,13 +63,9 @@ class quest_rolling_with_my_homies : public QuestScript
 
 struct npc_hot_rod : public ScriptedAI
 {
-    npc_hot_rod(Creature* creature) : ScriptedAI(creature)
-    {
-    }
+    npc_hot_rod(Creature* creature) : ScriptedAI(creature) {}
 
-    void OnCharmed(bool /*apply*/) override
-    {
-    }
+    void OnCharmed(bool /*apply*/) override {}
 
     void PassengerBoarded(Unit* who, int8 /*seatId*/, bool apply) override
     {
@@ -96,7 +90,7 @@ struct npc_hot_rod : public ScriptedAI
 
             for (auto it : seatPerHomie)
             {
-                if (Creature* homie = player->GetSummonedCreatureByEntry(it.first))
+                if (Creature* homie = GetCreatureSummon(it.first))
                 {
                     homie->AI()->DoAction(ACTION_ROD_ENTER_VEHICLE);
                 }
@@ -122,10 +116,7 @@ class spell_klaxon : public SpellScript
                 GetCaster()->PlayDirectSound(KLAXON_SOUND, player);
     }
 
-    void Register() override
-    {
-        OnHit.Register(&spell_klaxon::HandleOnHit);
-    }
+    void Register() override { OnHit.Register(&spell_klaxon::HandleOnHit); }
 };
 
 class spell_radio : public SpellScript
@@ -139,17 +130,12 @@ class spell_radio : public SpellScript
                 GetCaster()->PlayDistanceSound(RADIO_SOUND, caster->ToPlayer());
     }
 
-    void Register() override
-    {
-        OnHit.Register(&spell_radio::HandleOnHit);
-    }
+    void Register() override { OnHit.Register(&spell_radio::HandleOnHit); }
 };
 
 struct npc_homies : public ScriptedAI
 {
-    npc_homies(Creature* creature) : ScriptedAI(creature)
-    {
-    }
+    npc_homies(Creature* creature) : ScriptedAI(creature) {}
 
     void MoveInLineOfSight(Unit* who) override
     {
@@ -187,9 +173,7 @@ struct npc_homies : public ScriptedAI
 
 struct npc_homies_summon : public ScriptedAI
 {
-    npc_homies_summon(Creature* creature) : ScriptedAI(creature)
-    {
-    }
+    npc_homies_summon(Creature* creature) : ScriptedAI(creature) {}
 
     void Reset() override
     {
@@ -248,9 +232,7 @@ void InitQuestRollingWithMyHomies()
 class quest_fourth_and_goal : public QuestScript
 {
   public:
-    quest_fourth_and_goal() : QuestScript("quest_fourth_and_goal")
-    {
-    }
+    quest_fourth_and_goal() : QuestScript("quest_fourth_and_goal") {}
 
     void OnQuestStatusChange(Player* player, Quest const* /*quest*/, QuestStatus /*oldStatus*/, QuestStatus newStatus) override
     {
@@ -266,15 +248,11 @@ class quest_fourth_and_goal : public QuestScript
 class npc_coach_crosscheck : public CreatureScript
 {
   public:
-    npc_coach_crosscheck() : CreatureScript("npc_coach_crosscheck")
-    {
-    }
+    npc_coach_crosscheck() : CreatureScript("npc_coach_crosscheck") {}
 
     struct npc_coach_crosscheckAI : public ScriptedAI
     {
-        npc_coach_crosscheckAI(Creature* creature) : ScriptedAI(creature)
-        {
-        }
+        npc_coach_crosscheckAI(Creature* creature) : ScriptedAI(creature) {}
     };
 
     bool OnQuestAccept(Player* player, Creature* /*creature*/, Quest const* quest) override
@@ -300,10 +278,7 @@ class npc_coach_crosscheck : public CreatureScript
         return false;
     }
 
-    CreatureAI* GetAI(Creature* creature) const override
-    {
-        return new npc_coach_crosscheckAI(creature);
-    }
+    CreatureAI* GetAI(Creature* creature) const override { return new npc_coach_crosscheckAI(creature); }
 };
 
 const Position SharkPos[8] = {
@@ -322,9 +297,7 @@ const Position SharkPos[8] = {
 class npc_bilgewater_bucaneer : public CreatureScript
 {
   public:
-    npc_bilgewater_bucaneer() : CreatureScript("npc_bilgewater_bucaneer")
-    {
-    }
+    npc_bilgewater_bucaneer() : CreatureScript("npc_bilgewater_bucaneer") {}
 
     bool OnGossipHello(Player* pPlayer, Creature* pCreature) override
     {
@@ -337,9 +310,7 @@ class npc_bilgewater_bucaneer : public CreatureScript
     struct npc_bucanneer_gob : public VehicleAI
     {
 
-        npc_bucanneer_gob(Creature* creature) : VehicleAI(creature)
-        {
-        }
+        npc_bucanneer_gob(Creature* creature) : VehicleAI(creature) {}
 
         EventMap m_events;
         ObjectGuid m_playerGUID;
@@ -464,18 +435,13 @@ class npc_bilgewater_bucaneer : public CreatureScript
         }
     };
 
-    CreatureAI* GetAI(Creature* creature) const override
-    {
-        return new npc_bucanneer_gob(creature);
-    }
+    CreatureAI* GetAI(Creature* creature) const override { return new npc_bucanneer_gob(creature); }
 };
 
 // NPC entry 37114
 struct npc_shark_gob : public ScriptedAI
 {
-    npc_shark_gob(Creature* creature) : ScriptedAI(creature)
-    {
-    }
+    npc_shark_gob(Creature* creature) : ScriptedAI(creature) {}
 
     void Reset() override
     {
@@ -498,9 +464,7 @@ struct npc_shark_gob : public ScriptedAI
         }
     }
 
-    void JustReachedHome() override
-    {
-    }
+    void JustReachedHome() override {}
 };
 
 // Spell Id 70052
@@ -518,18 +482,13 @@ class npc_fourth_and_goal_kick_footbomb : public SpellScript
         }
     }
 
-    void Register() override
-    {
-        BeforeCast.Register(&npc_fourth_and_goal_kick_footbomb::HandleBeforeCast);
-    }
+    void Register() override { BeforeCast.Register(&npc_fourth_and_goal_kick_footbomb::HandleBeforeCast); }
 };
 
 // NPC entry 37203
 struct npc_fourth_and_goal_target : public ScriptedAI
 {
-    npc_fourth_and_goal_target(Creature* creature) : ScriptedAI(creature)
-    {
-    }
+    npc_fourth_and_goal_target(Creature* creature) : ScriptedAI(creature) {}
 
     void Reset() override
     {
@@ -542,15 +501,11 @@ struct npc_fourth_and_goal_target : public ScriptedAI
 class npc_fourth_and_goal_deathwing : public CreatureScript
 {
   public:
-    npc_fourth_and_goal_deathwing() : CreatureScript("npc_fourth_and_goal_deathwing")
-    {
-    }
+    npc_fourth_and_goal_deathwing() : CreatureScript("npc_fourth_and_goal_deathwing") {}
 
     struct npc_fourth_and_goal_deathwingAI : public ScriptedAI
     {
-        npc_fourth_and_goal_deathwingAI(Creature* creature) : ScriptedAI(creature)
-        {
-        }
+        npc_fourth_and_goal_deathwingAI(Creature* creature) : ScriptedAI(creature) {}
 
         EventMap m_events;
         ObjectGuid m_playerGUID;
@@ -721,10 +676,7 @@ class npc_fourth_and_goal_deathwing : public CreatureScript
         }
     };
 
-    CreatureAI* GetAI(Creature* creature) const override
-    {
-        return new npc_fourth_and_goal_deathwingAI(creature);
-    }
+    CreatureAI* GetAI(Creature* creature) const override { return new npc_fourth_and_goal_deathwingAI(creature); }
 };
 
 // Spell Id 69987
@@ -740,10 +692,7 @@ class spell_kezan_despawn_sharks : public SpellScript
                     creature->DespawnOrUnsummon();
     }
 
-    void Register() override
-    {
-        OnEffectHitTarget.Register(&spell_kezan_despawn_sharks::HandleHit, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
-    }
+    void Register() override { OnEffectHitTarget.Register(&spell_kezan_despawn_sharks::HandleHit, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT); }
 };
 
 void InitQuestNecessaryRoughness()
