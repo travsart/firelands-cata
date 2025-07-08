@@ -299,8 +299,7 @@ bool CreatureAI::_EnterEvadeMode(EvadeReason /*why*/)
         return false;
     }
 
-
-    me->RemoveAurasOnEvade();
+    me->RemoveEvadeAuras();
 
     me->CombatStop(true);
     me->LoadCreaturesAddon();

@@ -767,6 +767,7 @@ class FC_GAME_API Unit : public WorldObject
     typedef std::list<AuraApplication*> AuraApplicationList;
     typedef std::list<DiminishingReturn> Diminishing;
     typedef std::map<uint8, AuraApplication*> VisibleAuraMap;
+    typedef std::unordered_map<uint32 /*spellId*/, AuraList> AurasBySpellIdMap;
 
     virtual ~Unit();
 
@@ -1534,7 +1535,8 @@ class FC_GAME_API Unit : public WorldObject
     void RemoveAurasDueToItemSpell(uint32 spellId, ObjectGuid castItemGuid);
     void RemoveAurasByType(AuraType auraType, ObjectGuid casterGUID = ObjectGuid::Empty, Aura* except = nullptr, bool negative = true, bool positive = true);
     void RemoveAurasByType(AuraType auraType, std::function<bool(AuraApplication const*)> const& check);
-    void RemoveNotOwnSingleTargetAuras();
+    void RemoveNotOwnLimitedTargetAuras(bool onPhaseChange = false);
+    // void RemoveNotOwnLimitedTargetAuras();
     // template <typename InterruptFlags> void RemoveAurasWithInterruptFlags(InterruptFlags flag, uint32 except = 0, Spell* interruptingSpell = nullptr);
     void RemoveAurasWithInterruptFlags(uint32 flag, uint32 except = 0, bool isAutoshot = false);
 
@@ -1544,8 +1546,6 @@ class FC_GAME_API Unit : public WorldObject
     void RemoveMovementImpairingAuras(bool withRoot);
     void RemoveAurasByShapeShift();
 
-    // @todo do we need?
-    void RemoveAurasOnEvade();
     void RemoveAllGroupBuffsFromCaster(ObjectGuid casterGUID);
 
     void RemoveAreaAurasDueToLeaveWorld();
@@ -1562,8 +1562,9 @@ class FC_GAME_API Unit : public WorldObject
     void _ApplyAllAuraStatMods();
 
     [[nodiscard]] AuraEffectList const& GetAuraEffectsByType(AuraType type) const { return m_modAuras[type]; }
-    AuraList& GetSingleCastAuras() { return m_scAuras; }
-    [[nodiscard]] AuraList const& GetSingleCastAuras() const { return m_scAuras; }
+    AuraList& GetLimitedCastAuras(uint32 spellId) { return m_ltAuras[spellId]; }
+    AurasBySpellIdMap& GetAllLimitedCastAuras() { return m_ltAuras; }
+    bool HasLimitedTargetAuraForSpell(uint32 spellId) const;
 
     [[nodiscard]] AuraEffect* GetAuraEffect(uint32 spellId, uint8 effIndex, ObjectGuid casterGUID = ObjectGuid::Empty) const;
     [[nodiscard]] AuraEffect* GetAuraEffectOfRankedSpell(uint32 spellId, uint8 effIndex, ObjectGuid casterGUID = ObjectGuid::Empty) const;
@@ -1580,7 +1581,7 @@ class FC_GAME_API Unit : public WorldObject
         uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, ObjectGuid itemCasterGUID = ObjectGuid::Empty, uint8 reqEffMask = 0, AuraApplication* except = nullptr) const;
     [[nodiscard]] Aura* GetAuraOfRankedSpell(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, ObjectGuid itemCasterGUID = ObjectGuid::Empty, uint8 reqEffMask = 0) const;
 
-    void GetDispellableAuraList(Unit* caster, uint32 dispelMask, DispelChargesList& dispelList, SpellInfo const* dispelSpell);
+    void GetDispellableAuraList(Unit* caster, uint32 dispelMask, DispelChargesList& dispelList, SpellInfo const* dispelSpell, bool isReflect = false);
 
     [[nodiscard]] bool HasAuraEffect(uint32 spellId, uint8 effIndex, ObjectGuid caster = ObjectGuid::Empty) const;
     [[nodiscard]] uint32 GetAuraCount(uint32 spellId) const;
@@ -1633,7 +1634,9 @@ class FC_GAME_API Unit : public WorldObject
     bool HasAuraTypeWithAffectMask(AuraType auratype, SpellInfo const* affectedSpell) const;
     [[nodiscard]] bool HasAuraTypeWithValue(AuraType auratype, int32 value) const;
     [[nodiscard]] bool HasAuraTypeWithTriggerSpell(AuraType auratype, uint32 triggerSpell) const;
-    template <typename InterruptFlags> bool HasNegativeAuraWithInterruptFlag(InterruptFlags flag, ObjectGuid guid = ObjectGuid::Empty) const;
+    // template <typename InterruptFlags> bool HasNegativeAuraWithInterruptFlag(InterruptFlags flag, ObjectGuid guid = ObjectGuid::Empty) const;
+    bool HasNegativeAuraWithInterruptFlag(uint32 flag, ObjectGuid guid = ObjectGuid::Empty);
+
     [[nodiscard]] bool HasVisibleAuraType(AuraType auraType) const;
     bool HasNegativeAuraWithAttribute(uint32 flag, ObjectGuid guid = ObjectGuid::Empty);
     [[nodiscard]] bool HasAuraWithMechanic(uint32 mechanicMask) const;
@@ -2210,6 +2213,8 @@ class FC_GAME_API Unit : public WorldObject
     [[nodiscard]] uint32 GetPhaseByAuras() const;
     void SetPhaseMask(uint32 newPhaseMask, bool update) override; // overwrite WorldObject::SetPhaseMask
     void UpdateObjectVisibility(bool forced = true, bool fromUpdate = false) override;
+    // TODO need????
+    void OnPhaseChange(); // Phasinghandler
 
     // Pointers
     void AddPointedBy(SafeUnitPointer* sup) { SafeUnitPointerSet.insert(sup); }
@@ -2429,7 +2434,7 @@ class FC_GAME_API Unit : public WorldObject
     uint32 m_removedAurasCount;
 
     AuraEffectList m_modAuras[TOTAL_AURAS];
-    AuraList m_scAuras;                       // casted singlecast auras
+    AurasBySpellIdMap m_ltAuras;              // cast limited target auras
     AuraApplicationList m_interruptableAuras; // auras which have interrupt mask applied on unit
     AuraStateAurasMap m_auraStateAuras;       // Used for improve performance of aura state checks on aura apply/remove
     EnumFlag<SpellAuraInterruptFlags> m_interruptMask;

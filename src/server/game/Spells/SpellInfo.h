@@ -568,7 +568,7 @@ class FC_GAME_API SpellInfo
     bool CanPierceImmuneAura(SpellInfo const* auraSpellInfo) const;
     bool CanDispelAura(SpellInfo const* auraSpellInfo) const;
 
-    bool IsSingleTarget() const;
+    bool IsLimitedTarget() const;
     uint32 GetAuraTargetLimit() const { return MaxAuraTargets; };
     bool IsAuraExclusiveBySpecificWith(SpellInfo const* spellInfo) const;
     bool IsAuraExclusiveBySpecificPerCasterWith(SpellInfo const* spellInfo) const;

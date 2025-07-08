@@ -257,10 +257,7 @@ pEffect SpellEffects[TOTAL_SPELL_EFFECTS] = {
     &Spell::EffectNULL,                          // 182 SPELL_EFFECT_DESPAWN_AREATRIGGER
 };
 
-void Spell::EffectNULL(SpellEffIndex /*effIndex*/)
-{
-    LOG_DEBUG("spells", "WORLD: Spell Effect DUMMY");
-}
+void Spell::EffectNULL(SpellEffIndex /*effIndex*/) { LOG_DEBUG("spells", "WORLD: Spell Effect DUMMY"); }
 
 void Spell::EffectUnused(SpellEffIndex /*effIndex*/)
 {
@@ -1998,7 +1995,7 @@ void Spell::EffectDispel(SpellEffIndex effIndex)
     uint32 dispelMask = SpellInfo::GetDispelMask(DispelType(dispel_type));
 
     DispelChargesList dispelList;
-    unitTarget->GetDispellableAuraList(m_caster, dispelMask, dispelList, targetMissInfo == SPELL_MISS_REFLECT);
+    unitTarget->GetDispellableAuraList(m_caster, dispelMask, dispelList, m_spellInfo, targetMissInfo == SPELL_MISS_REFLECT);
     if (dispelList.empty())
         return;
 

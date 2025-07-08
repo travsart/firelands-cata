@@ -4346,9 +4346,9 @@ void Unit::_AddAura(UnitAura* aura, Unit* caster)
     if (aura->IsRemoved())
         return;
 
-    aura->SetIsSingleTarget(caster && (aura->GetSpellInfo()->IsSingleTarget() || aura->GetSpellInfo()->GetAuraTargetLimit() || aura->HasEffectType(SPELL_AURA_CONTROL_VEHICLE)));
+    aura->SetIsLimitedTarget(caster && (aura->GetSpellInfo()->IsLimitedTarget() || aura->GetSpellInfo()->GetAuraTargetLimit() || aura->HasEffectType(SPELL_AURA_CONTROL_VEHICLE)));
 
-    if (aura->IsSingleTarget())
+    if (aura->IsLimitedTarget())
     {
         ASSERT((IsInWorld() && !IsDuringRemoveFromWorld()) || (aura->GetCasterGUID() == GetGUID()) || (isBeingLoaded() && aura->HasEffectType(SPELL_AURA_CONTROL_VEHICLE)));
         /* @HACK: Player is not in world during loading auras.
@@ -4356,22 +4356,21 @@ void Unit::_AddAura(UnitAura* aura, Unit* caster)
          *        but may be created as a result of aura links (player mounts with passengers)
          */
 
-        // register single target aura
-        caster->GetSingleCastAuras().push_back(aura);
+        // register limited target aura
+        caster->GetLimitedCastAuras(aura->GetId()).push_back(aura);
 
         Unit::AuraList& ltAuras = caster->GetLimitedCastAuras(aura->GetId());
-
-        Unit::AuraList& scAuras = caster->GetSingleCastAuras();
         uint32 targetLimit = aura->GetSpellInfo()->GetAuraTargetLimit();
 
-        for (Unit::AuraList::iterator itr = scAuras.begin(); itr != scAuras.end();)
+        // remove other limited target auras
+        for (Unit::AuraList::iterator itr = ltAuras.begin(); itr != ltAuras.end();)
         {
-            if ((*itr) != aura && (*itr)->IsSingleTargetWith(aura) && !targetLimit)
+            if ((*itr) != aura && (*itr)->IsLimitedTargetWith(aura) && !targetLimit)
             {
                 (*itr)->Remove();
                 itr = ltAuras.begin();
             }
-            else if ((*itr) != aura && (*itr)->IsSingleTargetWith(aura) && targetLimit && ltAuras.size() > targetLimit)
+            else if ((*itr) != aura && (*itr)->IsLimitedTargetWith(aura) && targetLimit && ltAuras.size() > targetLimit)
             {
                 // We have more auras in our target limit list than we are allowed to have so we remove the oldest entry
                 if ((*itr) == ltAuras.front())
@@ -4380,14 +4379,10 @@ void Unit::_AddAura(UnitAura* aura, Unit* caster)
                     itr = ltAuras.begin();
                 }
                 else
-                {
                     ++itr;
-                }
             }
             else
-            {
                 ++itr;
-            }
         }
     }
 }
@@ -4668,7 +4663,7 @@ void Unit::RemoveOwnedAura(AuraMap::iterator& i, AuraRemoveMode removeMode)
     m_removedAuras.push_back(aura);
 
     // Unregister single target aura
-    if (aura->IsSingleTarget())
+    if (aura->IsLimitedTarget())
         aura->UnregisterSingleTarget();
 
     aura->_Remove(removeMode);
@@ -4990,7 +4985,7 @@ void Unit::RemoveAurasDueToSpellBySteal(uint32 spellId, ObjectGuid casterGUID, U
             else
             {
                 // limited target state must be removed before aura creation to preserve existing limited target aura
-                if (aura->IsSingleTarget())
+                if (aura->IsLimitedTarget())
                     aura->UnregisterSingleTarget();
 
                 AuraCreateInfo createInfo(aura->GetSpellInfo(), effMask, stealer);
@@ -4999,11 +4994,11 @@ void Unit::RemoveAurasDueToSpellBySteal(uint32 spellId, ObjectGuid casterGUID, U
                 if (Aura* newAura = Aura::TryRefreshStackOrCreate(createInfo))
                 {
                     // created aura must not be limited target aura, so stealer won't loose it on recast
-                    if (newAura->IsSingleTarget())
+                    if (newAura->IsLimitedTarget())
                     {
                         newAura->UnregisterSingleTarget();
                         // bring back single target aura status to the old aura
-                        aura->SetIsSingleTarget(true);
+                        aura->SetIsLimitedTarget(true);
                         caster->GetLimitedCastAuras(aura->GetId()).push_back(aura);
                     }
                     // FIXME: using aura->GetMaxDuration() maybe not blizzlike but it fixes stealing of spells like Innervate
@@ -5104,9 +5099,8 @@ void Unit::RemoveAurasWithAttribute(uint32 flags)
     }
 }
 
-void Unit::RemoveNotOwnSingleTargetAuras()
+void Unit::RemoveNotOwnLimitedTargetAuras(bool onPhaseChange)
 {
-    // single target auras from other casters
     // Iterate m_ownedAuras - aura is marked as single target in Unit::AddAura (and pushed to m_ownedAuras).
     // m_appliedAuras will NOT contain the aura before first Unit::Update after adding it to m_ownedAuras.
     // Quickly removing such an aura will lead to it not being unregistered from caster's single cast auras container
@@ -5119,28 +5113,39 @@ void Unit::RemoveNotOwnSingleTargetAuras()
     {
         Aura const* aura = iter->second;
 
-        if (aura->GetCasterGUID() != GetGUID() && aura->IsSingleTarget())
+        if (aura->GetCasterGUID() != GetGUID() && aura->IsLimitedTarget())
         {
-            RemoveOwnedAura(iter);
+            if (!onPhaseChange)
+                RemoveOwnedAura(iter);
+            else
+            {
+                Unit* caster = aura->GetCaster();
+                if (!caster || !caster->IsInPhase(this))
+                    RemoveOwnedAura(iter);
+                else
+                    ++iter;
+            }
         }
         else
-        {
             ++iter;
-        }
     }
 
-    // single target auras at other targets
-    AuraList& scAuras = GetSingleCastAuras();
-    for (AuraList::iterator iter = scAuras.begin(); iter != scAuras.end();)
+    // limited target auras at other targets
+    AurasBySpellIdMap& ltAurasBySpellId = GetAllLimitedCastAuras();
+    for (AurasBySpellIdMap::iterator itr = ltAurasBySpellId.begin(); itr != ltAurasBySpellId.end(); itr++)
     {
-        Aura* aura = *iter;
-        if (aura->GetUnitOwner() != this)
+        AuraList& list = itr->second;
+        for (AuraList::iterator iter = list.begin(); iter != list.end();)
         {
-            aura->Remove();
-            iter = scAuras.begin();
+            Aura* aura = *iter;
+            if (aura->GetUnitOwner() != this && (!onPhaseChange || !aura->GetUnitOwner()->IsInPhase(this)))
+            {
+                aura->Remove();
+                iter = list.begin();
+            }
+            else
+                ++iter;
         }
-        else
-            ++iter;
     }
 }
 
@@ -5244,11 +5249,12 @@ void Unit::RemoveAurasByShapeShift()
     for (AuraApplicationMap::iterator iter = m_appliedAuras.begin(); iter != m_appliedAuras.end();)
     {
         Aura const* aura = iter->second->GetBase();
-        if ((aura->GetSpellInfo()->GetAllEffectsMechanicMask() & mechanic_mask) && !aura->GetSpellInfo()->HasAttribute(SPELL_ATTR0_CU_AURA_CC))
-        {
-            RemoveAura(iter);
-            continue;
-        }
+        if ((aura->GetSpellInfo()->GetAllEffectsMechanicMask() & mechanic_mask) && !aura->GetSpellInfo()->HasAttribute(SPELL_ATTR0_CU_AURA_CC) ||
+            (aura->GetSpellInfo()->SpellFamilyName == SPELLFAMILY_WARRIOR && (aura->GetSpellInfo()->SpellFamilyFlags[1] & 0x20))))
+            {
+                RemoveAura(iter);
+                continue;
+            }
         ++iter;
     }
 }
@@ -5299,20 +5305,6 @@ void Unit::RemoveAllAuras()
         AuraMap::iterator aurIter;
         for (aurIter = m_ownedAuras.begin(); aurIter != m_ownedAuras.end();)
             RemoveOwnedAura(aurIter);
-
-        const int maxIteration = 50;
-        // give this loop a few tries, if there are still auras then log as much information as possible
-        if (counter >= maxIteration)
-        {
-            std::stringstream sstr;
-            sstr << "Unit::RemoveAllAuras() iterated " << maxIteration << " times already but there are still " << m_appliedAuras.size() << " m_appliedAuras and " << m_ownedAuras.size()
-                 << " m_ownedAuras.\n";
-
-            LOG_ERROR("entities.unit", "%s", sstr.str().c_str());
-            ASSERT(false);
-
-            break;
-        }
     }
 }
 
@@ -5331,16 +5323,6 @@ void Unit::RemoveArenaAuras()
         });
 }
 
-void Unit::RemoveAurasOnEvade()
-{
-    if (IsCharmedOwnedByPlayerOrPlayer()) // if it is a player owned creature it should not remove the aura
-        return;
-
-    // don't remove vehicle auras, passengers aren't supposed to drop off the vehicle
-    // don't remove clone caster on evade (to be verified)
-    RemoveAllAurasExceptType(SPELL_AURA_CONTROL_VEHICLE, SPELL_AURA_CLONE_CASTER);
-}
-
 void Unit::RemoveAllAurasOnDeath()
 {
     // used just after dieing to remove all visible auras
@@ -5348,7 +5330,7 @@ void Unit::RemoveAllAurasOnDeath()
     for (AuraApplicationMap::iterator iter = m_appliedAuras.begin(); iter != m_appliedAuras.end();)
     {
         Aura const* aura = iter->second->GetBase();
-        if (!aura->IsPassive() && !aura->IsDeathPersistent())
+        if ((!aura->IsPassive() || aura->GetSpellInfo()->HasAttribute(SPELL_ATTR7_DISABLE_AURA_WHILE_DEAD)) && !aura->IsDeathPersistent())
             _UnapplyAura(iter, AuraRemoveMode::ByDeath);
         else
             ++iter;
@@ -5357,7 +5339,7 @@ void Unit::RemoveAllAurasOnDeath()
     for (AuraMap::iterator iter = m_ownedAuras.begin(); iter != m_ownedAuras.end();)
     {
         Aura* aura = iter->second;
-        if (!aura->IsPassive() && !aura->IsDeathPersistent())
+        if ((!aura->IsPassive() || aura->GetSpellInfo()->HasAttribute(SPELL_ATTR7_DISABLE_AURA_WHILE_DEAD)) && !aura->IsDeathPersistent())
             RemoveOwnedAura(iter, AuraRemoveMode::ByDeath);
         else
             ++iter;
@@ -5406,12 +5388,14 @@ void Unit::RemoveAllAurasExceptType(AuraType type)
     }
 }
 
-void Unit::RemoveAllAurasExceptType(AuraType type1, AuraType type2)
+void Unit::RemoveEvadeAuras()
 {
     for (AuraApplicationMap::iterator iter = m_appliedAuras.begin(); iter != m_appliedAuras.end();)
     {
         Aura const* aura = iter->second->GetBase();
-        if (aura->GetSpellInfo()->HasAura(type1) || aura->GetSpellInfo()->HasAura(type2))
+        SpellInfo const* spellInfo = aura->GetSpellInfo();
+        if (spellInfo->HasAttribute(SPELL_ATTR0_CU_ROLLING_PERIODIC) || spellInfo->HasAttribute(SPELL_ATTR1_AURA_STAYS_AFTER_COMBAT) || spellInfo->HasAura(SPELL_AURA_CONTROL_VEHICLE) ||
+            spellInfo->HasAura(SPELL_AURA_CLONE_CASTER) || (aura->IsPassive() && GetOwnerGUID().IsPlayer()))
             ++iter;
         else
             _UnapplyAura(iter, AuraRemoveMode::ByDefault);
@@ -5420,7 +5404,9 @@ void Unit::RemoveAllAurasExceptType(AuraType type1, AuraType type2)
     for (AuraMap::iterator iter = m_ownedAuras.begin(); iter != m_ownedAuras.end();)
     {
         Aura* aura = iter->second;
-        if (aura->GetSpellInfo()->HasAura(type1) || aura->GetSpellInfo()->HasAura(type2))
+        SpellInfo const* spellInfo = aura->GetSpellInfo();
+        if (spellInfo->HasAttribute(SPELL_ATTR0_CU_ROLLING_PERIODIC) || spellInfo->HasAttribute(SPELL_ATTR1_AURA_STAYS_AFTER_COMBAT) || spellInfo->HasAura(SPELL_AURA_CONTROL_VEHICLE) ||
+            spellInfo->HasAura(SPELL_AURA_CLONE_CASTER) || (aura->IsPassive() && GetOwnerGUID().IsPlayer()))
             ++iter;
         else
             RemoveOwnedAura(iter, AuraRemoveMode::ByDefault);
@@ -5538,7 +5524,17 @@ AuraEffect* Unit::GetAuraEffect(AuraType type, SpellFamilyNames family, uint32 f
     return nullptr;
 }
 
-AuraEffect* Unit::GetDummyAuraEffect(SpellFamilyNames name, uint32 iconId, uint8 effIndex) const { return GetAuraEffect(SPELL_AURA_DUMMY, name, iconId, effIndex); }
+AuraEffect* Unit::GetAuraEffectDummy(uint32 spellid) const
+{
+    AuraEffectList const& auras = GetAuraEffectsByType(SPELL_AURA_DUMMY);
+    for (Unit::AuraEffectList::const_iterator itr = auras.begin(); itr != auras.end(); ++itr)
+    {
+        if ((*itr)->GetId() == spellid)
+            return *itr;
+    }
+
+    return nullptr;
+}
 
 AuraApplication* Unit::GetAuraApplication(uint32 spellId, ObjectGuid casterGUID, ObjectGuid itemCasterGUID, uint8 reqEffMask, AuraApplication* except) const
 {
@@ -5581,7 +5577,7 @@ Aura* Unit::GetAuraOfRankedSpell(uint32 spellId, ObjectGuid casterGUID, ObjectGu
     return aurApp ? aurApp->GetBase() : nullptr;
 }
 
-void Unit::GetDispellableAuraList(Unit* caster, uint32 dispelMask, DispelChargesList& dispelList, bool isReflect /*= false*/) const
+void Unit::GetDispellableAuraList(Unit* caster, uint32 dispelMask, DispelChargesList& dispelList, SpellInfo const* dispelSpell, bool isReflect /*= false*/)
 {
     // we should not be able to dispel diseases if the target is affected by unholy blight
     if (dispelMask & (1 << DISPEL_DISEASE) && HasAura(50536))
@@ -5606,6 +5602,12 @@ void Unit::GetDispellableAuraList(Unit* caster, uint32 dispelMask, DispelCharges
             // unless we're reflecting (dispeller eliminates one of it's benefitial buffs)
             if (isReflect != (aurApp->IsPositive() == IsFriendlyTo(caster)))
                 continue;
+
+            // Banish should only be dispelled by Mass Dispel
+            if (aura->GetSpellInfo()->Mechanic == MECHANIC_BANISH && !dispelSpell->HasAttribute(SPELL_ATTR0_NO_IMMUNITIES))
+            {
+                continue;
+            }
 
             // 2.4.3 Patch Notes: "Dispel effects will no longer attempt to remove effects that have 100% dispel resistance."
             int32 chance = aura->CalcDispelChance(this, !IsFriendlyTo(caster));
@@ -5652,6 +5654,29 @@ uint32 Unit::GetAuraCount(uint32 spellId) const
     return count;
 }
 
+bool Unit::HasAuras(SearchMethod sm, std::vector<uint32>& spellIds) const
+{
+    if (sm == SearchMethod::MatchAll)
+    {
+        for (auto const& spellId : spellIds)
+            if (!HasAura(spellId))
+                return false;
+        return true;
+    }
+    else if (sm == SearchMethod::MatchAny)
+    {
+        for (auto const& spellId : spellIds)
+            if (HasAura(spellId))
+                return true;
+        return false;
+    }
+    else
+    {
+        LOG_ERROR("entities.unit", "Unit::HasAuras using non-supported SearchMethod {}", sm);
+        return false;
+    }
+}
+
 bool Unit::HasAura(uint32 spellId, ObjectGuid casterGUID, ObjectGuid itemCasterGUID, uint8 reqEffMask) const
 {
     if (GetAuraApplication(spellId, casterGUID, itemCasterGUID, reqEffMask))
@@ -5666,6 +5691,16 @@ bool Unit::HasAuraTypeWithCaster(AuraType auraType, ObjectGuid caster) const
     for (AuraEffect const* eff : GetAuraEffectsByType(auraType))
         if (caster == eff->GetCasterGUID())
             return true;
+    return false;
+}
+
+bool Unit::HasVisibleAuraType(AuraType auraType) const
+{
+    AuraEffectList const& mAuraList = GetAuraEffectsByType(auraType);
+    for (AuraEffectList::const_iterator i = mAuraList.begin(); i != mAuraList.end(); ++i)
+        if ((*i)->GetBase()->CanBeSentToClient())
+            return true;
+
     return false;
 }
 
@@ -5696,7 +5731,20 @@ bool Unit::HasAuraTypeWithValue(AuraType auraType, int32 value) const
     return false;
 }
 
-template <typename InterruptFlags> bool Unit::HasNegativeAuraWithInterruptFlag(InterruptFlags flag, ObjectGuid guid) const
+bool Unit::HasAuraTypeWithTriggerSpell(AuraType auratype, uint32 triggerSpell) const
+{
+    for (AuraEffect const* aura : GetAuraEffectsByType(auratype))
+    {
+        if (aura->GetSpellInfo()->Effects[aura->GetEffIndex()].TriggerSpell == triggerSpell)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool Unit::HasNegativeAuraWithInterruptFlag(uint32 flag, ObjectGuid guid)
 {
     if (!HasInterruptFlag(flag))
         return false;
@@ -5704,6 +5752,17 @@ template <typename InterruptFlags> bool Unit::HasNegativeAuraWithInterruptFlag(I
     for (AuraApplicationList::const_iterator iter = m_interruptableAuras.begin(); iter != m_interruptableAuras.end(); ++iter)
     {
         if (!(*iter)->IsPositive() && (*iter)->GetBase()->GetSpellInfo()->HasAuraInterruptFlag(flag) && (!guid || (*iter)->GetBase()->GetCasterGUID() == guid))
+            return true;
+    }
+    return false;
+}
+
+bool Unit::HasNegativeAuraWithAttribute(uint32 flag, ObjectGuid guid)
+{
+    for (AuraApplicationMap::const_iterator iter = m_appliedAuras.begin(); iter != m_appliedAuras.end(); ++iter)
+    {
+        Aura const* aura = iter->second->GetBase();
+        if (!iter->second->IsPositive() && aura->GetSpellInfo()->Attributes & flag && (!guid || aura->GetCasterGUID() == guid))
             return true;
     }
     return false;
@@ -11354,7 +11413,7 @@ void Unit::RemoveFromWorld()
 
         RemoveCharmAuras();
         RemoveBindSightAuras();
-        RemoveNotOwnSingleTargetAuras();
+        RemoveNotOwnLimitedTargetAuras();
         RemoveAurasWithInterruptFlags(SpellAuraInterruptFlags::LeaveWorld);
 
         RemoveAllGameObjects();

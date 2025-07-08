@@ -1464,7 +1464,7 @@ bool SpellInfo::CanDispelAura(SpellInfo const* auraSpellInfo) const
     return true;
 }
 
-bool SpellInfo::IsSingleTarget() const
+bool SpellInfo::IsLimitedTarget() const
 {
     // all other single target spells have if it has AttributesEx5
     if (HasAttribute(SPELL_ATTR5_SINGLE_TARGET_SPELL))
