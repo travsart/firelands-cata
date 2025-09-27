@@ -603,15 +603,15 @@ struct CalcDamageInfo
 // Spell damage info structure based on structure sending in SMSG_SPELLNONMELEEDAMAGELOG opcode
 struct FC_GAME_API SpellNonMeleeDamage
 {
-    SpellNonMeleeDamage(Unit* _attacker, Unit* _target, SpellInfo const* _spellInfo, uint32 _schoolMask)
-        : target(_target), attacker(_attacker), spellInfo(_spellInfo), damage(0), overkill(0), schoolMask(_schoolMask), absorb(0), resist(0), physicalLog(false), unused(false), blocked(0), HitInfo(0),
+    SpellNonMeleeDamage(Unit* _attacker, Unit* _target, uint32 _SpellID, uint32 _schoolMask)
+        : target(_target), attacker(_attacker), SpellID(_SpellID), damage(0), overkill(0), schoolMask(_schoolMask), absorb(0), resist(0), physicalLog(false), unused(false), blocked(0), HitInfo(0),
           cleanDamage(0), fullBlock(false)
     {
     }
 
     Unit* target;
     Unit* attacker;
-    SpellInfo const* spellInfo;
+    uint32 SpellID;
     uint32 damage;
     uint32 overkill;
     uint32 schoolMask;
@@ -1203,6 +1203,7 @@ class FC_GAME_API Unit : public WorldObject
     void SetCanModifyStats(bool modifyStats) { m_canModifyStats = modifyStats; }
     [[nodiscard]] bool CanModifyStats() const { return m_canModifyStats; }
 
+    void ApplyStatBuffMod(Stats stat);
     void ApplyStatBuffMod(Stats stat, float val, bool apply)
     {
         ApplyModSignedFloatValue((val > 0 ? static_cast<uint16>(UNIT_FIELD_POSSTAT0) + stat : static_cast<uint16>(UNIT_FIELD_NEGSTAT0) + stat), val, apply);
@@ -1316,19 +1317,8 @@ class FC_GAME_API Unit : public WorldObject
     }
 
     void SetResistance(SpellSchools school, int32 val) { SetStatInt32Value(static_cast<uint16>(UNIT_FIELD_RESISTANCES) + school, val); }
-    void SetResistanceBuffMods(SpellSchools school, bool positive, float val)
-    {
-        SetFloatValue(positive ? static_cast<uint16>(UNIT_FIELD_RESISTANCEBUFFMODSPOSITIVE) + school : static_cast<uint16>(UNIT_FIELD_RESISTANCEBUFFMODSNEGATIVE) + +school, val);
-    }
 
-    void ApplyResistanceBuffModsMod(SpellSchools school, bool positive, float val, bool apply)
-    {
-        ApplyModSignedFloatValue(positive ? static_cast<uint16>(UNIT_FIELD_RESISTANCEBUFFMODSPOSITIVE) + school : static_cast<uint16>(UNIT_FIELD_RESISTANCEBUFFMODSNEGATIVE) + +school, val, apply);
-    }
-    void ApplyResistanceBuffModsPercentMod(SpellSchools school, bool positive, float val, bool apply)
-    {
-        ApplyPercentModFloatValue(positive ? static_cast<uint16>(UNIT_FIELD_RESISTANCEBUFFMODSPOSITIVE) + school : static_cast<uint16>(UNIT_FIELD_RESISTANCEBUFFMODSNEGATIVE) + +school, val, apply);
-    }
+    void ApplyResistanceBuffModsMod(SpellSchools school);
 
     uint16 GetMaxSkillValueForLevel(Unit const* target = nullptr) const { return (target ? getLevelForTarget(target) : GetLevel()) * 5; }
     [[nodiscard]] float GetTotalAuraModValue(UnitMods unitMod) const;
@@ -1649,6 +1639,7 @@ class FC_GAME_API Unit : public WorldObject
 
     AuraEffect* IsScriptOverriden(SpellInfo const* spell, int32 script) const;
     uint32 GetDiseasesByCaster(ObjectGuid casterGUID, uint8 mode = 0);
+    uint32 GetDiseasesByCaster(ObjectGuid casterGUID, bool remove = false);
     [[nodiscard]] uint32 GetDoTsByCaster(ObjectGuid casterGUID) const;
 
     [[nodiscard]] int32 GetTotalAuraModifierAreaExclusive(AuraType auratype) const;
@@ -2050,6 +2041,7 @@ class FC_GAME_API Unit : public WorldObject
     virtual bool IsAffectedByDiminishingReturns() const { return (GetCharmerOrOwnerPlayerOrPlayerItself() != nullptr); }
     void IncrDiminishing(DiminishingGroup group);
     float ApplyDiminishingToDuration(DiminishingGroup group, int32& duration, Unit* caster, DiminishingLevels Level, int32 limitduration);
+    bool ApplyDiminishingToDuration(SpellInfo const* auraSpellInfo, bool triggered, int32& duration, Unit* caster, DiminishingLevels previousLevel);
     void ApplyDiminishingAura(DiminishingGroup group, bool apply);
     void ClearDiminishings() { m_Diminishing.clear(); }
 
@@ -2242,6 +2234,8 @@ class FC_GAME_API Unit : public WorldObject
     void SendSpellNonMeleeReflectLog(SpellNonMeleeDamage* log, Unit* attacker);
     void SendSpellNonMeleeDamageLog(Unit* target, SpellInfo const* spellInfo, uint32 Damage, SpellSchoolMask damageSchoolMask, uint32 AbsorbedDamage, uint32 Resist, bool PhysicalDamage,
         uint32 Blocked, bool CriticalHit = false, bool Split = false);
+    void SendSpellNonMeleeDamageLog(
+        Unit* target, uint32 SpellID, uint32 Damage, SpellSchoolMask damageSchoolMask, uint32 AbsorbedDamage, uint32 Resist, bool PhysicalDamage, uint32 Blocked, bool CriticalHit);
     void SendSpellMiss(Unit* target, uint32 spellID, SpellMissInfo missInfo);
     void SendSpellDamageResist(Unit* target, uint32 spellId);
     void SendSpellDamageImmune(Unit* target, uint32 spellId);

@@ -2635,6 +2635,71 @@ DiminishingLevels SpellInfo::GetDiminishingReturnsMaxLevel(bool triggered) const
 
 int32 SpellInfo::GetDiminishingReturnsLimitDuration(bool triggered) const { return triggered ? _diminishInfoTriggered.DiminishDurationLimit : _diminishInfoNonTriggered.DiminishDurationLimit; }
 
+DiminishingGroup SpellInfo::GetDiminishingReturnsGroupForSpell(SpellInfo const* spellproto, bool triggered) { return spellproto->GetDiminishingReturnsGroupForSpell(triggered); }
+
+DiminishingReturnsType SpellInfo::GetDiminishingReturnsGroupType(DiminishingGroup group)
+{
+    switch (group)
+    {
+    case DIMINISHING_TAUNT:
+    case DIMINISHING_CONTROLLED_STUN:
+    case DIMINISHING_STUN:
+    case DIMINISHING_OPENING_STUN:
+    case DIMINISHING_CYCLONE:
+    case DIMINISHING_CHARGE:
+        return DRTYPE_ALL;
+    case DIMINISHING_LIMITONLY:
+    case DIMINISHING_NONE:
+        return DRTYPE_NONE;
+    default:
+        return DRTYPE_PLAYER;
+    }
+}
+
+DiminishingLevels SpellInfo::GetDiminishingReturnsMaxLevel(DiminishingGroup group)
+{
+    switch (group)
+    {
+    case DIMINISHING_TAUNT:
+        return DIMINISHING_LEVEL_TAUNT_IMMUNE;
+    default:
+        return DIMINISHING_LEVEL_IMMUNE;
+    }
+}
+
+int32 SpellInfo::GetDiminishingReturnsLimitDuration(DiminishingGroup group, SpellInfo const* spellproto)
+{
+    if (!IsDiminishingReturnsGroupDurationLimited(group))
+    {
+        return 0;
+    }
+    return GetDiminishingReturnsLimitDuration(false);
+}
+
+bool SpellInfo::IsDiminishingReturnsGroupDurationLimited(DiminishingGroup group)
+{
+    switch (group)
+    {
+    case DIMINISHING_BANISH:
+    case DIMINISHING_CONTROLLED_STUN:
+    case DIMINISHING_CONTROLLED_ROOT:
+    case DIMINISHING_CYCLONE:
+    case DIMINISHING_DISORIENT:
+    case DIMINISHING_ENTRAPMENT:
+    case DIMINISHING_FEAR:
+    case DIMINISHING_HORROR:
+    case DIMINISHING_MIND_CONTROL:
+    case DIMINISHING_OPENING_STUN:
+    case DIMINISHING_ROOT:
+    case DIMINISHING_STUN:
+    case DIMINISHING_SLEEP:
+    case DIMINISHING_LIMITONLY:
+        return true;
+    default:
+        return false;
+    }
+}
+
 void SpellInfo::_LoadImmunityInfo()
 {
     for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)

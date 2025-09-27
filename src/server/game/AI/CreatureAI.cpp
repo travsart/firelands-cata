@@ -301,6 +301,9 @@ bool CreatureAI::_EnterEvadeMode(EvadeReason /*why*/)
 
     me->RemoveEvadeAuras();
 
+    me->ClearComboPointHolders(); // Remove all combo points targeting this unit
+    // sometimes bosses stuck in combat?
+    me->GetThreatMgr().ClearAllThreat();
     me->CombatStop(true);
     me->LoadCreaturesAddon();
     me->SetLootRecipient(nullptr);
@@ -312,14 +315,31 @@ bool CreatureAI::_EnterEvadeMode(EvadeReason /*why*/)
     me->SetTarget(ObjectGuid::Empty);
     EngagementOver();
 
+    me->SetCannotReachTarget();
+
+    if (ZoneScript* zoneScript = me->GetZoneScript() ? me->GetZoneScript() : (ZoneScript*)me->GetInstanceScript())
+        zoneScript->OnCreatureEvade(me);
+
+    if (me->IsInEvadeMode())
+    {
+        return false;
+    }
+    else if (CreatureGroup* formation = me->GetFormation())
+    {
+        formation->MemberEvaded(me);
+    }
+
     if (TempSummon* summon = me->ToTempSummon())
     {
-        if (SummonPropertiesEntry const* properties = summon->m_Properties)
-        { // Allied summons, pet summons join a formation unless the following exceptions are being met.
-            if ((properties->Flags & SUMMON_PROP_FLAG_DESPAWN_ON_SUMMONER_DEATH) || ((me->IsGuardian() || me->IsPet()) && !me->GetOwner()->IsAlive()))
+        if (WorldObject* summoner = summon->GetSummoner())
+        {
+            if (summoner->ToCreature() && summoner->ToCreature()->IsAIEnabled)
             {
-                me->DespawnOrUnsummon();
-                return true;
+                summoner->ToCreature()->AI()->SummonedCreatureEvade(me);
+            }
+            else if (summoner->ToGameObject() && summoner->ToGameObject()->AI())
+            {
+                summoner->ToGameObject()->AI()->SummonedCreatureEvade(me);
             }
         }
     }

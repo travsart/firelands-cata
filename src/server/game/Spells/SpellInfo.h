@@ -626,6 +626,12 @@ class FC_GAME_API SpellInfo
     DiminishingLevels GetDiminishingReturnsMaxLevel(bool triggered) const;
     int32 GetDiminishingReturnsLimitDuration(bool triggered) const;
 
+    DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellInfo const* spellproto, bool triggered);
+    DiminishingReturnsType GetDiminishingReturnsGroupType(DiminishingGroup group);
+    DiminishingLevels GetDiminishingReturnsMaxLevel(DiminishingGroup group);
+    int32 GetDiminishingReturnsLimitDuration(DiminishingGroup group, SpellInfo const* spellproto);
+    bool IsDiminishingReturnsGroupDurationLimited(DiminishingGroup group);
+
     // spell immunities
     void ApplyAllSpellImmunitiesTo(Unit* target, uint8 effIndex, bool apply) const;
     bool CanSpellProvideImmunityAgainstAura(SpellInfo const* auraSpellInfo) const;
