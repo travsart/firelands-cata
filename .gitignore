@@ -23,4 +23,3 @@ cmake-build-*/
 .vs
 release/
 env/
-mods/mod-*

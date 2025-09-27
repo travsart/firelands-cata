@@ -1,0 +1,3 @@
+[submodule "mods/mod-playerbots-cata"]
+	path = mods/mod-playerbots-cata
+	url = git@github.com:travsart/mod-playerbots-cata.git
